@@ -1,14 +1,15 @@
 export type GroupByMode = 'day' | 'week' | 'month' | 'quarter' | 'year'
-export type SortByMode = 'playedDate' | 'title' | 'favorite' | 'releaseYear' | 'addedDate'
+export type SortByMode = 'playedDate' | 'title' | 'favoritedAt' | 'releaseDate' | 'addedDate'
 export type SortOrder = 'asc' | 'desc'
 export type MediaFilter = 'video' | 'audio' | 'all'
+export type ViewMode = 'thumbnail' | 'poster' | 'list'
 
 export interface PlayRecord {
   itemId: string
   title: string
   playedDate: Date
-  isFavorite: boolean
-  releaseYear: number | null
+  favoritedAt: Date | null
+  releaseDate: Date | null
   addedDate: Date | null
   mediaType: 'video' | 'audio'
   imagePrimaryTag: string | null
@@ -33,4 +34,5 @@ export interface ViewSettings {
   sortOrder: SortOrder
   mediaFilter: MediaFilter
   showRepeats: boolean
+  viewMode: ViewMode
 }

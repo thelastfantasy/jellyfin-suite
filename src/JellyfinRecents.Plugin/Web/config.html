@@ -1,35 +1,6 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>最近播放</title>
-  <style>
-    #jellyfin-recents-root {
-      width: 100%;
-      min-height: 100vh;
-    }
-    #jellyfin-recents-no-client {
-      display: none;
-      padding: 2em;
-      color: var(--theme-text-color, #fff);
-      font-family: inherit;
-    }
-  </style>
-</head>
-<body>
-  <div id="jellyfin-recents-no-client">
-    <p>⚠️ 请通过 Jellyfin Web 界面访问此页面。</p>
-    <p>直接打开此页面无法获取用户会话信息。</p>
+<div data-role="page" class="page" id="jellyfinRecentsPage" data-title="最近播放">
+  <div class="content-primary">
+    <div id="jellyfin-recents-root"></div>
   </div>
-  <div id="jellyfin-recents-root"></div>
-
-  <script>
-    if (typeof window.ApiClient === 'undefined') {
-      document.getElementById('jellyfin-recents-no-client').style.display = 'block';
-      document.getElementById('jellyfin-recents-root').style.display = 'none';
-    }
-  </script>
-  <script src="jellyfin-recents.js"></script>
-</body>
-</html>
+  <script src="/web/configurationpage?name=JellyfinRecentsBundle"></script>
+</div>

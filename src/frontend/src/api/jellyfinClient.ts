@@ -6,6 +6,10 @@ declare global {
       serverAddress(): string
       accessToken(): string
       getCurrentUserId(): string
+      getUrl(name: string, params?: Record<string, string>): string
+      ajax(request: { url: string; type?: string; dataType?: string }): Promise<unknown>
+      getItem(userId: string, itemId: string): Promise<unknown>
+      serverId(): string
     }
   }
 }

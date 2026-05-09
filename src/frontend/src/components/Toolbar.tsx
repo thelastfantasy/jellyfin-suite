@@ -1,4 +1,4 @@
-import type { GroupByMode, MediaFilter, SortByMode, ViewSettings } from '../types'
+import type { GroupByMode, MediaFilter, SortByMode, ViewMode, ViewSettings } from '../types'
 
 interface Props {
   settings: ViewSettings
@@ -16,8 +16,8 @@ const GROUP_OPTIONS: { value: GroupByMode; label: string }[] = [
 const SORT_OPTIONS: { value: SortByMode; label: string }[] = [
   { value: 'playedDate', label: '播放时间' },
   { value: 'title', label: '标题' },
-  { value: 'favorite', label: '收藏优先' },
-  { value: 'releaseYear', label: '发行年份' },
+  { value: 'favoritedAt', label: '收藏时间' },
+  { value: 'releaseDate', label: '发行时间' },
   { value: 'addedDate', label: '添加时间' },
 ]
 
@@ -25,6 +25,12 @@ const MEDIA_OPTIONS: { value: MediaFilter; label: string }[] = [
   { value: 'video', label: '仅视频' },
   { value: 'audio', label: '仅音频' },
   { value: 'all', label: '全部' },
+]
+
+const VIEW_MODE_OPTIONS: { value: ViewMode; label: string; title: string }[] = [
+  { value: 'thumbnail', label: '⊞', title: '缩略图（16:9）' },
+  { value: 'poster', label: '🎞', title: '海报（2:3）' },
+  { value: 'list', label: '☰', title: '列表' },
 ]
 
 export function Toolbar({ settings, onSettingsChange }: Props) {
@@ -74,6 +80,22 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+      </div>
+
+      <div class="jr-toolbar__group">
+        <label class="jr-toolbar__label">视图</label>
+        <div class="jr-toolbar__view-modes">
+          {VIEW_MODE_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              class={`jr-toolbar__view-btn${settings.viewMode === o.value ? ' jr-toolbar__view-btn--active' : ''}`}
+              title={o.title}
+              onClick={() => onSettingsChange({ viewMode: o.value })}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div class="jr-toolbar__group">

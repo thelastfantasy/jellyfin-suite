@@ -1,5 +1,6 @@
 import { getItemsApi } from '@jellyfin/sdk/lib/utils/api/items-api'
 import {
+  BaseItemDto,
   BaseItemKind,
   ItemFields,
   ItemFilter,
@@ -38,12 +39,14 @@ export async function getRecentlyPlayed(
     limit: 1000,
   })
 
-  return (response.data.Items ?? []).map((item): PlayRecord => ({
+  return (response.data.Items ?? []).map((item: BaseItemDto): PlayRecord => ({
     itemId: item.Id ?? '',
     title: item.Name ?? '未知标题',
     playedDate: new Date(item.UserData?.LastPlayedDate ?? item.DateCreated ?? Date.now()),
-    isFavorite: item.UserData?.IsFavorite ?? false,
-    releaseYear: item.ProductionYear ?? null,
+    favoritedAt: null, // Items API 不提供收藏时间戳，仅 historyApi（SQLite）返回
+    releaseDate: item.PremiereDate ? new Date(item.PremiereDate)
+      : item.ProductionYear ? new Date(item.ProductionYear, 0, 1)
+      : null,
     addedDate: item.DateCreated ? new Date(item.DateCreated) : null,
     mediaType: (item.MediaType?.toLowerCase() === 'audio') ? 'audio' : 'video',
     imagePrimaryTag: item.ImageTags?.Primary ?? null,
