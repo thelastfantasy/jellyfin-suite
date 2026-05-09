@@ -1,0 +1,31 @@
+# Claude Code local settings (machine-specific, auto-generated)
+.claude/settings.json
+.claude/settings.local.json
+
+# Node.js / TypeScript
+node_modules/
+dist/
+build/
+*.js.map
+.env
+.env.local
+.env.*.local
+
+# C# / .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+packages/
+*.nupkg
+publish/
+*.DotSettings.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
