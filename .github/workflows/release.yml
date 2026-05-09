@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          # Convert semver (1.0.0) to Jellyfin 4-part format (1.0.0.0)
+          IFS='.' read -r -a parts <<< "$TAG"
+          MAJOR="${parts[0]:-0}"
+          MINOR="${parts[1]:-0}"
+          PATCH="${parts[2]:-0}"
+          BUILD="${parts[3]:-0}"
+          VER4="$MAJOR.$MINOR.$PATCH.$BUILD"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "ver4=$VER4" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG  =>  ver4: $VER4"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: src/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish plugin
+        run: |
+          dotnet publish src/JellyfinRecents.Plugin/JellyfinRecents.Plugin.csproj \
+            -c Release \
+            -p:Version=${{ steps.version.outputs.ver4 }} \
+            -o publish/
+
+      - name: Prepare meta.json
+        run: |
+          VER4="${{ steps.version.outputs.ver4 }}"
+          TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%S.0000000Z)"
+          jq \
+            --arg ver "$VER4" \
+            --arg ts "$TIMESTAMP" \
+            '.version = $ver | .timestamp = $ts' \
+            src/JellyfinRecents.Plugin/meta.json \
+            > publish/meta.json
+
+      - name: Create release zip
+        id: zip
+        run: |
+          VER4="${{ steps.version.outputs.ver4 }}"
+          ZIPNAME="jellyfin-recents_${VER4}.zip"
+          cd publish
+          zip "../${ZIPNAME}" JellyfinRecents.Plugin.dll meta.json
+          cd ..
+          CHECKSUM="$(md5sum "${ZIPNAME}" | awk '{print $1}')"
+          echo "zipname=$ZIPNAME" >> $GITHUB_OUTPUT
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "Zip: $ZIPNAME  MD5: $CHECKSUM"
+
+      - name: Create GitHub Release
+        id: gh_release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.zip.outputs.zipname }}
+          generate_release_notes: true
+
+      - name: Update manifest.json for GitHub Pages
+        run: |
+          VER4="${{ steps.version.outputs.ver4 }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          CHECKSUM="${{ steps.zip.outputs.checksum }}"
+          ZIPNAME="${{ steps.zip.outputs.zipname }}"
+          TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%S.0000000Z)"
+          SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/v${TAG}/${ZIPNAME}"
+
+          # Read current manifest and prepend new version entry
+          jq --argjson entry "{
+            \"version\": \"$VER4\",
+            \"changelog\": \"https://github.com/${{ github.repository }}/releases/tag/v${TAG}\",
+            \"targetAbi\": \"10.8.0.0\",
+            \"sourceUrl\": \"$SOURCE_URL\",
+            \"checksum\": \"$CHECKSUM\",
+            \"timestamp\": \"$TIMESTAMP\"
+          }" \
+          '.[0].versions = [$entry] + .[0].versions' \
+          manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
+
+      - name: Deploy manifest to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: .
+          include_files: manifest.json
+          keep_files: true
+          commit_message: "chore: update manifest for v${{ steps.version.outputs.tag }}"

@@ -1,0 +1,38 @@
+export type GroupByMode = 'day' | 'week' | 'month' | 'quarter' | 'year'
+export type SortByMode = 'playedDate' | 'title' | 'favoritedAt' | 'releaseDate' | 'addedDate'
+export type SortOrder = 'asc' | 'desc'
+export type MediaFilter = 'video' | 'audio' | 'all'
+export type ViewMode = 'thumbnail' | 'poster' | 'list'
+
+export interface PlayRecord {
+  itemId: string
+  title: string
+  playedDate: Date
+  favoritedAt: Date | null
+  releaseDate: Date | null
+  addedDate: Date | null
+  mediaType: 'video' | 'audio'
+  imagePrimaryTag: string | null
+}
+
+export interface TimeGroup {
+  label: string
+  startDate: Date
+  endDate: Date
+  records: PlayRecord[]
+}
+
+export interface GroupedPage {
+  groups: TimeGroup[]
+  pageIndex: number
+  totalPages: number
+}
+
+export interface ViewSettings {
+  groupBy: GroupByMode
+  sortBy: SortByMode
+  sortOrder: SortOrder
+  mediaFilter: MediaFilter
+  showRepeats: boolean
+  viewMode: ViewMode
+}
