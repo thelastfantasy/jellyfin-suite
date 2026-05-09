@@ -43,7 +43,7 @@
 - [ ] T012 [P] 实现 `src/JellyfinRecents.Plugin/PluginServiceRegistrator.cs`（实现 `IPluginServiceRegistrator`，注册 `PlayHistoryService` 为 Scoped 服务）
 - [ ] T013 [P] 实现 `src/JellyfinRecents.Plugin/Configuration/PluginConfiguration.cs`（空配置类，继承 `BasePluginConfiguration`）
 - [ ] T014 创建 `src/JellyfinRecents.Plugin/Web/config.html`（设为嵌入资源；引入 `jellyfin-recents.js`；检查 `window.ApiClient` 是否存在，不存在时显示"请从 Jellyfin Web 访问"提示）
-- [ ] T015 [P] 实现前端共享类型 `src/frontend/src/types.ts`（导出 `PlayRecord`、`ViewSettings`、`GroupedPage`、`TimeGroup`、`GroupByMode`、`SortByMode`、`MediaFilter` 接口/类型，与 data-model.md 保持一致）
+- [ ] T015 [P] 实现前端共享类型 `src/frontend/src/types.ts`（导出 `PlayRecord`（含 `favoritedAt: Date | null` 字段）、`ViewSettings`、`GroupedPage`、`TimeGroup`、`GroupByMode`、`SortByMode`、`MediaFilter` 接口/类型，与 data-model.md 保持一致）
 - [ ] T016 [P] 实现 `src/frontend/src/api/jellyfinClient.ts`（从 `window.ApiClient` 提取 serverAddress、accessToken、userId，初始化 `@jellyfin/sdk` 的 `Api` 实例并导出）
 - [ ] T017 [P] 实现 `src/frontend/src/state/viewSettings.ts`（从 localStorage 读写 `ViewSettings`，key 为 `jellyfin-recents-settings`，提供默认值：groupBy=week、sortBy=playedDate、mediaFilter=video、showRepeats=false）
 - [ ] T018 实现前端入口 `src/frontend/src/main.tsx`（挂载 Preact `App` 组件到 `config.html` 中的挂载点；初始化时调用 `viewSettings.ts` 加载已保存设置）
@@ -107,18 +107,37 @@
 
 **Goal**: 用户可在 5 种排序维度间切换，同一分组内条目顺序随之变化
 
-**Independent Test**: 切换每种排序，验证同一周组内条目按正确字段重排（含收藏优先布尔排序）
+**Independent Test**: 切换每种排序，验证同一周组内条目按正确字段重排（含收藏时间降序、null 排末尾）
 
-- [ ] T035 [US3] 实现 `src/frontend/src/sorting/sortBy.ts`（实现 `sortRecords(records, sortBy, sortOrder): PlayRecord[]`；支持：`title`（字母序）、`playedDate`、`favorite`（isFavorite desc 为主，playedDate desc 为次级）、`releaseYear`（null 排末尾）、`addedDate`（null 排末尾））
-- [ ] T036 [P] [US3] 编写单元测试 `tests/frontend/sortBy.test.ts`（覆盖：5 种排序模式；null 值末尾处理；收藏优先的次级排序）
-- [ ] T037 [US3] 激活 `src/frontend/src/components/Toolbar.tsx` 中的排序选择器（渲染排序字段下拉 + 升降序切换按钮）
+- [ ] T035 [US3] 实现 `src/frontend/src/sorting/sortBy.ts`（实现 `sortRecords(records, sortBy, sortOrder): PlayRecord[]`；支持：`title`（字母序）、`playedDate`、`favoritedAt`（降序，null 排末尾，次级按 playedDate desc）、`releaseDate`（`Date | null`，降序，null 排末尾）、`addedDate`（null 排末尾））
+- [ ] T036 [P] [US3] 编写单元测试 `tests/frontend/sortBy.test.ts`（覆盖：5 种排序模式；null 值末尾处理；收藏时间的 null 排末尾和次级排序）
+- [ ] T037 [US3] 激活 `src/frontend/src/components/Toolbar.tsx` 中的排序选择器（渲染排序字段下拉（选项标签：标题/播放时间/收藏时间/发行时间/添加时间）+ 升降序切换按钮）
 - [ ] T038 [US3] 更新 `src/frontend/src/components/App.tsx`（在分组后对每个 `TimeGroup.records` 调用 `sortRecords`；响应 `sortBy`/`sortOrder` 变化重排；持久化到 `viewSettings`）
 
 **Checkpoint**: 所有排序方式可切换，分组内顺序正确
 
 ---
 
-## Phase 6: User Story 5 - 插件发布与第三方仓库 (Priority: P2)
+## Phase 5.5: User Story 5 - 视图模式切换（缩略图/海报/列表）(Priority: P2)
+
+**Goal**: 工具栏新增视图模式选择器，支持三种布局，设置持久化
+
+**Independent Test**: 切换三种模式，确认卡片比例、布局和信息密度各不相同；刷新后恢复上次选择
+
+- [ ] T035b [P] 扩展 `src/frontend/src/types.ts`：新增 `ViewMode = 'thumbnail' | 'poster' | 'list'` 类型，`ViewSettings` 增加 `viewMode: ViewMode` 字段（默认 `'thumbnail'`）
+- [ ] T035c [P] 更新 `src/frontend/src/state/viewSettings.ts`：默认值增加 `viewMode: 'thumbnail'`
+- [ ] T035d 在 `src/frontend/src/components/Toolbar.tsx` 添加视图模式选择器（三个图标按钮：⊞ 缩略图 / 🎞 海报 / ☰ 列表）
+- [ ] T035e 更新 `src/frontend/src/components/GroupSection.tsx`：根据 `viewMode` prop 切换：
+  - `thumbnail`：16:9 横向网格，`minmax(200px, 1fr)`，使用 Primary 图
+  - `poster`：2:3 竖向网格，`minmax(130px, 1fr)`，使用 Primary 图
+  - `list`：全宽行列表，小缩略图（64×36）+ 标题 + 类型标签 + 播放时间
+- [ ] T035f 更新 `src/frontend/src/components/App.tsx`：传递 `viewMode` 给 `GroupSection`；响应视图切换并持久化
+
+**Checkpoint**: 三种视图模式均可切换，布局比例和信息密度正确
+
+---
+
+## Phase 6: User Story 6 - 插件发布与第三方仓库 (Priority: P2)
 
 **Goal**: 通过标准 Jellyfin 第三方仓库机制发布插件，用户添加 manifest URL 即可安装和更新
 
@@ -141,12 +160,20 @@
 
 **Independent Test**: 账号有同一视频多次播放记录，开关开启时显示多条，关闭时显示一条
 
-### C# 后端（Activity Log 封装）
+### C# 后端（SQLite 独立数据库）
 
-- [ ] T045 实现 `src/JellyfinRecents.Plugin/Models/PlayHistoryEntry.cs`（DTO：`ItemId`、`PlayedDate`）和响应体 `PlayHistoryResponse`（`Entries: List<PlayHistoryEntry>`、`TotalCount: int`）
-- [ ] T046 实现 `src/JellyfinRecents.Plugin/Services/PlayHistoryService.cs`（注入 `IActivityManager`；实现 `GetPlayHistoryAsync(userId, startDate?, endDate?, mediaType?)`：查询 Activity Log，过滤 `VideoPlayback`/`AudioPlayback` 类型，仅返回请求用户的记录，映射为 `PlayHistoryEntry` 列表）
-- [ ] T047 [P] 编写单元测试 `tests/JellyfinRecents.Tests/PlayHistoryServiceTests.cs`（Mock `IActivityManager`；覆盖：正常返回、过滤其他用户记录、mediaType 过滤、空结果）
-- [ ] T048 实现 `src/JellyfinRecents.Plugin/Controllers/PlayHistoryController.cs`（`[Authorize]` 标注；`GET /JellyfinRecents/PlayHistory`；从 JWT/HttpContext 获取当前 userId；调用 `PlayHistoryService`；返回 `PlayHistoryResponse`；处理 401 和 500）
+- [ ] T044b 添加 NuGet 依赖 `Microsoft.Data.Sqlite` 到 `JellyfinRecents.Plugin.csproj`
+- [ ] T044c 在 `RecentsDatabase.Initialize()` 中实现基于 `PRAGMA user_version` 的 schema 版本控制：读取当前版本号（0 = 空库）→ 按序执行未应用的迁移函数 → 写入最新版本号；每次迁移为独立事务；当前最新版本定义为常量 `CurrentSchemaVersion`
+- [ ] T045 实现 `RecentsDatabase`（静态帮助类或单例服务）：
+  - 连接字符串指向 Jellyfin 配置目录下的 `jellyfin-recents.db`
+  - 启动时执行建表 SQL（`CREATE TABLE IF NOT EXISTS play_history (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, item_id TEXT, played_at TEXT, media_type TEXT)`）
+  - 同理建 `favorite_record` 表（`id, user_id, item_id, favorited_at TEXT NULL`）
+- [ ] T045b 实现数据库初始化：在 `Plugin.cs` 的 `Initialize()` 中调用 `RecentsDatabase.Initialize(configDir)`
+- [ ] T045c 实现 `PlaybackStartedEventConsumer`：实现 `IEventConsumer<PlaybackStartEventArgs>`，用 `INSERT` 写入 `play_history`（user_id、item_id、played_at = UtcNow、media_type）
+- [ ] T045d 实现 `FavoriteChangedEventConsumer`：实现 `IEventConsumer<UserDataSaveEventArgs>`，检测 `IsFavorite` 变更；收藏时 `INSERT OR REPLACE` 更新 `favorited_at = UtcNow`；取消收藏时 `UPDATE` 设 `favorited_at = NULL`
+- [ ] T046 重写 `PlayHistoryService.cs`（注入 `RecentsDatabase`；`GetPlayHistoryAsync` 用 `SELECT ... LEFT JOIN favorite_record` 查询，返回 `PlayHistoryEntry`（含 `FavoritedAt`）；支持 `userId`、`startDate`、`endDate`、`mediaType` 过滤）
+- [ ] T047 [P] 更新单元测试 `tests/JellyfinRecents.Tests/PlayHistoryServiceTests.cs`（使用 SQLite in-memory（`:memory:`）连接；覆盖：正常查询、userId 隔离、日期过滤、mediaType 过滤）
+- [ ] T048 `PlayHistoryController.cs`（已实现，确认返回 `FavoritedAt` 字段）
 
 ### 前端集成
 

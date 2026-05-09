@@ -24,13 +24,18 @@
 - Vite（TypeScript 构建，输出单文件 iife bundle；`@preact/preset-vite` 处理 JSX）
 - Jellyfin `BasePlugin<T>`、`IHasWebPages`（C# 插件基类）
 - ASP.NET Core Controller（C# 自定义 API 端点）
+- `Microsoft.Data.Sqlite`（轻量级 SQLite 驱动，与 Jellyfin 自身保持一致；直接使用 SQL 语句，不引入 EF Core ORM）
+- `MediaBrowser.Controller.Library.IEventConsumer<T>`（Jellyfin 事件订阅，用于监听 `PlaybackStartEventArgs` 和 `UserDataSaveEventArgs`）
 
 **CSS 策略**:
 - **不引入** CSS-in-JS 库（PandaCSS/Tailwind 等）——IIFE bundle 需 CSS 注入插件，增加不必要的构建复杂度
 - 直接使用 **Jellyfin CSS 变量**（`--theme-text-color`、`--theme-body-background-color` 等）确保自动适配深色/浅色主题
 - 组件级样式使用 scoped `<style>` 块或 CSS Modules（Vite 原生支持）
 
-**Storage**: 无自定义数据库。用户偏好持久化至浏览器 localStorage
+**Storage**:
+- **SQLite**（服务端，插件数据库）: 记录播放开始事件（`PlayHistoryRecord`）和收藏变更事件（`FavoriteRecord`），数据库文件位于 Jellyfin 配置目录 `data/jellyfin-recents.db`
+- **Microsoft.Data.Sqlite**: 直接执行 SQL（`CREATE TABLE IF NOT EXISTS`、`INSERT`、`SELECT`），插件启动时建表；不使用 EF Core（过重）；schema 迁移通过 SQLite 内置的 `PRAGMA user_version`（整数版本号）控制，`RecentsDatabase.Initialize()` 按版本号顺序执行增量迁移
+- **浏览器 localStorage**: 用户视图偏好（分组、排序等）持久化
 
 **Testing**:
 - TypeScript：Vitest（分组/排序/日期工具单元测试）
@@ -134,40 +139,62 @@ jellyfin-recents.sln                 # .NET 解决方案
 
 **Structure Decision**: Web application 变体（前端 + C# 后端），但前端为主体（约 80% 工作量），C# 为最薄的服务端壳。
 
-## Development Workflow（Windows，无 WSL）
+## Development Workflow（Windows + Docker）
+
+### 开发实例
+
+Jellyfin 运行在 Docker 容器中（WSL2 后端）：
+
+```bash
+# 启动（已创建）
+docker start jellyfin-dev
+
+# 访问地址
+http://localhost:8600
+
+# 用户名/密码
+root / 123456
+```
+
+容器名：`jellyfin-dev`，镜像：`jellyfin/jellyfin:10.10.7`
 
 ### 前端开发（TypeScript/Preact）
 
-无需 Jellyfin 实例即可开发 UI：
+无需重启容器即可开发 UI：
 
-```
+```bash
 cd src/frontend
 npm run dev
 ```
 
-Vite 启动开发服务器，配置 proxy 将 `/Users`、`/Items`、`/JellyfinRecents` 等 API 路径代理到本地 Jellyfin 实例。支持热更新（HMR），修改即见效果。
+Vite 启动开发服务器（默认 http://localhost:5173），通过 proxy 将 API 请求转发到 Docker 容器：
+- `VITE_JELLYFIN_URL=http://localhost:8600`（默认值，可在 `.env.local` 中覆盖）
+
+支持热更新（HMR），修改即见效果。
 
 ### C# 插件开发
 
-**本地 Jellyfin（推荐，无需 Docker/WSL）**:
+插件 DLL 需复制到 Docker 容器内的插件目录：
 
-1. 从 [jellyfin.org](https://jellyfin.org) 安装 Jellyfin Windows 版（作为 Windows 服务运行）
-2. 插件目录：`C:\ProgramData\Jellyfin\Server\plugins\JellyfinRecents\`
-3. 在 `.csproj` 中配置 post-build 事件，构建后自动复制 DLL 到插件目录：
-   ```xml
-   <Target Name="CopyToJellyfin" AfterTargets="Build">
-     <Copy SourceFiles="$(OutputPath)JellyfinRecents.Plugin.dll"
-           DestinationFolder="$(JELLYFIN_PLUGINS_PATH)\JellyfinRecents\" />
-   </Target>
-   ```
-4. 环境变量 `JELLYFIN_PLUGINS_PATH` 设为插件目录（各开发者本地配置，不提交）
-5. 重启 Jellyfin 服务：`net stop JellyfinServer && net start JellyfinServer`（或在 Windows 服务管理器中操作）
+```bash
+# 构建插件
+dotnet build src/JellyfinRecents.Plugin/
+
+# 复制 DLL 到容器（每次修改 C# 后执行）
+docker cp src/JellyfinRecents.Plugin/bin/Debug/net8.0/JellyfinRecents.Plugin.dll \
+  jellyfin-dev:/config/plugins/JellyfinRecents/JellyfinRecents.Plugin.dll
+
+# 重启容器使插件生效（约 5 秒）
+docker restart jellyfin-dev
+```
+
+`JELLYFIN_PLUGINS_PATH` 环境变量用于本地 Jellyfin 安装场景（post-build 自动复制），Docker 开发时手动执行上述命令。
 
 ### 端到端验证顺序
 
 1. **Vitest 单元测试**：覆盖分组/排序/日期工具，离线可跑，最快反馈
-2. **Vite dev server + proxy**：验证前端 UI 与真实 Jellyfin API 的交互
-3. **完整插件验证**：`dotnet build` → 自动复制 → 重启 Jellyfin → 浏览器访问插件页面
+2. **Vite dev server + proxy**：验证前端 UI 与 Docker 内 Jellyfin API 的交互
+3. **完整插件验证**：`dotnet build` → `docker cp` → `docker restart` → 浏览器访问插件页面
 
 ## Release & Publishing
 
