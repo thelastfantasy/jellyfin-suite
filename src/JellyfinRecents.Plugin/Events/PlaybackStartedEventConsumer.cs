@@ -8,6 +8,8 @@ namespace Jellyfin.Plugin.JellyfinRecents.Events;
 
 /// <summary>
 /// 监听播放开始事件，将记录写入 SQLite play_history 表。
+/// 使用 Session.UserId 而非 eventArgs.Users，避免依赖
+/// Jellyfin.Data.Entities.User（10.11.x 中已被重构）。
 /// </summary>
 public class PlaybackStartedEventConsumer : IEventConsumer<PlaybackStartEventArgs>
 {
@@ -27,13 +29,12 @@ public class PlaybackStartedEventConsumer : IEventConsumer<PlaybackStartEventArg
             var item = eventArgs.Item;
             if (item is null) return Task.CompletedTask;
 
+            var userId = eventArgs.Session?.UserId;
+            if (userId is null || userId == Guid.Empty) return Task.CompletedTask;
+
             // 只记录视频和音频
             var mediaType = item.MediaType == MediaType.Audio ? "audio" : "video";
-
-            foreach (var user in eventArgs.Users)
-            {
-                _db.InsertPlayRecord(user.Id, item.Id.ToString(), DateTime.UtcNow, mediaType);
-            }
+            _db.InsertPlayRecord(userId.Value, item.Id.ToString(), DateTime.UtcNow, mediaType);
         }
         catch (Exception ex)
         {
