@@ -39,7 +39,6 @@ export default defineConfig({
     emptyOutDir: false,
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
         plugins: [inlineCssPlugin()],
       },
     },
