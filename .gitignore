@@ -1,0 +1,47 @@
+# Claude Code local settings (machine-specific, auto-generated)
+.claude/settings.json
+.claude/settings.local.json
+
+# Node.js / TypeScript
+node_modules/
+dist/
+build/
+*.js.map
+.env
+.env.local
+.env.*.local
+
+# C# / .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+packages/
+*.nupkg
+publish/
+*.DotSettings.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 媒体文件（测试用，不入仓库）
+*.mkv
+*.mp4
+*.avi
+*.mov
+*.flac
+*.mp3
+
+# IDE
+.idea/
+*.swp
+src/frontend/node_modules/
+src/frontend/dist/
+src/JellyfinRecents.Plugin/Web/jellyfin-recents.js
+src/JellyfinRecents.Plugin/Web/jellyfin-recents-frontend.css
+src/JellyfinRecents.Plugin/bin/
+src/JellyfinRecents.Plugin/obj/
+tests/JellyfinRecents.Tests/bin/
+tests/JellyfinRecents.Tests/obj/

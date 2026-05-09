@@ -1,0 +1,21 @@
+[
+  {
+    "guid": "a6dd5650-d124-42b6-806a-5426f266e8f2",
+    "name": "Jellyfin Recents",
+    "description": "A customizable recently-played view with flexible grouping and sorting.",
+    "overview": "Browse your recently played media grouped by day/week/month/quarter/year, with multiple sort options (play time, title, release date, favorite) and thumbnail/poster/list view modes.",
+    "owner": "thelastfantasy",
+    "category": "General",
+    "imageUrl": "",
+    "versions": [
+      {
+        "version": "1.0.0.0",
+        "changelog": "https://github.com/thelastfantasy/jellyfin-recents/releases/tag/v1.0.0",
+        "targetAbi": "10.8.0.0",
+        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-recents/releases/download/v1.0.0/jellyfin-recents_1.0.0.0.zip",
+        "checksum": "3ca1b33259ea80221449630d0684bfb3",
+        "timestamp": "2026-05-09T12:28:37.0000000Z"
+      }
+    ]
+  }
+]
