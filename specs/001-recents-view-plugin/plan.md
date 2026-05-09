@@ -20,10 +20,15 @@
 
 **Primary Dependencies**:
 - `@jellyfin/sdk`（Jellyfin TypeScript SDK）
-- Preact（轻量 UI 框架，~3KB）
-- Vite（TypeScript 构建，输出单文件 iife bundle）
+- Preact（轻量 UI 框架，~3KB；与 React 相同 JSX/hooks API，TypeScript 支持完整）
+- Vite（TypeScript 构建，输出单文件 iife bundle；`@preact/preset-vite` 处理 JSX）
 - Jellyfin `BasePlugin<T>`、`IHasWebPages`（C# 插件基类）
 - ASP.NET Core Controller（C# 自定义 API 端点）
+
+**CSS 策略**:
+- **不引入** CSS-in-JS 库（PandaCSS/Tailwind 等）——IIFE bundle 需 CSS 注入插件，增加不必要的构建复杂度
+- 直接使用 **Jellyfin CSS 变量**（`--theme-text-color`、`--theme-body-background-color` 等）确保自动适配深色/浅色主题
+- 组件级样式使用 scoped `<style>` 块或 CSS Modules（Vite 原生支持）
 
 **Storage**: 无自定义数据库。用户偏好持久化至浏览器 localStorage
 
