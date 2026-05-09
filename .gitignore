@@ -39,6 +39,8 @@ Thumbs.db
 *.swp
 src/frontend/node_modules/
 src/frontend/dist/
+src/JellyfinRecents.Plugin/Web/jellyfin-recents.js
+src/JellyfinRecents.Plugin/Web/jellyfin-recents-frontend.css
 src/JellyfinRecents.Plugin/bin/
 src/JellyfinRecents.Plugin/obj/
 tests/JellyfinRecents.Tests/bin/
