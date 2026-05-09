@@ -1,0 +1,12 @@
+[
+  {
+    "guid": "a6dd5650-d124-42b6-806a-5426f266e8f2",
+    "name": "Jellyfin Recents",
+    "description": "A customizable recently-played view with flexible grouping and sorting.",
+    "overview": "Browse your recently played media grouped by day/week/month/quarter/year, with multiple sort options (play time, title, release date, favorite) and thumbnail/poster/list view modes.",
+    "owner": "thelastfantasy",
+    "category": "General",
+    "imageUrl": "",
+    "versions": []
+  }
+]

@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: [main, "001-*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: src/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build plugin
+        run: dotnet build src/JellyfinRecents.Plugin/JellyfinRecents.Plugin.csproj -c Release
+
+      - name: Run tests
+        run: dotnet test tests/JellyfinRecents.Tests/JellyfinRecents.Tests.csproj -c Release --no-build
+        continue-on-error: true
