@@ -26,6 +26,14 @@ publish/
 .DS_Store
 Thumbs.db
 
+# 媒体文件（测试用，不入仓库）
+*.mkv
+*.mp4
+*.avi
+*.mov
+*.flac
+*.mp3
+
 # IDE
 .idea/
 *.swp
