@@ -105,7 +105,9 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   }
 
   const episodeCode = record.episodeNumber != null
-    ? `S${record.seasonNumber ?? 1}E${record.episodeNumber}`
+    ? record.seasonNumber === 0
+      ? `SP${record.episodeNumber}`
+      : `S${record.seasonNumber ?? 1}E${record.episodeNumber}`
     : null
 
   if (viewMode === 'list') {
