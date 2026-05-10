@@ -14,6 +14,7 @@ export interface PlayRecord {
   mediaType: 'video' | 'audio'
   imagePrimaryTag: string | null
   seriesName: string | null
+  seriesId: string | null
   seasonNumber: number | null
   episodeNumber: number | null
 }

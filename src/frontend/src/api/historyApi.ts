@@ -10,6 +10,7 @@ interface PlayHistoryEntry {
   ReleaseDate?: string | null
   AddedDate?: string | null
   SeriesName?: string | null
+  SeriesId?: string | null
   SeasonNumber?: number | null
   EpisodeNumber?: number | null
   ImagePrimaryTag?: string | null
@@ -62,6 +63,7 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
     mediaType: entry.MediaType === 'audio' ? 'audio' : 'video',
     imagePrimaryTag: entry.ImagePrimaryTag ?? null,
     seriesName: entry.SeriesName ?? null,
+    seriesId: entry.SeriesId ?? null,
     seasonNumber: entry.SeasonNumber ?? null,
     episodeNumber: entry.EpisodeNumber ?? null,
   }))

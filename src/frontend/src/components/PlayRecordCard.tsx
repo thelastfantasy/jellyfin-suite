@@ -81,6 +81,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
     ? `/Items/${record.itemId}/Images/Primary?fillWidth=320&quality=90&tag=${record.imagePrimaryTag}`
     : `/Items/${record.itemId}/Images/Primary?fillWidth=320&quality=90`
   const detailUrl = `#!/details?id=${record.itemId}`
+  const seriesUrl = record.seriesId ? `#!/details?id=${record.seriesId}` : null
 
   function handlePlayClick(e: MouseEvent) {
     e.preventDefault()
@@ -112,8 +113,8 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
 
   if (viewMode === 'list') {
     return (
-      <a class="jr-card jr-card--list" href={detailUrl}>
-        <div class="jr-card__thumb jr-card__thumb--list">
+      <div class="jr-card jr-card--list">
+        <a class="jr-card__thumb jr-card__thumb--list" href={detailUrl}>
           <img
             src={imageUrl}
             alt={record.title}
@@ -125,16 +126,18 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
             }}
           />
           <div class="jr-card__thumb-placeholder jr-card__thumb-placeholder--hidden">🎬</div>
-        </div>
+        </a>
         <div class="jr-card__info jr-card__info--list">
           <div class="jr-card__title-block">
             {record.seriesName && (
-              <div class="jr-card__series-name">{record.seriesName}</div>
+              seriesUrl
+                ? <a class="jr-card__series-name" href={seriesUrl}>{record.seriesName}</a>
+                : <div class="jr-card__series-name">{record.seriesName}</div>
             )}
-            <div class="jr-card__title" title={record.title}>
+            <a class="jr-card__title" href={detailUrl} title={record.title}>
               {episodeCode && <span class="jr-card__ep-code">{episodeCode}</span>}
               {record.title}
-            </div>
+            </a>
           </div>
           <div class="jr-card__meta">
             {showTypeLabel && (
@@ -152,54 +155,58 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
             </button>
           </div>
         </div>
-      </a>
+      </div>
     )
   }
 
   return (
-    <a class="jr-card" href={detailUrl}>
-      <div class="jr-card__thumb">
-        <img
-          src={imageUrl}
-          alt={record.title}
-          loading="lazy"
-          onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement
-            img.style.display = 'none'
-            img.nextElementSibling?.classList.remove('jr-card__thumb-placeholder--hidden')
-          }}
-        />
-        <div class="jr-card__thumb-placeholder jr-card__thumb-placeholder--hidden">🎬</div>
-        {episodeCode && (
-          <div class="jr-card__ep-badge">{episodeCode}</div>
-        )}
-        {showTypeLabel && (
-          <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
-            {record.mediaType === 'video' ? t.video : t.audio}
-          </span>
-        )}
-        <div class="jr-card__overlay">
-          <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
-            <span class="material-icons">play_arrow</span>
-          </button>
-          <div class="jr-card__actions">
-            <button
-              class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
-              onClick={handleFavClick}
-              title={isFav ? t.unfavorite : t.favorite}
-            >
-              <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
+    <div class="jr-card">
+      <a class="jr-card__thumb-link" href={detailUrl}>
+        <div class="jr-card__thumb">
+          <img
+            src={imageUrl}
+            alt={record.title}
+            loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement
+              img.style.display = 'none'
+              img.nextElementSibling?.classList.remove('jr-card__thumb-placeholder--hidden')
+            }}
+          />
+          <div class="jr-card__thumb-placeholder jr-card__thumb-placeholder--hidden">🎬</div>
+          {episodeCode && (
+            <div class="jr-card__ep-badge">{episodeCode}</div>
+          )}
+          {showTypeLabel && (
+            <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
+              {record.mediaType === 'video' ? t.video : t.audio}
+            </span>
+          )}
+          <div class="jr-card__overlay">
+            <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
+              <span class="material-icons">play_arrow</span>
             </button>
+            <div class="jr-card__actions">
+              <button
+                class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
+                onClick={handleFavClick}
+                title={isFav ? t.unfavorite : t.favorite}
+              >
+                <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </a>
       <div class="jr-card__info">
         {record.seriesName && (
-          <div class="jr-card__series-name">{record.seriesName}</div>
+          seriesUrl
+            ? <a class="jr-card__series-name" href={seriesUrl}>{record.seriesName}</a>
+            : <div class="jr-card__series-name">{record.seriesName}</div>
         )}
-        <div class="jr-card__title" title={record.title}>{record.title}</div>
+        <a class="jr-card__title" href={detailUrl} title={record.title}>{record.title}</a>
         <div class="jr-card__played-date">{formatPlayedDate(record.playedDate, locale)}</div>
       </div>
-    </a>
+    </div>
   )
 }
