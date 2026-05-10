@@ -45,3 +45,9 @@ src/JellyfinRecents.Plugin/bin/
 src/JellyfinRecents.Plugin/obj/
 tests/JellyfinRecents.Tests/bin/
 tests/JellyfinRecents.Tests/obj/
+
+# 本地测试数据库文件
+*.db
+*.db-wal
+*.db-shm
+*.db.bak
