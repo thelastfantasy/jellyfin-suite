@@ -1,3 +1,4 @@
+import { MdArrowDownward, MdArrowUpward, MdGridView, MdViewModule, MdViewList } from 'react-icons/md'
 import type { GroupByMode, MediaFilter, SortByMode, ViewMode, ViewSettings } from '../types'
 
 interface Props {
@@ -27,10 +28,13 @@ const MEDIA_OPTIONS: { value: MediaFilter; label: string }[] = [
   { value: 'all', label: '全部' },
 ]
 
-const VIEW_MODE_OPTIONS: { value: ViewMode; label: string; title: string }[] = [
-  { value: 'thumbnail', label: '⊞', title: '缩略图（16:9）' },
-  { value: 'poster', label: '🎞', title: '海报（2:3）' },
-  { value: 'list', label: '☰', title: '列表' },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type IconComponent = (props: { size?: number }) => any
+
+const VIEW_MODE_OPTIONS: { value: ViewMode; icon: IconComponent; title: string }[] = [
+  { value: 'thumbnail', icon: MdGridView as IconComponent, title: '缩略图（16:9）' },
+  { value: 'poster', icon: MdViewModule as IconComponent, title: '海报（2:3）' },
+  { value: 'list', icon: MdViewList as IconComponent, title: '列表' },
 ]
 
 export function Toolbar({ settings, onSettingsChange }: Props) {
@@ -65,7 +69,7 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
           onClick={() => onSettingsChange({ sortOrder: settings.sortOrder === 'desc' ? 'asc' : 'desc' })}
           title={settings.sortOrder === 'desc' ? '降序' : '升序'}
         >
-          {settings.sortOrder === 'desc' ? '↓' : '↑'}
+          {settings.sortOrder === 'desc' ? <MdArrowDownward size={16} /> : <MdArrowUpward size={16} />}
         </button>
       </div>
 
@@ -92,7 +96,7 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
               title={o.title}
               onClick={() => onSettingsChange({ viewMode: o.value })}
             >
-              {o.label}
+              <o.icon size={18} />
             </button>
           ))}
         </div>
