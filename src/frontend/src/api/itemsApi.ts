@@ -50,5 +50,8 @@ export async function getRecentlyPlayed(
     addedDate: item.DateCreated ? new Date(item.DateCreated) : null,
     mediaType: (item.MediaType?.toLowerCase() === 'audio') ? 'audio' : 'video',
     imagePrimaryTag: item.ImageTags?.Primary ?? null,
+    seriesName: item.SeriesName ?? null,
+    seasonNumber: item.ParentIndexNumber ?? null,
+    episodeNumber: item.IndexNumber ?? null,
   }))
 }

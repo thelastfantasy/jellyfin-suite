@@ -48,9 +48,10 @@ export function App({ locale }: Props) {
         sortOrder: s.sortOrder,
         mediaFilter: s.mediaFilter,
         showRepeats: s.showRepeats,
+        groupDedup: s.groupDedup,
       })
 
-      const grouped = groupByMode(records, s.groupBy, locale, t).map((g) => ({
+      const grouped = groupByMode(records, s.groupBy, locale, t, s.groupDedup).map((g) => ({
         ...g,
         records: sortRecords(g.records, s.sortBy, s.sortOrder),
       }))

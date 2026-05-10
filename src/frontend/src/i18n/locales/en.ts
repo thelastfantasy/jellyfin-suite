@@ -22,6 +22,7 @@ export const en: Translations = {
   sortDesc: 'Descending',
   sortAsc: 'Ascending',
   showRepeats: 'Show Repeated',
+  groupDedup: 'Dedup per Group',
   viewThumbnail: 'Thumbnail (16:9)',
   viewPoster: 'Poster (2:3)',
   viewList: 'List',

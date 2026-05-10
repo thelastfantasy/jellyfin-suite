@@ -27,6 +27,7 @@ export interface Translations {
   sortAsc: string
   // Checkbox
   showRepeats: string
+  groupDedup: string
   // View mode button tooltips
   viewThumbnail: string
   viewPoster: string

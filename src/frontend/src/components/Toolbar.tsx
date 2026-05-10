@@ -49,77 +49,95 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
 
   return (
     <div class="jr-toolbar">
-      <div class="jr-toolbar__group">
-        <label class="jr-toolbar__label">{t.groupLabel}</label>
-        <select
-          class="jr-toolbar__select"
-          value={settings.groupBy}
-          onChange={(e) => onSettingsChange({ groupBy: (e.target as HTMLSelectElement).value as GroupByMode })}
-        >
-          {GROUP_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </div>
+      {/* 左侧：数据筛选控制（分组 / 排序 / 类型） */}
+      <div class="jr-toolbar__left">
+        <div class="jr-toolbar__group">
+          <label class="jr-toolbar__label">{t.groupLabel}</label>
+          <select
+            class="jr-toolbar__select"
+            value={settings.groupBy}
+            onChange={(e) => onSettingsChange({ groupBy: (e.target as HTMLSelectElement).value as GroupByMode })}
+          >
+            {GROUP_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
 
-      <div class="jr-toolbar__group">
-        <label class="jr-toolbar__label">{t.sortLabel}</label>
-        <select
-          class="jr-toolbar__select"
-          value={settings.sortBy}
-          onChange={(e) => onSettingsChange({ sortBy: (e.target as HTMLSelectElement).value as SortByMode })}
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <button
-          class="jr-toolbar__sort-order"
-          onClick={() => onSettingsChange({ sortOrder: settings.sortOrder === 'desc' ? 'asc' : 'desc' })}
-          title={settings.sortOrder === 'desc' ? t.sortDesc : t.sortAsc}
-        >
-          {settings.sortOrder === 'desc' ? <MdArrowDownward size={16} /> : <MdArrowUpward size={16} />}
-        </button>
-      </div>
+        <div class="jr-toolbar__group">
+          <label class="jr-toolbar__label">{t.sortLabel}</label>
+          <select
+            class="jr-toolbar__select"
+            value={settings.sortBy}
+            onChange={(e) => onSettingsChange({ sortBy: (e.target as HTMLSelectElement).value as SortByMode })}
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            class="jr-toolbar__sort-order"
+            onClick={() => onSettingsChange({ sortOrder: settings.sortOrder === 'desc' ? 'asc' : 'desc' })}
+            title={settings.sortOrder === 'desc' ? t.sortDesc : t.sortAsc}
+          >
+            {settings.sortOrder === 'desc' ? <MdArrowDownward size={16} /> : <MdArrowUpward size={16} />}
+          </button>
+        </div>
 
-      <div class="jr-toolbar__group">
-        <label class="jr-toolbar__label">{t.typeLabel}</label>
-        <select
-          class="jr-toolbar__select"
-          value={settings.mediaFilter}
-          onChange={(e) => onSettingsChange({ mediaFilter: (e.target as HTMLSelectElement).value as MediaFilter })}
-        >
-          {MEDIA_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </div>
-
-      <div class="jr-toolbar__group">
-        <label class="jr-toolbar__label">{t.viewLabel}</label>
-        <div class="jr-toolbar__view-modes">
-          {VIEW_MODE_ICONS.map((o) => (
-            <button
-              key={o.value}
-              class={`jr-toolbar__view-btn${settings.viewMode === o.value ? ' jr-toolbar__view-btn--active' : ''}`}
-              title={VIEW_MODE_TITLES[o.value]}
-              onClick={() => onSettingsChange({ viewMode: o.value })}
-            >
-              <o.icon size={18} />
-            </button>
-          ))}
+        <div class="jr-toolbar__group">
+          <label class="jr-toolbar__label">{t.typeLabel}</label>
+          <select
+            class="jr-toolbar__select"
+            value={settings.mediaFilter}
+            onChange={(e) => onSettingsChange({ mediaFilter: (e.target as HTMLSelectElement).value as MediaFilter })}
+          >
+            {MEDIA_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      <div class="jr-toolbar__group">
-        <label class="jr-toolbar__label jr-toolbar__label--toggle">
-          <input
-            type="checkbox"
-            checked={settings.showRepeats}
-            onChange={(e) => onSettingsChange({ showRepeats: (e.target as HTMLInputElement).checked })}
-          />
-          {t.showRepeats}
-        </label>
+      {/* 右侧：显示控制（视图 / 勾选框） */}
+      <div class="jr-toolbar__right">
+        <div class="jr-toolbar__group">
+          <label class="jr-toolbar__label">{t.viewLabel}</label>
+          <div class="jr-toolbar__view-modes">
+            {VIEW_MODE_ICONS.map((o) => (
+              <button
+                key={o.value}
+                class={`jr-toolbar__view-btn${settings.viewMode === o.value ? ' jr-toolbar__view-btn--active' : ''}`}
+                title={VIEW_MODE_TITLES[o.value]}
+                onClick={() => onSettingsChange({ viewMode: o.value })}
+              >
+                <o.icon size={18} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div class="jr-toolbar__group">
+          <label class="jr-toolbar__label jr-toolbar__label--toggle">
+            <input
+              type="checkbox"
+              checked={settings.showRepeats}
+              onChange={(e) => onSettingsChange({ showRepeats: (e.target as HTMLInputElement).checked })}
+            />
+            {t.showRepeats}
+          </label>
+        </div>
+
+        <div class="jr-toolbar__group">
+          <label class={`jr-toolbar__label jr-toolbar__label--toggle${!settings.showRepeats ? ' jr-toolbar__label--disabled' : ''}`}>
+            <input
+              type="checkbox"
+              checked={settings.groupDedup}
+              disabled={!settings.showRepeats}
+              onChange={(e) => onSettingsChange({ groupDedup: (e.target as HTMLInputElement).checked })}
+            />
+            {t.groupDedup}
+          </label>
+        </div>
       </div>
     </div>
   )
