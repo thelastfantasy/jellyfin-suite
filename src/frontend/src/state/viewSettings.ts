@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS: ViewSettings = {
   sortOrder: 'desc',
   mediaFilter: 'video',
   showRepeats: false,
+  groupDedup: false,
   viewMode: 'thumbnail',
 }
 

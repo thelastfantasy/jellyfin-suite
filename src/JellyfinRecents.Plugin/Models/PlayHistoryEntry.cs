@@ -9,6 +9,10 @@ public class PlayHistoryEntry
     public DateTime? FavoritedAt { get; set; }
     public DateTime? ReleaseDate { get; set; }
     public DateTime? AddedDate { get; set; }
+    public string? SeriesName { get; set; }
+    public int? SeasonNumber { get; set; }
+    public int? EpisodeNumber { get; set; }
+    public string? ImagePrimaryTag { get; set; }
 }
 
 public class PlayHistoryResponse

@@ -13,6 +13,9 @@ export interface PlayRecord {
   addedDate: Date | null
   mediaType: 'video' | 'audio'
   imagePrimaryTag: string | null
+  seriesName: string | null
+  seasonNumber: number | null
+  episodeNumber: number | null
 }
 
 export interface TimeGroup {
@@ -34,5 +37,6 @@ export interface ViewSettings {
   sortOrder: SortOrder
   mediaFilter: MediaFilter
   showRepeats: boolean
+  groupDedup: boolean
   viewMode: ViewMode
 }
