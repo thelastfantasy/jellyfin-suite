@@ -1,3 +1,4 @@
+import { Fragment } from 'preact'
 import type { TimeGroup, ViewMode } from '../types'
 import { PlayRecordCard } from './PlayRecordCard'
 
@@ -11,7 +12,7 @@ export function GroupSection({ group, showTypeLabel = false, viewMode = 'thumbna
   if (group.records.length === 0) return null
 
   return (
-    <section class="jr-group">
+    <Fragment>
       <h2 class="jr-group__title">{group.label}</h2>
       <div class={`jr-group__cards jr-group__cards--${viewMode}`}>
         {group.records.map((record) => (
@@ -23,6 +24,6 @@ export function GroupSection({ group, showTypeLabel = false, viewMode = 'thumbna
           />
         ))}
       </div>
-    </section>
+    </Fragment>
   )
 }

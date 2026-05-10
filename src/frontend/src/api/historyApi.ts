@@ -9,6 +9,10 @@ interface PlayHistoryEntry {
   FavoritedAt?: string | null
   ReleaseDate?: string | null
   AddedDate?: string | null
+  SeriesName?: string | null
+  SeasonNumber?: number | null
+  EpisodeNumber?: number | null
+  ImagePrimaryTag?: string | null
 }
 
 interface PlayHistoryResponse {
@@ -28,6 +32,7 @@ export interface HistoryQuery {
   sortOrder: SortOrder
   mediaFilter: MediaFilter
   showRepeats: boolean
+  groupDedup: boolean
 }
 
 export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResult> {
@@ -55,7 +60,10 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
     releaseDate: entry.ReleaseDate ? new Date(entry.ReleaseDate) : null,
     addedDate: entry.AddedDate ? new Date(entry.AddedDate) : null,
     mediaType: entry.MediaType === 'audio' ? 'audio' : 'video',
-    imagePrimaryTag: null,
+    imagePrimaryTag: entry.ImagePrimaryTag ?? null,
+    seriesName: entry.SeriesName ?? null,
+    seasonNumber: entry.SeasonNumber ?? null,
+    episodeNumber: entry.EpisodeNumber ?? null,
   }))
 
   return { records, totalCount: data.TotalCount }

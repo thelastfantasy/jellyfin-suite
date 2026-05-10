@@ -1,6 +1,8 @@
 using Jellyfin.Plugin.JellyfinRecents.Data;
 using Jellyfin.Plugin.JellyfinRecents.Models;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Model.Entities;
 
 namespace Jellyfin.Plugin.JellyfinRecents.Services;
 
@@ -44,6 +46,12 @@ public class PlayHistoryService
                     ? new DateTime(item.ProductionYear.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                     : null;
             entry.AddedDate = item.DateCreated == DateTime.MinValue ? null : item.DateCreated;
+            entry.SeriesName = (item is IHasSeries hasSeries && !string.IsNullOrEmpty(hasSeries.SeriesName))
+                ? hasSeries.SeriesName : null;
+            entry.SeasonNumber = item.ParentIndexNumber;
+            entry.EpisodeNumber = item.IndexNumber;
+            // ItemImageInfo 无 Tag 属性；前端直接用无 tag 的图片 URL，Jellyfin 仍可正确返回图片
+            entry.ImagePrimaryTag = null;
         }
 
         return Task.FromResult(new PlayHistoryResponse

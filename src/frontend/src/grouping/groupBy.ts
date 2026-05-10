@@ -41,6 +41,7 @@ export function groupByMode(
   mode: GroupByMode,
   locale: Locale,
   t: Translations,
+  groupDedup = false,
 ): TimeGroup[] {
   const groupMap = new Map<string, { label: string; date: Date; records: PlayRecord[] }>()
 
@@ -56,7 +57,7 @@ export function groupByMode(
     groupMap.get(key)!.records.push(record)
   }
 
-  return Array.from(groupMap.values())
+  const rawGroups = Array.from(groupMap.values())
     .filter((g) => g.records.length > 0)
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .map((g) => ({
@@ -65,6 +66,9 @@ export function groupByMode(
       endDate: g.date,
       records: g.records,
     }))
+
+  if (!groupDedup) return rawGroups
+  return rawGroups.map(deduplicateGroup)
 }
 
 // 去重：同一 itemId 保留 playedDate 最大的一条

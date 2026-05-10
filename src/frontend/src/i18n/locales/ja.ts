@@ -22,6 +22,7 @@ export const ja: Translations = {
   sortDesc: '降順',
   sortAsc: '昇順',
   showRepeats: '重複を表示',
+  groupDedup: 'グループ内去重',
   viewThumbnail: 'サムネイル（16:9）',
   viewPoster: 'ポスター（2:3）',
   viewList: 'リスト',

@@ -104,6 +104,10 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
     }
   }
 
+  const episodeCode = record.episodeNumber != null
+    ? `S${record.seasonNumber ?? 1}E${record.episodeNumber}`
+    : null
+
   if (viewMode === 'list') {
     return (
       <a class="jr-card jr-card--list" href={detailUrl}>
@@ -121,7 +125,15 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
           <div class="jr-card__thumb-placeholder jr-card__thumb-placeholder--hidden">🎬</div>
         </div>
         <div class="jr-card__info jr-card__info--list">
-          <div class="jr-card__title" title={record.title}>{record.title}</div>
+          <div class="jr-card__title-block">
+            {record.seriesName && (
+              <div class="jr-card__series-name">{record.seriesName}</div>
+            )}
+            <div class="jr-card__title" title={record.title}>
+              {episodeCode && <span class="jr-card__ep-code">{episodeCode}</span>}
+              {record.title}
+            </div>
+          </div>
           <div class="jr-card__meta">
             {showTypeLabel && (
               <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
@@ -156,9 +168,12 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
           }}
         />
         <div class="jr-card__thumb-placeholder jr-card__thumb-placeholder--hidden">🎬</div>
+        {episodeCode && (
+          <div class="jr-card__ep-badge">{episodeCode}</div>
+        )}
         {showTypeLabel && (
           <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
-            {record.mediaType === 'video' ? '视频' : '音频'}
+            {record.mediaType === 'video' ? t.video : t.audio}
           </span>
         )}
         <div class="jr-card__overlay">
@@ -177,6 +192,9 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
         </div>
       </div>
       <div class="jr-card__info">
+        {record.seriesName && (
+          <div class="jr-card__series-name">{record.seriesName}</div>
+        )}
         <div class="jr-card__title" title={record.title}>{record.title}</div>
         <div class="jr-card__played-date">{formatPlayedDate(record.playedDate, locale)}</div>
       </div>

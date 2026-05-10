@@ -22,6 +22,7 @@ export const zh: Translations = {
   sortDesc: '降序',
   sortAsc: '升序',
   showRepeats: '显示重复记录',
+  groupDedup: '分组内去重',
   viewThumbnail: '缩略图（16:9）',
   viewPoster: '海报（2:3）',
   viewList: '列表',
