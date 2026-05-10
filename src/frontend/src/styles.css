@@ -132,6 +132,16 @@
 }
 
 /* ── 分组区块（兄弟结构：title + cards 平级，sticky 才能正常生效）── */
+@keyframes jr-group-highlight {
+  0%   { background: var(--theme-dark-color, var(--card-text-area-background, #101010)); }
+  25%  { background: rgba(0, 164, 220, 0.28); }
+  100% { background: var(--theme-dark-color, var(--card-text-area-background, #101010)); }
+}
+
+.jr-group__title--highlight {
+  animation: jr-group-highlight 1.5s ease-out;
+}
+
 .jr-group__title {
   display: flex;
   align-items: center;
@@ -143,7 +153,7 @@
   color: #00a4dc;
   opacity: 1;
   margin: 2rem 0 0.9rem 0;
-  padding: 0.6rem 0 0.6rem 0;
+  padding: 0.6rem 4px;
   border-bottom: 2px solid rgba(0, 164, 220, 0.35);
   position: sticky;
   top: 48px;
@@ -206,6 +216,7 @@
 
 .jr-group__cards {
   margin-bottom: 0.5rem;
+  padding: 0 18px;
 }
 
 /* ── 卡片网格 ── */

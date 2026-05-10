@@ -15,11 +15,18 @@ interface Props {
 }
 
 function scrollToGroupHeader(index: number) {
-  const headers = document.querySelectorAll<HTMLElement>('.jr-group__title')
-  const el = headers[index]
+  const cards = document.querySelectorAll<HTMLElement>('.jr-group__cards')
+  const el = cards[index]
   if (!el) return
-  const top = el.getBoundingClientRect().top + window.scrollY - 56
-  window.scrollTo({ top, behavior: 'smooth' })
+  const title = el.previousElementSibling as HTMLElement | null
+  const titleH = title?.offsetHeight ?? 50
+  window.scrollTo({ top: el.offsetTop - titleH - 56, behavior: 'smooth' })
+  if (title) {
+    title.classList.remove('jr-group__title--highlight')
+    void title.offsetWidth // reflow 以便重复触发动画
+    title.classList.add('jr-group__title--highlight')
+    title.addEventListener('animationend', () => title.classList.remove('jr-group__title--highlight'), { once: true })
+  }
 }
 
 export function GroupSection({
