@@ -366,7 +366,7 @@
 /* ── 视图模式按钮组 ── */
 .jr-toolbar__view-modes {
   display: flex;
-  gap: 2px;
+  gap: 6px;
 }
 
 .jr-toolbar__view-btn {

@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { TimeGroup, ViewSettings } from '../types'
+import type { Locale } from '../i18n'
+import { getTranslations } from '../i18n'
+import { LocaleContext } from '../i18n/context'
 import { getHistoryPlayed } from '../api/historyApi'
 import { groupByMode } from '../grouping/groupBy'
 import { sortRecords } from '../sorting/sortBy'
@@ -18,7 +21,13 @@ if (typeof document !== 'undefined' && !document.getElementById('jr-scrollbar-gu
   document.head.appendChild(s)
 }
 
-export function App() {
+interface Props {
+  locale: Locale
+}
+
+export function App({ locale }: Props) {
+  const t = getTranslations(locale)
+
   const [settings, setSettings] = useState<ViewSettings>(loadSettings)
   const [pageIndex, setPageIndex] = useState(0)
   const [groups, setGroups] = useState<TimeGroup[]>([])
@@ -41,17 +50,15 @@ export function App() {
         showRepeats: s.showRepeats,
       })
 
-      // 分组（groupBy 是纯显示参数，不影响 API 查询）
-      const grouped = groupByMode(records, s.groupBy).map((g) => ({
+      const grouped = groupByMode(records, s.groupBy, locale, t).map((g) => ({
         ...g,
-        // 对非 DB 排序字段，在组内做二次排序
         records: sortRecords(g.records, s.sortBy, s.sortOrder),
       }))
 
       setGroups(grouped)
       setTotalCount(count)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '加载失败，请重试')
+      setError(e instanceof Error ? e.message : t.loadError)
     } finally {
       setLoading(false)
     }
@@ -74,46 +81,48 @@ export function App() {
   }
 
   return (
-    <div class="jr-app">
-      <Toolbar settings={settings} onSettingsChange={handleSettingsChange} />
+    <LocaleContext.Provider value={{ locale, t }}>
+      <div class="jr-app">
+        <Toolbar settings={settings} onSettingsChange={handleSettingsChange} />
 
-      {loading && (
-        <div class="jr-status jr-status--loading">
-          <span class="jr-spinner" />
-          加载中…
-        </div>
-      )}
+        {loading && (
+          <div class="jr-status jr-status--loading">
+            <span class="jr-spinner" />
+            {t.loading}
+          </div>
+        )}
 
-      {error && !loading && (
-        <div class="jr-status jr-status--error">
-          <p>⚠️ {error}</p>
-          <button class="jr-btn" onClick={() => fetchData(settings, pageIndex)}>重试</button>
-        </div>
-      )}
+        {error && !loading && (
+          <div class="jr-status jr-status--error">
+            <p>⚠️ {error}</p>
+            <button class="jr-btn" onClick={() => fetchData(settings, pageIndex)}>{t.retry}</button>
+          </div>
+        )}
 
-      {!loading && !error && groups.length === 0 && (
-        <div class="jr-status jr-status--empty">
-          <p>没有播放记录。</p>
-        </div>
-      )}
+        {!loading && !error && groups.length === 0 && (
+          <div class="jr-status jr-status--empty">
+            <p>{t.empty}</p>
+          </div>
+        )}
 
-      {!loading && !error && groups.map((group) => (
-        <GroupSection
-          key={group.label}
-          group={group}
-          showTypeLabel={settings.mediaFilter === 'all'}
-          viewMode={settings.viewMode}
-        />
-      ))}
+        {!loading && !error && groups.map((group) => (
+          <GroupSection
+            key={group.label}
+            group={group}
+            showTypeLabel={settings.mediaFilter === 'all'}
+            viewMode={settings.viewMode}
+          />
+        ))}
 
-      {totalCount > 0 && (
-        <Pagination
-          pageIndex={pageIndex}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          onPageChange={handlePageChange}
-        />
-      )}
-    </div>
+        {totalCount > 0 && (
+          <Pagination
+            pageIndex={pageIndex}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={handlePageChange}
+          />
+        )}
+      </div>
+    </LocaleContext.Provider>
   )
 }
