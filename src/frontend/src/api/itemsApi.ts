@@ -51,6 +51,7 @@ export async function getRecentlyPlayed(
     mediaType: (item.MediaType?.toLowerCase() === 'audio') ? 'audio' : 'video',
     imagePrimaryTag: item.ImageTags?.Primary ?? null,
     seriesName: item.SeriesName ?? null,
+    seriesId: item.SeriesId ? item.SeriesId.replace(/-/g, '') : null,
     seasonNumber: item.ParentIndexNumber ?? null,
     episodeNumber: item.IndexNumber ?? null,
   }))

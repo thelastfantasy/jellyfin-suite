@@ -183,6 +183,11 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
 }
 
+.jr-card__thumb-link {
+  display: block;
+  text-decoration: none;
+}
+
 .jr-card__thumb {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -240,6 +245,7 @@
 }
 
 .jr-card__title {
+  display: block;
   font-size: 0.82rem;
   font-weight: 500;
   white-space: nowrap;
@@ -247,6 +253,12 @@
   text-overflow: ellipsis;
   line-height: 1.3;
   margin-bottom: 0.15rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.jr-card__title:hover {
+  text-decoration: underline;
 }
 
 .jr-card__played-date {
@@ -257,6 +269,7 @@
 
 /* ── 剧集信息 ── */
 .jr-card__series-name {
+  display: block;
   font-size: 0.7rem;
   opacity: 0.55;
   white-space: nowrap;
@@ -264,6 +277,13 @@
   text-overflow: ellipsis;
   line-height: 1.2;
   margin-bottom: 0.1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.jr-card__series-name:hover {
+  text-decoration: underline;
+  opacity: 0.8;
 }
 
 .jr-card__ep-code {
