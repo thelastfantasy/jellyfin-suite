@@ -106,12 +106,17 @@ export function App({ locale }: Props) {
           </div>
         )}
 
-        {!loading && !error && groups.map((group) => (
+        {!loading && !error && groups.map((group, i) => (
           <GroupSection
             key={group.label}
             group={group}
             showTypeLabel={settings.mediaFilter === 'all'}
             viewMode={settings.viewMode}
+            groupIndex={i}
+            totalGroups={groups.length}
+            hasPrevPage={pageIndex > 0}
+            hasNextPage={pageIndex < totalPages - 1}
+            onPageNav={(dir) => handlePageChange(dir === 'next' ? pageIndex + 1 : pageIndex - 1)}
           />
         ))}
 

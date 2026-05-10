@@ -133,6 +133,9 @@
 
 /* ── 分组区块（兄弟结构：title + cards 平级，sticky 才能正常生效）── */
 .jr-group__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -143,11 +146,55 @@
   padding: 0.6rem 0 0.6rem 0;
   border-bottom: 2px solid rgba(0, 164, 220, 0.35);
   position: sticky;
-  /* Jellyfin 导航栏高度：桌面 ~48px，平板 ~56px，手机 ~56px */
   top: 48px;
   background: var(--theme-dark-color, var(--card-text-area-background, #101010));
   backdrop-filter: blur(8px);
   z-index: 10;
+}
+
+.jr-group__title-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jr-group__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.jr-group__nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #00a4dc;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+.jr-group__nav-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(0, 164, 220, 0.15);
+}
+
+.jr-group__nav-btn:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.jr-group__nav-btn .material-icons {
+  font-size: 1.2rem;
 }
 
 .jr-group__title:first-of-type {
