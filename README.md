@@ -18,6 +18,8 @@ A Jellyfin plugin that provides a customizable recently-played view with flexibl
 - **Full pagination**: First / prev / jump / next / last
 - **Internationalization**: English, 简体中文, 日本語
 
+> **Note:** This plugin records play activity from the point of installation onward. Pre-existing play history is not imported.
+
 ---
 
 ## Installation
