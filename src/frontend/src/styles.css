@@ -178,7 +178,7 @@
   cursor: pointer;
   padding: 2px;
   border-radius: 4px;
-  opacity: 0.6;
+  opacity: 0.85;
   transition: opacity 0.15s, background 0.15s;
   line-height: 1;
 }
@@ -193,8 +193,11 @@
   cursor: default;
 }
 
-.jr-group__nav-btn .material-icons {
-  font-size: 1.2rem;
+.jr-group__nav-btn .material-icons,
+.jr-group__nav-btn svg {
+  font-size: 1.8rem;
+  width: 1.8rem;
+  height: 1.8rem;
 }
 
 .jr-group__title:first-of-type {

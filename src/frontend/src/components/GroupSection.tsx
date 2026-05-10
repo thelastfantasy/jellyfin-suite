@@ -1,4 +1,5 @@
 import { Fragment } from 'preact'
+import { RiArrowDropUpFill, RiArrowDropDownFill } from 'react-icons/ri'
 import type { TimeGroup, ViewMode } from '../types'
 import { PlayRecordCard } from './PlayRecordCard'
 
@@ -53,7 +54,7 @@ export function GroupSection({
             disabled={!canUp}
             title="Previous group"
           >
-            <span class="material-icons">keyboard_arrow_up</span>
+            <RiArrowDropUpFill />
           </button>
           <button
             class="jr-group__nav-btn"
@@ -61,7 +62,7 @@ export function GroupSection({
             disabled={!canDown}
             title="Next group"
           >
-            <span class="material-icons">keyboard_arrow_down</span>
+            <RiArrowDropDownFill />
           </button>
         </span>
       </h2>
