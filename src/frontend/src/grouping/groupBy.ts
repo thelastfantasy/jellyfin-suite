@@ -1,5 +1,6 @@
 import type { GroupByMode, PlayRecord, TimeGroup } from '../types'
-import { getLabelByMode } from './dateUtils'
+import type { Locale, Translations } from '../i18n'
+import { getLabelByMode } from '../i18n'
 
 function getGroupKey(date: Date, mode: GroupByMode): string {
   const y = date.getFullYear()
@@ -10,7 +11,6 @@ function getGroupKey(date: Date, mode: GroupByMode): string {
     case 'day':
       return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     case 'week': {
-      // ISO week key
       const monday = getMonday(date)
       const wy = monday.getFullYear()
       const wm = monday.getMonth() + 1
@@ -31,20 +31,24 @@ function getGroupKey(date: Date, mode: GroupByMode): string {
 function getMonday(date: Date): Date {
   const d = new Date(date)
   const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
   d.setHours(0, 0, 0, 0)
   return d
 }
 
-export function groupByMode(records: PlayRecord[], mode: GroupByMode): TimeGroup[] {
+export function groupByMode(
+  records: PlayRecord[],
+  mode: GroupByMode,
+  locale: Locale,
+  t: Translations,
+): TimeGroup[] {
   const groupMap = new Map<string, { label: string; date: Date; records: PlayRecord[] }>()
 
   for (const record of records) {
     const key = getGroupKey(record.playedDate, mode)
     if (!groupMap.has(key)) {
       groupMap.set(key, {
-        label: getLabelByMode(record.playedDate, mode),
+        label: getLabelByMode(record.playedDate, mode, locale, t),
         date: record.playedDate,
         records: [],
       })
