@@ -11,9 +11,12 @@ A Jellyfin plugin that provides a customizable recently-played view with flexibl
 - **Grouping**: Browse play history grouped by day / week / month / quarter / year
 - **Sorting**: Play time, title, release date, favorites-first
 - **Media filter**: All / video / audio
-- **Dedup mode**: Show only the latest play per title
+- **Dedup mode**: Hide repeated plays; optionally dedup within each group independently
+- **Episode info**: Series name and episode code (S×E× / SP× for specials) shown on every card
+- **Smart links**: Series name links to the series page; episode title links to the episode page
 - **View modes**: Thumbnail / poster / list
 - **Full pagination**: First / prev / jump / next / last
+- **Internationalization**: English, 简体中文, 日本語
 
 ---
 
@@ -46,7 +49,7 @@ After installation, a **Recently Played** entry will appear in the sidebar.
 
 | Plugin version | Minimum Jellyfin |
 |----------------|------------------|
-| 1.x            | 10.8.0           |
+| 1.x            | 10.10.0          |
 
 ---
 
