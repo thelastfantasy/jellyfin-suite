@@ -221,4 +221,78 @@ public class RecentsDatabaseCleanupTests : IDisposable
         // After large deletion + VACUUM, file should shrink
         Assert.True(after <= before);
     }
+
+    // ── GetDistinctUserIdsAsync / GetDistinctItemIdsAsync ─────────────────
+
+    [Fact]
+    public async Task GetDistinctUserIdsAsync_ReturnsAllUsers()
+    {
+        InsertRecord("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", DateTime.UtcNow);
+        InsertRecord("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", DateTime.UtcNow.AddDays(-1));
+        InsertRecord("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", DateTime.UtcNow);
+
+        var ids = await _db.GetDistinctUserIdsAsync(CancellationToken.None);
+
+        Assert.Equal(2, ids.Count);
+        Assert.Contains("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", ids);
+        Assert.Contains("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", ids);
+    }
+
+    [Fact]
+    public async Task GetDistinctItemIdsAsync_ReturnsAllItems()
+    {
+        InsertRecord("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", DateTime.UtcNow);
+        // Different items
+        _db.InsertPlayRecord(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            "item-aaa", DateTime.UtcNow, "video");
+        _db.InsertPlayRecord(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            "item-bbb", DateTime.UtcNow, "video");
+
+        var ids = await _db.GetDistinctItemIdsAsync(CancellationToken.None);
+
+        Assert.True(ids.Count >= 2);
+    }
+
+    // ── DeleteRecordsByFieldAsync ────────────────────────────────────────
+
+    [Fact]
+    public async Task DeleteRecordsByFieldAsync_DeletesMatching()
+    {
+        var uid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        for (var i = 0; i < 5; i++)
+            InsertRecord(uid, DateTime.UtcNow.AddDays(-i));
+
+        var deleted = await _db.DeleteRecordsByFieldAsync("user_id",
+            new HashSet<string> { uid }, null, CancellationToken.None);
+
+        Assert.Equal(5, deleted);
+    }
+
+    [Fact]
+    public async Task DeleteRecordsByFieldAsync_MultipleValues()
+    {
+        var uidA = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        var uidB = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+        InsertRecord(uidA, DateTime.UtcNow);
+        InsertRecord(uidA, DateTime.UtcNow.AddDays(-1));
+        InsertRecord(uidB, DateTime.UtcNow);
+        InsertRecord("cccccccc-cccc-cccc-cccc-cccccccccccc", DateTime.UtcNow);
+        InsertRecord("cccccccc-cccc-cccc-cccc-cccccccccccc", DateTime.UtcNow.AddDays(-1));
+
+        var deleted = await _db.DeleteRecordsByFieldAsync("user_id",
+            new HashSet<string> { uidA, uidB }, null, CancellationToken.None);
+
+        Assert.Equal(3, deleted); // 2 from A + 1 from B = 3
+    }
+
+    [Fact]
+    public async Task DeleteRecordsByFieldAsync_EmptySet_ReturnsZero()
+    {
+        InsertRecord("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", DateTime.UtcNow);
+
+        var deleted = await _db.DeleteRecordsByFieldAsync("user_id",
+            new HashSet<string>(), null, CancellationToken.None);
+
+        Assert.Equal(0, deleted);
+    }
 }

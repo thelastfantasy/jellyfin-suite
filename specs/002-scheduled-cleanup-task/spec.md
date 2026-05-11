@@ -3,7 +3,7 @@
 **Feature Branch**: `002-add-play-history-cleanup`
 **Created**: 2026-05-11
 **Status**: Draft
-**Input**: User description: "添加手动任务，通过 Jellyfin IScheduledTask 接口实现四个维护策略：清理2年前过期记录、按用户保留最新N条、全局保留最新N条、数据库优化（VACUUM）。兼容 Jellyfin 10.8.x ~ 10.11.x"
+**Input**: User description: "添加手动任务，通过 Jellyfin IScheduledTask 接口实现五个维护策略：清理2年前过期记录、按用户保留最新N条、全局保留最新N条、数据库优化（VACUUM）、清理无效记录（自动）。兼容 Jellyfin 10.8.x ~ 10.11.x"
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -70,6 +70,22 @@
 
 ---
 
+### User Story 5 - 清理无效记录（自动）(Priority: P2)
+
+管理员无需手动干预，系统每日凌晨自动扫描并删除无效播放记录——包括用户已被删除的孤儿记录、以及媒体文件已从库中移除的无效条目。
+
+**Why this priority**: 当用户或媒体被删除时，play_history 中会残留无效数据。自动清理比手动触发更实用——管理员不需要记得去清理。同时这也是唯一一个有默认触发器的任务，降低管理负担。
+
+**Independent Test**: 在数据库中插入一条不存在用户的播放记录，等待任务自动执行（或手动触发），验证该无效记录被删除而有效记录保留。
+
+**Acceptance Scenarios**:
+
+1. **Given** play_history 中有 3 条有效用户记录和 2 条无效用户记录，**When** 任务执行，**Then** 2 条无效用户记录被删除，3 条有效记录保留
+2. **Given** play_history 中有有效媒体记录和已删除媒体的记录，**When** 任务执行，**Then** 已删除媒体的记录被清理，有效媒体记录保留
+3. **Given** 所有记录均为有效（用户和媒体均存在），**When** 任务执行，**Then** 无记录删除
+
+---
+
 ### Edge Cases
 
 - 多个任务同时执行时是否互相干扰？（假设：每个任务独立使用数据库事务，WAL 模式下并发安全；VACUUM 需排他锁会自然排队；建议管理员不要同时运行多个任务）
@@ -84,9 +100,9 @@
 
 ### Functional Requirements
 
-- **FR-001**: 系统必须提供四个独立的任务，均通过 Jellyfin IScheduledTask 接口注册，由 Jellyfin 运行时自动发现
-- **FR-002**: 四个任务必须在 Dashboard → Scheduled Tasks 页面中以"Jellyfin Recents"分类显示
-- **FR-003**: 四个任务均不设默认触发器（`GetDefaultTriggers()` 返回空），仅支持手动执行
+- **FR-001**: 系统必须提供五个独立的任务，均通过 Jellyfin IScheduledTask 接口注册，由 Jellyfin 运行时自动发现
+- **FR-002**: 五个任务必须在 Dashboard → Scheduled Tasks 页面中以"Jellyfin Recents"分类显示
+- **FR-003**: 任务 1-4 不设默认触发器（`GetDefaultTriggers()` 返回空），仅支持手动执行；任务 5（"清理无效记录"）设有默认触发器，每日 UTC 0 点自动执行
 - **FR-004**: 任务 1（"清理过期播放记录"）必须删除 play_history 表中 `played_at` 早于 2 年前的所有记录
 - **FR-005**: 任务 2（"按用户整理记录"）必须对每个有播放记录的用户，各自保留最新 10000 条，超出部分删除
 - **FR-006**: 任务 3（"全局整理记录"）必须仅保留 play_history 表中最新 10000 条记录，其余全部删除
@@ -98,10 +114,11 @@
 - **FR-012**: 所有任务必须兼容 Jellyfin 10.8.0 到 10.11.x 版本（targetAbi 10.8.0.0）
 - **FR-013**: 任务 3 的描述中必须包含警告信息，提示管理员该操作会影响所有用户
 - **FR-014**: 任务 4（"优化数据库"）必须：(a) 执行前通过日志和终端输出当前主数据库文件（`jellyfin-recents.db`）大小；(b) 执行 SQLite `VACUUM` 命令重建数据库文件并自动触发 WAL checkpoint；(c) 执行后再次输出新文件大小及节省的空间差值。任务结果中必须包含"优化前 X MB → 优化后 Y MB，节省 Z MB"。仅关注 `.db` 主文件，不统计 `.db-wal` / `.db-shm` 辅助文件
+- **FR-015**: 任务 5（"清理无效记录"）必须：(a) 检查 play_history 中所有 `user_id`，删除不存在于 Jellyfin 用户表中的用户的记录；(b) 检查所有 `item_id`，删除 `ILibraryManager.GetItemById()` 返回 null 的媒体的记录；(c) 默认每日 UTC 0 点自动执行；(d) 支持手动触发和取消
 
 ### Key Entities
 
-- **CleanupTasks（四个任务类）**: 分别实现 IScheduledTask 的任务类，各有不同的 Key、Name、Description 和执行逻辑。任务 1-3 共享相同的分批删除基础设施；任务 4（VACUUM）独立实现，无需分批逻辑
+- **CleanupTasks（五个任务类）**: 分别实现 IScheduledTask 的任务类。任务 1-3 共享相同的分批删除基础设施；任务 4（VACUUM）独立实现；任务 5（清理无效记录）依赖 IUserManager 和 ILibraryManager 进行有效性检查
 - **TaskResult**: 每个任务执行后的结果，包含已清理的记录数量，由 Jellyfin 任务框架持久化并在 Dashboard 显示
 
 ## Success Criteria *(mandatory)*
@@ -117,6 +134,7 @@
 - **SC-007**: 任务被取消时，已删除的批次已提交、未处理的批次完好保留，不产生数据不一致
 - **SC-008**: 所有任务在 Jellyfin 10.8.x 和 10.10.x / 10.11.x 服务器上均可被自动发现并在 Dashboard Tasks 页面显示
 - **SC-009**: 任务 4 执行后，在已大量删除记录的数据库中（空闲页 ≥ 30%），主数据库文件大小减少 ≥ 30%
+- **SC-010**: 任务 5 执行后，play_history 表中不存在无效 user_id 或无效 item_id 的记录
 
 ## Assumptions
 

@@ -371,6 +371,69 @@ public class RecentsDatabase
         return (beforeSize, afterSize);
     }
 
+    /// <summary>获取所有不重复的 user_id（任务 5 用）。</summary>
+    public async Task<List<string>> GetDistinctUserIdsAsync(CancellationToken ct)
+    {
+        var ids = new List<string>();
+        await using var conn = OpenConnection();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT DISTINCT user_id FROM play_history";
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+            ids.Add(reader.GetString(0));
+        return ids;
+    }
+
+    /// <summary>获取所有不重复的 item_id（任务 5 用）。</summary>
+    public async Task<List<string>> GetDistinctItemIdsAsync(CancellationToken ct)
+    {
+        var ids = new List<string>();
+        await using var conn = OpenConnection();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT DISTINCT item_id FROM play_history";
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+            ids.Add(reader.GetString(0));
+        return ids;
+    }
+
+    /// <summary>按字段值批量删除记录（任务 5 用）。field 必须为 user_id 或 item_id。</summary>
+    public async Task<int> DeleteRecordsByFieldAsync(string field, HashSet<string> values, IProgress<double>? progress, CancellationToken ct)
+    {
+        var totalDeleted = 0;
+        var total = values.Count;
+        var processed = 0;
+        progress?.Report(0);
+
+        foreach (var val in values)
+        {
+            ct.ThrowIfCancellationRequested();
+            await using var conn = OpenConnection();
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = $"""
+                    DELETE FROM play_history WHERE rowid IN (
+                        SELECT rowid FROM play_history WHERE {field} = @val LIMIT @batch
+                    )
+                    """;
+                cmd.Parameters.AddWithValue("@val", val);
+                cmd.Parameters.AddWithValue("@batch", CleanupBatchSize);
+                var deleted = await cmd.ExecuteNonQueryAsync(ct);
+                if (deleted == 0) break;
+                totalDeleted += deleted;
+            }
+            processed++;
+            if (total > 0)
+                progress?.Report(Math.Min(100, (double)processed / total * 100));
+        }
+
+        progress?.Report(100);
+        _logger.LogInformation("DeleteRecordsByField({Field}): {Count} records deleted across {Total} values", field, totalDeleted, total);
+        return totalDeleted;
+    }
+
     private static int GetSchemaVersion(SqliteConnection conn)
     {
         using var cmd = conn.CreateCommand();
