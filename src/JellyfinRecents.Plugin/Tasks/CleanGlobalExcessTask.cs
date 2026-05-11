@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.JellyfinRecents.Data;
+using Jellyfin.Plugin.JellyfinRecents.i18n;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -17,9 +18,9 @@ public class CleanGlobalExcessTask : IScheduledTask
 
     public string Key => "JellyfinRecents.CleanGlobalExcess";
 
-    public string Name => "全局保留最新 10000 条";
+    public string Name => TaskStrings.Get("CleanGlobalExcess.Name");
 
-    public string Description => "⚠ 全局操作：仅保留最新 10000 条播放记录，其余全部删除。该操作影响所有用户。";
+    public string Description => TaskStrings.Get("CleanGlobalExcess.Desc");
 
     public string Category => "Jellyfin Recents";
 

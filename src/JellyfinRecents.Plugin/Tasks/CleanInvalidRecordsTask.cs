@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.JellyfinRecents.Data;
+using Jellyfin.Plugin.JellyfinRecents.i18n;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
@@ -26,9 +27,9 @@ public class CleanInvalidRecordsTask : IScheduledTask
 
     public string Key => "JellyfinRecents.CleanInvalid";
 
-    public string Name => "清理无效记录";
+    public string Name => TaskStrings.Get("CleanInvalid.Name");
 
-    public string Description => "删除用户已不存在或媒体已删除的无效播放记录，每日自动执行";
+    public string Description => TaskStrings.Get("CleanInvalid.Desc");
 
     public string Category => "Jellyfin Recents";
 

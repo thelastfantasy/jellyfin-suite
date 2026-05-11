@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.JellyfinRecents.Data;
+using Jellyfin.Plugin.JellyfinRecents.i18n;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -17,9 +18,9 @@ public class CleanExpiredRecordsTask : IScheduledTask
 
     public string Key => "JellyfinRecents.CleanExpired";
 
-    public string Name => "清理 2 年前播放记录";
+    public string Name => TaskStrings.Get("CleanExpired.Name");
 
-    public string Description => "删除 2 年前的所有播放记录";
+    public string Description => TaskStrings.Get("CleanExpired.Desc");
 
     public string Category => "Jellyfin Recents";
 

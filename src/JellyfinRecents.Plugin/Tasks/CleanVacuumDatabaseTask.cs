@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.JellyfinRecents.Data;
+using Jellyfin.Plugin.JellyfinRecents.i18n;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -17,9 +18,9 @@ public class CleanVacuumDatabaseTask : IScheduledTask
 
     public string Key => "JellyfinRecents.VacuumDatabase";
 
-    public string Name => "优化数据库（VACUUM）";
+    public string Name => TaskStrings.Get("CleanVacuum.Name");
 
-    public string Description => "执行 VACUUM 重建数据库文件，回收已删除记录占用的磁盘空间。执行期间数据库将被短暂锁定。";
+    public string Description => TaskStrings.Get("CleanVacuum.Desc");
 
     public string Category => "Jellyfin Recents";
 
