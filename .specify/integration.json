@@ -2,14 +2,14 @@
   "version": "0.8.7",
   "integration_state_schema": 1,
   "installed_integrations": [
-    "claude"
+    "opencode"
   ],
   "integration_settings": {
-    "claude": {
+    "opencode": {
       "script": "ps",
-      "invoke_separator": "-"
+      "invoke_separator": "."
     }
   },
-  "integration": "claude",
-  "default_integration": "claude"
+  "integration": "opencode",
+  "default_integration": "opencode"
 }
