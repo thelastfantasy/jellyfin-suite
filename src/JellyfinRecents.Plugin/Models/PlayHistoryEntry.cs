@@ -19,6 +19,6 @@ public class PlayHistoryEntry
 public class PlayHistoryResponse
 {
     public List<PlayHistoryEntry> Entries { get; set; } = [];
-    /// <summary>满足筛选条件的记录总数（去重敏感），用于前端计算 totalPages。</summary>
     public int TotalCount { get; set; }
+    public int TotalPages { get; set; }
 }

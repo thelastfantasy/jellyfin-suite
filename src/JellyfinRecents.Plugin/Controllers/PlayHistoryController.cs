@@ -19,29 +19,25 @@ public class PlayHistoryController : ControllerBase
         _playHistoryService = playHistoryService;
     }
 
-    /// <summary>
-    /// Gets paginated play history for the current authenticated user.
-    /// </summary>
     [HttpGet("PlayHistory")]
     [ProducesResponseType(typeof(PlayHistoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<PlayHistoryResponse>> GetPlayHistory(
+        [FromQuery] string groupBy = "week",
         [FromQuery] int page = 0,
-        [FromQuery] int pageSize = 100,
+        [FromQuery] string tz = "UTC",
         [FromQuery] string sortBy = "playedDate",
         [FromQuery] string sortOrder = "desc",
         [FromQuery] string? mediaType = null,
-        [FromQuery] bool showRepeats = true)
+        [FromQuery] bool showRepeats = true,
+        [FromQuery] bool groupDedup = false)
     {
         var userIdStr = User.FindFirstValue("Jellyfin-UserId");
         if (!Guid.TryParse(userIdStr, out var userId) || userId == Guid.Empty)
             return Unauthorized();
 
-        // 防止异常大的 pageSize
-        pageSize = Math.Clamp(pageSize, 1, 500);
-
         var result = await _playHistoryService
-            .GetPlayHistoryAsync(userId, page, pageSize, showRepeats, mediaType, sortBy, sortOrder)
+            .GetPlayHistoryAsync(userId, groupBy, page, tz, mediaType, sortBy, sortOrder, showRepeats, groupDedup, HttpContext.RequestAborted)
             .ConfigureAwait(false);
 
         return Ok(result);
