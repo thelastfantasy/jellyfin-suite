@@ -206,6 +206,107 @@ public class RecentsDatabase
         return (entries, totalCount);
     }
 
+    /// <summary>获取指定用户的所有不重复本地日期（按时区偏移转换），按日期降序排列。</summary>
+    public async Task<List<string>> GetDistinctLocalDatesAsync(Guid userId, int tzOffsetMinutes, CancellationToken ct)
+    {
+        var dates = new List<string>();
+        await using var conn = OpenConnection();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT DISTINCT date(datetime(played_at, @offset || ' minutes')) AS local_date
+            FROM play_history
+            WHERE user_id = @uid
+            ORDER BY local_date DESC
+            """;
+        cmd.Parameters.AddWithValue("@uid", userId.ToString("D"));
+        cmd.Parameters.AddWithValue("@offset", tzOffsetMinutes >= 0 ? $"+{tzOffsetMinutes}" : tzOffsetMinutes.ToString());
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+            dates.Add(reader.GetString(0));
+        return dates;
+    }
+
+    /// <summary>查询指定 UTC 日期范围内的播放历史。</summary>
+    public async Task<List<PlayHistoryEntry>> GetPlayHistoryByDateRangeAsync(
+        Guid userId, DateTime utcStart, DateTime utcEnd, bool showRepeats,
+        string? mediaType, string sortBy, string sortOrder, CancellationToken ct)
+    {
+        var uid = userId.ToString("D");
+        var orderDir = string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
+        var mediaFilter = string.IsNullOrEmpty(mediaType) ? string.Empty : " AND ph.media_type = $mt";
+
+        var orderCol = sortBy switch
+        {
+            "favoritedAt" => showRepeats
+                ? $"(fr.favorited_at IS NULL), fr.favorited_at {orderDir}"
+                : $"(MAX(fr.favorited_at) IS NULL), MAX(fr.favorited_at) {orderDir}",
+            _ => showRepeats
+                ? $"ph.played_at {orderDir}"
+                : $"MAX(ph.played_at) {orderDir}",
+        };
+
+        string dataSql;
+        if (showRepeats)
+        {
+            dataSql = $"""
+                SELECT ph.item_id, ph.played_at, ph.media_type, fr.favorited_at
+                FROM play_history ph
+                LEFT JOIN favorite_record fr ON fr.user_id = ph.user_id AND fr.item_id = ph.item_id
+                WHERE ph.user_id = $uid AND ph.played_at >= $start AND ph.played_at <= $end{mediaFilter}
+                ORDER BY {orderCol}
+                """;
+        }
+        else
+        {
+            dataSql = $"""
+                SELECT ph.item_id, MAX(ph.played_at) AS played_at, ph.media_type, MAX(fr.favorited_at) AS favorited_at
+                FROM play_history ph
+                LEFT JOIN favorite_record fr ON fr.user_id = ph.user_id AND fr.item_id = ph.item_id
+                WHERE ph.user_id = $uid AND ph.played_at >= $start AND ph.played_at <= $end{mediaFilter}
+                GROUP BY ph.item_id
+                ORDER BY {orderCol}
+                """;
+        }
+
+        await using var conn = OpenConnection();
+        await using var dataCmd = conn.CreateCommand();
+        dataCmd.CommandText = dataSql;
+        dataCmd.Parameters.AddWithValue("$uid", uid);
+        dataCmd.Parameters.AddWithValue("$start", utcStart.ToUniversalTime().ToString("O"));
+        dataCmd.Parameters.AddWithValue("$end", utcEnd.ToUniversalTime().ToString("O"));
+        if (!string.IsNullOrEmpty(mediaType)) dataCmd.Parameters.AddWithValue("$mt", mediaType);
+
+        var entries = new List<PlayHistoryEntry>();
+        await using var reader = await dataCmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var favStr = reader.IsDBNull(3) ? null : reader.GetString(3);
+            entries.Add(new PlayHistoryEntry
+            {
+                ItemId = reader.GetString(0),
+                PlayedDate = DateTime.Parse(reader.GetString(1), null, System.Globalization.DateTimeStyles.RoundtripKind),
+                MediaType = reader.GetString(2),
+                FavoritedAt = favStr is not null
+                    ? DateTime.Parse(favStr, null, System.Globalization.DateTimeStyles.RoundtripKind)
+                    : null,
+            });
+        }
+
+        return entries;
+    }
+
+    /// <summary>获取用户最早播放记录的 UTC 时间。</summary>
+    public async Task<DateTime?> GetEarliestPlayedAtAsync(Guid userId, CancellationToken ct)
+    {
+        await using var conn = OpenConnection();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT MIN(played_at) FROM play_history WHERE user_id = @uid";
+        cmd.Parameters.AddWithValue("@uid", userId.ToString("D"));
+        var result = await cmd.ExecuteScalarAsync(ct);
+        if (result is DBNull or null) return null;
+        return DateTime.Parse((string)result, null, System.Globalization.DateTimeStyles.RoundtripKind);
+    }
+
     // ── 数据库维护 ────────────────────────────────────────────────────────────
 
     private const int CleanupBatchSize = 1000;

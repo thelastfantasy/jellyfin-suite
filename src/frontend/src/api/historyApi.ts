@@ -1,5 +1,5 @@
 import { getCurrentUserId } from './jellyfinClient'
-import type { MediaFilter, PlayRecord, SortByMode, SortOrder } from '../types'
+import type { GroupByMode, MediaFilter, PlayRecord, SortByMode, SortOrder } from '../types'
 
 interface PlayHistoryEntry {
   ItemId: string
@@ -19,16 +19,19 @@ interface PlayHistoryEntry {
 interface PlayHistoryResponse {
   Entries: PlayHistoryEntry[]
   TotalCount: number
+  TotalPages: number
 }
 
 export interface HistoryResult {
   records: PlayRecord[]
   totalCount: number
+  totalPages: number
 }
 
 export interface HistoryQuery {
+  groupBy: GroupByMode
   page: number
-  pageSize: number
+  tz: string
   sortBy: SortByMode
   sortOrder: SortOrder
   mediaFilter: MediaFilter
@@ -42,8 +45,9 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
 
   const params: Record<string, string> = {
     userId,
+    groupBy: query.groupBy,
     page: String(query.page),
-    pageSize: String(query.pageSize),
+    tz: query.tz,
     sortBy: query.sortBy,
     sortOrder: query.sortOrder,
     showRepeats: String(query.showRepeats),
@@ -68,5 +72,5 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
     episodeNumber: entry.EpisodeNumber ?? null,
   }))
 
-  return { records, totalCount: data.TotalCount }
+  return { records, totalCount: data.TotalCount, totalPages: data.TotalPages }
 }

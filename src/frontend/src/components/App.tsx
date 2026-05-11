@@ -11,9 +11,7 @@ import { Toolbar } from './Toolbar'
 import { GroupSection } from './GroupSection'
 import { Pagination } from './Pagination'
 
-const PAGE_SIZE = 100
-
-// 注入 scrollbar-gutter: stable 到 html，防止 Jellyfin 菜单弹出时移除滚动条导致内容位移
+// 注入 scrollbar-gutter: stable 到 html
 if (typeof document !== 'undefined' && !document.getElementById('jr-scrollbar-gutter')) {
   const s = document.createElement('style')
   s.id = 'jr-scrollbar-gutter'
@@ -25,6 +23,10 @@ interface Props {
   locale: Locale
 }
 
+function getTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
+
 export function App({ locale }: Props) {
   const t = getTranslations(locale)
 
@@ -32,18 +34,18 @@ export function App({ locale }: Props) {
   const [pageIndex, setPageIndex] = useState(0)
   const [groups, setGroups] = useState<TimeGroup[]>([])
   const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1
 
   async function fetchData(s: ViewSettings, page: number) {
     setLoading(true)
     setError(null)
     try {
-      const { records, totalCount: count } = await getHistoryPlayed({
+      const { records, totalCount: count, totalPages: pages } = await getHistoryPlayed({
+        groupBy: s.groupBy,
         page,
-        pageSize: PAGE_SIZE,
+        tz: getTimezone(),
         sortBy: s.sortBy,
         sortOrder: s.sortOrder,
         mediaFilter: s.mediaFilter,
@@ -58,6 +60,7 @@ export function App({ locale }: Props) {
 
       setGroups(grouped)
       setTotalCount(count)
+      setTotalPages(Math.max(1, pages))
     } catch (e) {
       setError(e instanceof Error ? e.message : t.loadError)
     } finally {
