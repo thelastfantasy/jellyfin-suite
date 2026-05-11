@@ -53,6 +53,7 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
     showRepeats: String(query.showRepeats),
   }
   if (query.mediaFilter !== 'all') params['mediaType'] = query.mediaFilter
+  if (query.groupDedup) params['groupDedup'] = 'true'
 
   const url = window.ApiClient.getUrl('JellyfinRecents/PlayHistory', params)
   const data = (await window.ApiClient.ajax({ url, type: 'GET', dataType: 'json' })) as PlayHistoryResponse

@@ -29,14 +29,15 @@ public class PlayHistoryController : ControllerBase
         [FromQuery] string sortBy = "playedDate",
         [FromQuery] string sortOrder = "desc",
         [FromQuery] string? mediaType = null,
-        [FromQuery] bool showRepeats = true)
+        [FromQuery] bool showRepeats = true,
+        [FromQuery] bool groupDedup = false)
     {
         var userIdStr = User.FindFirstValue("Jellyfin-UserId");
         if (!Guid.TryParse(userIdStr, out var userId) || userId == Guid.Empty)
             return Unauthorized();
 
         var result = await _playHistoryService
-            .GetPlayHistoryAsync(userId, groupBy, page, tz, mediaType, sortBy, sortOrder, showRepeats, HttpContext.RequestAborted)
+            .GetPlayHistoryAsync(userId, groupBy, page, tz, mediaType, sortBy, sortOrder, showRepeats, groupDedup, HttpContext.RequestAborted)
             .ConfigureAwait(false);
 
         return Ok(result);

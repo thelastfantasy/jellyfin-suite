@@ -19,18 +19,19 @@ public class PlayHistoryService
 
     public async Task<PlayHistoryResponse> GetPlayHistoryAsync(
         Guid userId, string groupBy, int page, string timeZoneId,
-        string? mediaType, string sortBy, string sortOrder, bool showRepeats, CancellationToken ct)
+        string? mediaType, string sortBy, string sortOrder, bool showRepeats, bool groupDedup, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(groupBy)) groupBy = "week";
         var tz = GetTimeZone(timeZoneId);
         var nowUtc = DateTime.UtcNow;
+        var tzOffset = (int)tz.GetUtcOffset(nowUtc).TotalMinutes;
         List<PlayHistoryEntry> entries;
         int totalPages;
 
         if (groupBy == "day")
         {
             // 按天：递补机制 — UTC 转本地日期，去重，按 30 天分页
-            var tzOffset = (int)tz.GetUtcOffset(nowUtc).TotalMinutes;
+            tzOffset = (int)tz.GetUtcOffset(nowUtc).TotalMinutes;
             var dates = await _db.GetDistinctLocalDatesAsync(userId, tzOffset, ct);
             var pageDates = dates.Skip(page * 30).Take(30).ToList();
             totalPages = (int)Math.Ceiling(dates.Count / 30.0);
@@ -48,7 +49,7 @@ public class PlayHistoryService
 
             var dateSet = new HashSet<string>(pageDates);
             entries = entries.Where(e =>
-                dateSet.Contains(TimeZoneInfo.ConvertTimeFromUtc(e.PlayedDate, tz).ToString("yyyy-MM-dd"))).ToList();
+                dateSet.Contains(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(e.PlayedDate, DateTimeKind.Utc), tz).ToString("yyyy-MM-dd"))).ToList();
         }
         else
         {
@@ -61,7 +62,9 @@ public class PlayHistoryService
 
         EnrichMetadata(entries);
 
-        return new PlayHistoryResponse { Entries = entries, TotalCount = entries.Count, TotalPages = totalPages };
+        var totalCount = await _db.GetTotalRecordCountAsync(userId, mediaType, showRepeats, groupDedup, groupBy, tzOffset, ct);
+
+        return new PlayHistoryResponse { Entries = entries, TotalCount = totalCount, TotalPages = totalPages };
     }
 
     private void EnrichMetadata(List<PlayHistoryEntry> entries)

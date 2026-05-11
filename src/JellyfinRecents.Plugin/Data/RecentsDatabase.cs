@@ -89,7 +89,7 @@ public class RecentsDatabase
             VALUES ($uid, $iid, $pat, $mt)
             """;
         cmd.Parameters.AddWithValue("$uid", userId.ToString());
-        cmd.Parameters.AddWithValue("$iid", itemId);
+        cmd.Parameters.AddWithValue("$iid", itemId.ToLowerInvariant());
         cmd.Parameters.AddWithValue("$pat", playedAt.ToUniversalTime().ToString("O"));
         cmd.Parameters.AddWithValue("$mt", mediaType);
         cmd.ExecuteNonQuery();
@@ -163,11 +163,11 @@ public class RecentsDatabase
                 FROM play_history ph
                 LEFT JOIN favorite_record fr ON fr.user_id = ph.user_id AND fr.item_id = ph.item_id
                 WHERE ph.user_id = $uid{mediaFilter}
-                GROUP BY ph.item_id
+                GROUP BY LOWER(ph.item_id)
                 ORDER BY {orderCol}
                 LIMIT $pageSize OFFSET $offset
                 """;
-            countSql = $"SELECT COUNT(DISTINCT ph.item_id) FROM play_history ph WHERE ph.user_id = $uid{mediaFilter}";
+            countSql = $"SELECT COUNT(DISTINCT LOWER(ph.item_id)) FROM play_history ph WHERE ph.user_id = $uid{mediaFilter}";
         }
 
         using var conn = OpenConnection();
@@ -263,7 +263,7 @@ public class RecentsDatabase
                 FROM play_history ph
                 LEFT JOIN favorite_record fr ON fr.user_id = ph.user_id AND fr.item_id = ph.item_id
                 WHERE ph.user_id = $uid AND ph.played_at >= $start AND ph.played_at <= $end{mediaFilter}
-                GROUP BY ph.item_id
+                GROUP BY LOWER(ph.item_id)
                 ORDER BY {orderCol}
                 """;
         }
@@ -304,7 +304,60 @@ public class RecentsDatabase
         cmd.Parameters.AddWithValue("@uid", userId.ToString("D"));
         var result = await cmd.ExecuteScalarAsync(ct);
         if (result is DBNull or null) return null;
-        return DateTime.Parse((string)result, null, System.Globalization.DateTimeStyles.RoundtripKind);
+        var dt = DateTime.Parse((string)result, null, System.Globalization.DateTimeStyles.RoundtripKind);
+        return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+    }
+
+    /// <summary>获取用户播放记录总数（支持 mediaType 过滤、显示重复、分组内去重）。</summary>
+    public async Task<int> GetTotalRecordCountAsync(Guid userId, string? mediaType, bool showRepeats,
+        bool groupDedup, string groupBy, int tzOffset, CancellationToken ct)
+    {
+        var filter = string.IsNullOrEmpty(mediaType) ? string.Empty : " AND media_type = $mt";
+        var uid = userId.ToString("D");
+
+        if (!showRepeats)
+        {
+            // 全局去重：每 item 只算一次
+            var sql = $"SELECT COUNT(DISTINCT LOWER(item_id)) FROM play_history WHERE user_id = $uid{filter}";
+            await using var conn = OpenConnection();
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.Parameters.AddWithValue("$uid", uid);
+            if (!string.IsNullOrEmpty(mediaType)) cmd.Parameters.AddWithValue("$mt", mediaType);
+            return Convert.ToInt32(await cmd.ExecuteScalarAsync(ct));
+        }
+
+        if (!groupDedup)
+        {
+            // 不去重：全部记录数
+            var sql = $"SELECT COUNT(*) FROM play_history WHERE user_id = $uid{filter}";
+            await using var conn = OpenConnection();
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.Parameters.AddWithValue("$uid", uid);
+            if (!string.IsNullOrEmpty(mediaType)) cmd.Parameters.AddWithValue("$mt", mediaType);
+            return Convert.ToInt32(await cmd.ExecuteScalarAsync(ct));
+        }
+
+        // 分组内去重：每 (item_id, group_key) 只算一次
+        var offset = tzOffset >= 0 ? $"+{tzOffset}" : tzOffset.ToString();
+        string groupExpr = groupBy switch
+        {
+            "day" => $"date(datetime(played_at, '{offset} minutes'))",
+            "week" => $"date(datetime(played_at, '{offset} minutes'), 'weekday 1', '-6 days')",
+            "month" => $"strftime('%Y-%m', datetime(played_at, '{offset} minutes'))",
+            "quarter" => $"strftime('%Y', datetime(played_at, '{offset} minutes')) || '-Q' || ((cast(strftime('%m', datetime(played_at, '{offset} minutes')) as int) - 1) / 3 + 1)",
+            "year" => $"strftime('%Y', datetime(played_at, '{offset} minutes'))",
+            _ => $"date(datetime(played_at, '{offset} minutes'))",
+        };
+
+        var countSql = $"SELECT COUNT(*) FROM (SELECT DISTINCT item_id, {groupExpr} AS grp FROM play_history WHERE user_id = $uid{filter})";
+        await using var conn2 = OpenConnection();
+        await using var cmd2 = conn2.CreateCommand();
+        cmd2.CommandText = countSql;
+        cmd2.Parameters.AddWithValue("$uid", uid);
+        if (!string.IsNullOrEmpty(mediaType)) cmd2.Parameters.AddWithValue("$mt", mediaType);
+        return Convert.ToInt32(await cmd2.ExecuteScalarAsync(ct));
     }
 
     // ── 数据库维护 ────────────────────────────────────────────────────────────
@@ -491,7 +544,7 @@ public class RecentsDatabase
         var ids = new List<string>();
         await using var conn = OpenConnection();
         await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT DISTINCT item_id FROM play_history";
+        cmd.CommandText = "SELECT DISTINCT LOWER(item_id) FROM play_history";
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
             ids.Add(reader.GetString(0));
@@ -516,7 +569,7 @@ public class RecentsDatabase
                 await using var cmd = conn.CreateCommand();
                 cmd.CommandText = $"""
                     DELETE FROM play_history WHERE rowid IN (
-                        SELECT rowid FROM play_history WHERE {field} = @val LIMIT @batch
+                        SELECT rowid FROM play_history WHERE {field} = @val COLLATE NOCASE LIMIT @batch
                     )
                     """;
                 cmd.Parameters.AddWithValue("@val", val);
