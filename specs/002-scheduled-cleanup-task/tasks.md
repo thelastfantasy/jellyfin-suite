@@ -25,15 +25,16 @@
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: 在 `RecentsDatabase.cs` 中添加三个清理方法，供所有任务类调用
+**Purpose**: 在 `RecentsDatabase.cs` 中添加四个方法（三个清理 + 一个 VACUUM），供所有任务类调用
 
-**⚠️ CRITICAL**: 所有用户任务 (US1/US2/US3) 依赖此阶段完成
+**⚠️ CRITICAL**: 所有用户任务 (US1/US2/US3/US4) 依赖此阶段完成
 
 - [ ] T002 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeleteExpiredRecordsAsync(DateTime cutoff, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：分批删除 `played_at < cutoff` 的所有记录，每批 ≤ 1000 条，支持进度报告和取消
 - [ ] T003 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeletePerUserExcessAsync(int maxRecords, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：查询所有 `DISTINCT user_id`，逐用户删除超出 `maxRecords` 条的最旧记录，支持进度报告和取消
 - [ ] T004 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeleteGlobalExcessAsync(int maxRecords, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：保留全表最新 `maxRecords` 条记录，删除其余，支持进度报告和取消
+- [ ] T005 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `VacuumDatabaseAsync(IProgress<double> progress) → Task<(long beforeSize, long afterSize)>` 方法：记录执行前 `.db` 文件大小 → 执行 `VACUUM` → 记录执行后文件大小 → 返回前后大小元组
 
-**Checkpoint**: RecentsDatabase 清理能力就绪 — 可以开始实现各任务类
+**Checkpoint**: RecentsDatabase 维护能力就绪 — 可以开始实现各任务类
 
 ---
 
@@ -45,8 +46,8 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanExpiredRecordsTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanExpired"`、`Name = "清理过期播放记录"`、`Description = "删除 2 年前的所有播放记录"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
-- [ ] T006 [US1] 在 `CleanExpiredRecordsTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteExpiredRecordsAsync(DateTime.UtcNow.AddYears(-2), progress, ct)`，并报告进度（0% → 50% → 100%）
+- [ ] T006 [US1] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanExpiredRecordsTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanExpired"`、`Name = "清理过期播放记录"`、`Description = "删除 2 年前的所有播放记录"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [ ] T007 [US1] 在 `CleanExpiredRecordsTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteExpiredRecordsAsync(DateTime.UtcNow.AddYears(-2), progress, ct)`，并报告进度（0% → 50% → 100%）
 
 **Checkpoint**: 任务 1 可在 Dashboard Tasks 页面显示并手动执行
 
@@ -60,8 +61,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanPerUserExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanPerUserExcess"`、`Name = "按用户整理记录"`、`Description = "对每个用户各自保留最新 10000 条播放记录，超出部分删除"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
-- [ ] T008 [US2] 在 `CleanPerUserExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeletePerUserExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
+- [ ] T008 [US2] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanPerUserExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanPerUserExcess"`、`Name = "按用户整理记录"`、`Description = "对每个用户各自保留最新 10000 条播放记录，超出部分删除"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [ ] T009 [US2] 在 `CleanPerUserExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeletePerUserExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
 
 **Checkpoint**: 任务 2 可在 Dashboard Tasks 页面显示并手动执行
 
@@ -75,22 +76,38 @@
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanGlobalExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanGlobalExcess"`、`Name = "全局整理记录"`、`Description = "⚠ 全局操作：仅保留最新 10000 条播放记录，其余全部删除。该操作影响所有用户。"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
-- [ ] T010 [US3] 在 `CleanGlobalExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteGlobalExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
+- [ ] T010 [US3] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanGlobalExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanGlobalExcess"`、`Name = "全局整理记录"`、`Description = "⚠ 全局操作：仅保留最新 10000 条播放记录，其余全部删除。该操作影响所有用户。"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [ ] T011 [US3] 在 `CleanGlobalExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteGlobalExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
 
 **Checkpoint**: 任务 3 可在 Dashboard Tasks 页面显示并手动执行
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
+## Phase 6: User Story 4 - 数据库优化（VACUUM）(Priority: P4)
+
+**Goal**: 管理员可手动执行"优化数据库"任务，执行 VACUUM 重建数据库文件并回收空间
+
+**Independent Test**: 插入 50000 条后删除 40000 条，执行 VACUUM 前后对比文件大小，验证显著减小
+
+### Implementation for User Story 4
+
+- [ ] T012 [US4] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanVacuumDatabaseTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.VacuumDatabase"`、`Name = "优化数据库"`、`Description = "执行 VACUUM 重建数据库文件，回收已删除记录占用的磁盘空间。执行期间数据库将被短暂锁定。"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [ ] T013 [US4] 在 `CleanVacuumDatabaseTask.ExecuteAsync` 中：(a) 调用 `RecentsDatabase.VacuumDatabaseAsync(progress)`；(b) 通过 `ILogger` 输出优化前/后文件大小及节省空间；(c) 将"优化前 X MB → 优化后 Y MB，节省 Z MB"写入任务结果
+
+**Checkpoint**: 任务 4 可在 Dashboard Tasks 页面显示并手动执行
+
+---
+
+## Phase 7: Polish & Cross-Cutting Concerns
 
 **Purpose**: 测试与验证
 
-- [ ] T011 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteExpiredRecordsAsync` 的单元测试（验证过期删除逻辑、边界条件、空表处理）
-- [ ] T012 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeletePerUserExcessAsync` 的单元测试（验证多用户、恰好边界、少量用户场景）
-- [ ] T013 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteGlobalExcessAsync` 的单元测试（验证全表截断逻辑）
-- [ ] T014 运行 `dotnet test tests/JellyfinRecents.Tests` 确认所有测试通过
-- [ ] T015 运行 `dotnet build src/JellyfinRecents.Plugin -c Debug` 确认编译无错误
+- [ ] T014 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteExpiredRecordsAsync` 的单元测试（验证过期删除逻辑、边界条件、空表处理）
+- [ ] T015 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeletePerUserExcessAsync` 的单元测试（验证多用户、恰好边界、少量用户场景）
+- [ ] T016 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteGlobalExcessAsync` 的单元测试（验证全表截断逻辑）
+- [ ] T017 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `VacuumDatabaseAsync` 的单元测试（验证文件大小变化、空表处理）
+- [ ] T018 运行 `dotnet test tests/JellyfinRecents.Tests` 确认所有测试通过
+- [ ] T019 运行 `dotnet build src/JellyfinRecents.Plugin -c Debug` 确认编译无错误
 
 ---
 
@@ -100,9 +117,9 @@
 
 - **Setup (Phase 1)**: 无依赖 — 仅确认接口可用
 - **Foundational (Phase 2)**: 依赖 Setup — **阻塞所有用户故事**
-- **User Stories (Phase 3-5)**: 全部依赖 Foundational (Phase 2) 完成
-  - US1、US2、US3 之间无相互依赖，可并行实现
-- **Polish (Phase 6)**: 依赖所有用户故事完成
+- **User Stories (Phase 3-6)**: 全部依赖 Foundational (Phase 2) 完成
+  - US1、US2、US3、US4 之间无相互依赖，可并行实现
+- **Polish (Phase 7)**: 依赖所有用户故事完成
 
 ### Within Each User Story
 
@@ -111,24 +128,26 @@
 
 ### Parallel Opportunities
 
-- T002、T003、T004 在同一文件（`RecentsDatabase.cs`）中，无法完全并行，但 T003 和 T004 可与 T002 合并为单次提交
-- Phase 3-5 的三个任务类（T005-T010）之间完全独立，可并行实现
-- Phase 6 的 T011-T013 完全独立，可并行编写
+- Phase 2 的 T002-T005 均在同一文件（`RecentsDatabase.cs`）中，建议合并为单次提交
+- Phase 3-6 的四个任务类（T006-T013）之间完全独立，可并行实现
+- Phase 7 的 T014-T017 完全独立，可并行编写
 
 ---
 
 ## Parallel Example: User Story Phases
 
 ```bash
-# Phase 3-5 全部可并行：
+# Phase 3-6 全部可并行：
 Task: "创建 CleanExpiredRecordsTask.cs (US1)"
 Task: "创建 CleanPerUserExcessTask.cs (US2)"
 Task: "创建 CleanGlobalExcessTask.cs (US3)"
+Task: "创建 CleanVacuumDatabaseTask.cs (US4)"
 
-# Phase 6 测试全部可并行：
-Task: "测试 DeleteExpiredRecordsAsync (T011)"
-Task: "测试 DeletePerUserExcessAsync (T012)"
-Task: "测试 DeleteGlobalExcessAsync (T013)"
+# Phase 7 测试全部可并行：
+Task: "测试 DeleteExpiredRecordsAsync (T014)"
+Task: "测试 DeletePerUserExcessAsync (T015)"
+Task: "测试 DeleteGlobalExcessAsync (T016)"
+Task: "测试 VacuumDatabaseAsync (T017)"
 ```
 
 ---
@@ -145,11 +164,12 @@ Task: "测试 DeleteGlobalExcessAsync (T013)"
 
 ### Incremental Delivery
 
-1. Setup + Foundational → 数据库清理能力就绪
+1. Setup + Foundational → 数据库维护能力就绪
 2. Add US1 → 部署验证 (MVP!)
 3. Add US2 → 部署验证
 4. Add US3 → 部署验证
-5. Add Tests → 回归安全
+5. Add US4 → 部署验证
+6. Add Tests → 回归安全
 
 ### Parallel Team Strategy
 
@@ -158,7 +178,8 @@ Task: "测试 DeleteGlobalExcessAsync (T013)"
 2. Foundational 完成后：
    - Developer A: US1 (T005-T006)
    - Developer B: US2 (T007-T008)
-   - Developer C: US3 (T009-T010)
+   - Developer C: US3 (T010-T011)
+   - Developer D: US4 (T012-T013)
 3. 各故事独立完成和部署
 
 ---
@@ -167,8 +188,9 @@ Task: "测试 DeleteGlobalExcessAsync (T013)"
 
 - [P] tasks = 不同文件，无依赖
 - [Story] label 将任务映射到用户故事以便追溯
-- 三个任务类共享 `RecentsDatabase` 中的清理方法
-- SQL 分批删除使用 `DELETE ... WHERE rowid IN (SELECT rowid ... LIMIT 1000)` 模式
+- 四个任务类共享 `RecentsDatabase` 中的方法（任务 1-3 共享清理方法，任务 4 使用 VACUUM 方法）
+- SQL 分批删除使用 `DELETE ... WHERE rowid IN (SELECT rowid ... LIMIT 1000)` 模式，仅任务 1-3
 - 任务通过 Jellyfin 自动发现注册，无需修改 `Plugin.cs` 或 `PluginServiceRegistrator.cs`
 - 任务描述中 US3 必须包含 `⚠` 警告前缀
-- 编译后验证：Dashboard → Scheduled Tasks 页面应有 "Jellyfin Recents" 分类及三个任务
+- VACUUM 不可取消，执行时独占锁；任务 1-3 支持分批取消
+- 编译后验证：Dashboard → Scheduled Tasks 页面应有 "Jellyfin Recents" 分类及四个任务

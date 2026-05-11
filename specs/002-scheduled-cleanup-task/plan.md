@@ -5,7 +5,7 @@
 
 ## Summary
 
-为插件添加三个手动 Jellyfin 定时清理任务：按时间清理 2 年前过期记录、按用户保留最新 10000 条、全局保留最新 10000 条。通过 `IScheduledTask` 接口实现，由 Jellyfin 运行时自动发现，支持分批删除、进度报告和取消操作。
+为插件添加四个手动 Jellyfin 定时维护任务：按时间清理 2 年前过期记录、按用户保留最新 10000 条、全局保留最新 10000 条、数据库优化（VACUUM）。通过 `IScheduledTask` 接口实现，由 Jellyfin 运行时自动发现，支持分批删除、进度报告和取消操作（VACUUM 任务除外）。
 
 ## Technical Context
 
@@ -19,9 +19,10 @@
 **Project Type**: Jellyfin 服务端插件（C# DLL）
 **Performance Goals**: 清理 50000 条过期记录 < 10 秒
 **Constraints**:
-- 三个任务均无默认触发器（纯手动）
+- 四个任务均无默认触发器（纯手动）
 - 任务通过 Jellyfin 自动发现注册（无需 DI 显式注册）
-- 分批删除每批 ≤ 1000 条
+- 任务 1-3：分批删除每批 ≤ 1000 条，支持取消
+- 任务 4（VACUUM）：单次 SQL 命令，不可取消，执行时数据库独占锁
 - 兼容 10.8.x ~ 10.11.x
 
 ## Constitution Check
@@ -49,9 +50,10 @@ src/JellyfinRecents.Plugin/
 ├── Tasks/                              # NEW: Task classes
 │   ├── CleanExpiredRecordsTask.cs      # Task 1: 删除 2 年前记录
 │   ├── CleanPerUserExcessTask.cs       # Task 2: 按用户保留 10000 条
-│   └── CleanGlobalExcessTask.cs        # Task 3: 全局保留 10000 条
+│   ├── CleanGlobalExcessTask.cs        # Task 3: 全局保留 10000 条
+│   └── CleanVacuumDatabaseTask.cs      # Task 4: VACUUM 数据库优化
 ├── Data/
-│   └── RecentsDatabase.cs              # MODIFY: 添加 3 个清理方法
+│   └── RecentsDatabase.cs              # MODIFY: 添加 4 个方法（3 清理 + 1 VACUUM）
 tests/JellyfinRecents.Tests/
 └── RecentsDatabaseTests.cs             # MODIFY: 添加清理方法测试
 ```
