@@ -73,3 +73,9 @@ Copy `.env.example` to `.env` and set your Jellyfin URL:
 ```
 VITE_JELLYFIN_URL=http://localhost:8096
 ```
+
+---
+
+## AI Disclosure
+
+This project was primarily developed with the assistance of an AI language model (Claude by Anthropic). In accordance with [Jellyfin's LLM policies](https://jellyfin.org/docs/general/contributing/llm-policies), this disclosure is provided so users can make an informed decision about whether to use this plugin.

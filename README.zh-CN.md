@@ -73,3 +73,9 @@ dotnet build    # 编译 C#
 ```
 VITE_JELLYFIN_URL=http://localhost:8096
 ```
+
+---
+
+## AI 声明
+
+本项目主要借助 AI 语言模型（Anthropic 的 Claude）开发完成。依据 [Jellyfin 的 LLM 政策](https://jellyfin.org/docs/general/contributing/llm-policies)，特此声明，以便用户自行判断是否使用本插件。
