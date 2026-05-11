@@ -13,11 +13,13 @@ public class RecentsDatabase
     private const int CurrentSchemaVersion = 1;
 
     private readonly string _connectionString;
+    private readonly string _dbPath;
     private readonly ILogger<RecentsDatabase> _logger;
 
     public RecentsDatabase(string dbPath, ILogger<RecentsDatabase> logger)
     {
         _connectionString = $"Data Source={dbPath};Mode=ReadWriteCreate;Cache=Shared";
+        _dbPath = dbPath;
         _logger = logger;
     }
 
@@ -204,7 +206,170 @@ public class RecentsDatabase
         return (entries, totalCount);
     }
 
-    // ── 版本控制 ─────────────────────────────────────────────────────────────
+    // ── 数据库维护 ────────────────────────────────────────────────────────────
+
+    private const int CleanupBatchSize = 1000;
+
+    /// <summary>批量删除 played_at &lt; cutoff 的所有记录（任务 1）。</summary>
+    public async Task<int> DeleteExpiredRecordsAsync(DateTime cutoff, IProgress<double>? progress, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(0);
+
+        var totalDeleted = 0;
+
+        // 先获取待删除行数用于进度计算
+        await using (var cntConn = OpenConnection())
+        {
+            await using var cntCmd = cntConn.CreateCommand();
+            cntCmd.CommandText = "SELECT COUNT(*) FROM play_history WHERE played_at < @cutoff";
+            cntCmd.Parameters.AddWithValue("@cutoff", cutoff.ToUniversalTime().ToString("O"));
+            var total = Convert.ToInt32(await cntCmd.ExecuteScalarAsync(ct));
+            if (total == 0)
+            {
+                progress?.Report(100);
+                return 0;
+            }
+
+            await using var conn = OpenConnection();
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = """
+                    DELETE FROM play_history WHERE rowid IN (
+                        SELECT rowid FROM play_history WHERE played_at < @cutoff LIMIT @batch
+                    )
+                    """;
+                cmd.Parameters.AddWithValue("@cutoff", cutoff.ToUniversalTime().ToString("O"));
+                cmd.Parameters.AddWithValue("@batch", CleanupBatchSize);
+                var deleted = await cmd.ExecuteNonQueryAsync(ct);
+                if (deleted == 0) break;
+                totalDeleted += deleted;
+                progress?.Report(Math.Min(100, (double)totalDeleted / total * 100));
+            }
+        }
+
+        progress?.Report(100);
+        _logger.LogInformation("DeleteExpiredRecords: {Count} records deleted before {Cutoff:O}", totalDeleted, cutoff);
+        return totalDeleted;
+    }
+
+    /// <summary>逐用户删除超出 maxRecords 条的最旧记录（任务 2）。</summary>
+    public async Task<int> DeletePerUserExcessAsync(int maxRecords, IProgress<double>? progress, CancellationToken ct)
+    {
+        var totalDeleted = 0;
+        progress?.Report(0);
+
+        // 获取所有有记录的用户
+        var userIds = new List<string>();
+        await using (var conn = OpenConnection())
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT DISTINCT user_id FROM play_history";
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                userIds.Add(reader.GetString(0));
+        }
+
+        if (userIds.Count == 0)
+        {
+            progress?.Report(100);
+            return 0;
+        }
+
+        var processed = 0;
+        foreach (var uid in userIds)
+        {
+            ct.ThrowIfCancellationRequested();
+            var userDeleted = 0;
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                await using var conn = OpenConnection();
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = """
+                    DELETE FROM play_history WHERE rowid IN (
+                        SELECT rowid FROM play_history WHERE user_id = @uid
+                        ORDER BY played_at DESC LIMIT @batch OFFSET @max
+                    )
+                    """;
+                cmd.Parameters.AddWithValue("@uid", uid);
+                cmd.Parameters.AddWithValue("@max", maxRecords);
+                cmd.Parameters.AddWithValue("@batch", CleanupBatchSize);
+                var deleted = await cmd.ExecuteNonQueryAsync(ct);
+                if (deleted == 0) break;
+                userDeleted += deleted;
+            }
+            totalDeleted += userDeleted;
+            processed++;
+            progress?.Report(Math.Min(100, (double)processed / userIds.Count * 100));
+        }
+
+        progress?.Report(100);
+        _logger.LogInformation("DeletePerUserExcess: {Count} records deleted across {Users} users (max {Max} each)", totalDeleted, userIds.Count, maxRecords);
+        return totalDeleted;
+    }
+
+    /// <summary>全表仅保留最新 maxRecords 条记录（任务 3）。</summary>
+    public async Task<int> DeleteGlobalExcessAsync(int maxRecords, IProgress<double>? progress, CancellationToken ct)
+    {
+        var totalDeleted = 0;
+        progress?.Report(0);
+
+        // 先获取待删除行数用于进度计算
+        await using (var cntConn = OpenConnection())
+        {
+            await using var cntCmd = cntConn.CreateCommand();
+            cntCmd.CommandText = "SELECT COUNT(*) FROM play_history";
+            var total = Convert.ToInt32(await cntCmd.ExecuteScalarAsync(ct));
+            var excess = total > maxRecords ? total - maxRecords : 0;
+            if (excess == 0)
+            {
+                progress?.Report(100);
+                return 0;
+            }
+
+            await using var conn = OpenConnection();
+            while (totalDeleted < excess)
+            {
+                ct.ThrowIfCancellationRequested();
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = """
+                    DELETE FROM play_history WHERE rowid IN (
+                        SELECT rowid FROM play_history ORDER BY played_at DESC LIMIT @batch OFFSET @max
+                    )
+                    """;
+                cmd.Parameters.AddWithValue("@max", maxRecords);
+                cmd.Parameters.AddWithValue("@batch", CleanupBatchSize);
+                var deleted = await cmd.ExecuteNonQueryAsync(ct);
+                if (deleted == 0) break;
+                totalDeleted += deleted;
+                progress?.Report(Math.Min(100, (double)totalDeleted / excess * 100));
+            }
+        }
+
+        progress?.Report(100);
+        _logger.LogInformation("DeleteGlobalExcess: {Count} records deleted (keeping latest {Max})", totalDeleted, maxRecords);
+        return totalDeleted;
+    }
+
+    /// <summary>执行 VACUUM 重建数据库文件并返回优化前后文件大小（任务 4）。</summary>
+    public async Task<(long BeforeSize, long AfterSize)> VacuumDatabaseAsync(IProgress<double>? progress)
+    {
+        progress?.Report(0);
+        var beforeSize = new FileInfo(_dbPath).Length;
+
+        await using var conn = OpenConnection();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "VACUUM";
+        await cmd.ExecuteNonQueryAsync();
+
+        var afterSize = new FileInfo(_dbPath).Length;
+        progress?.Report(100);
+        _logger.LogInformation("VACUUM: {Before} → {After} bytes (saved {Saved})", beforeSize, afterSize, beforeSize - afterSize);
+        return (beforeSize, afterSize);
+    }
 
     private static int GetSchemaVersion(SqliteConnection conn)
     {

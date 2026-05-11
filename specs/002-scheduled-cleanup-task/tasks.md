@@ -19,7 +19,7 @@
 
 **Purpose**: 无需额外初始化——项目结构已存在，仅需确认依赖就绪
 
-- [ ] T001 确认 `Jellyfin.Controller 10.10.7` 已包含 `MediaBrowser.Model.Tasks.IScheduledTask` 接口
+- [x] T001 确认 `Jellyfin.Controller 10.10.7` 已包含 `MediaBrowser.Model.Tasks.IScheduledTask` 接口
 
 ---
 
@@ -29,10 +29,10 @@
 
 **⚠️ CRITICAL**: 所有用户任务 (US1/US2/US3/US4) 依赖此阶段完成
 
-- [ ] T002 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeleteExpiredRecordsAsync(DateTime cutoff, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：分批删除 `played_at < cutoff` 的所有记录，每批 ≤ 1000 条，支持进度报告和取消
-- [ ] T003 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeletePerUserExcessAsync(int maxRecords, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：查询所有 `DISTINCT user_id`，逐用户删除超出 `maxRecords` 条的最旧记录，支持进度报告和取消
-- [ ] T004 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeleteGlobalExcessAsync(int maxRecords, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：保留全表最新 `maxRecords` 条记录，删除其余，支持进度报告和取消
-- [ ] T005 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `VacuumDatabaseAsync(IProgress<double> progress) → Task<(long beforeSize, long afterSize)>` 方法：记录执行前 `.db` 文件大小 → 执行 `VACUUM` → 记录执行后文件大小 → 返回前后大小元组
+- [x] T002 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeleteExpiredRecordsAsync(DateTime cutoff, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：分批删除 `played_at < cutoff` 的所有记录，每批 ≤ 1000 条，支持进度报告和取消
+- [x] T003 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeletePerUserExcessAsync(int maxRecords, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：查询所有 `DISTINCT user_id`，逐用户删除超出 `maxRecords` 条的最旧记录，支持进度报告和取消
+- [x] T004 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `DeleteGlobalExcessAsync(int maxRecords, IProgress<double> progress, CancellationToken ct) → Task<int>` 方法：保留全表最新 `maxRecords` 条记录，删除其余，支持进度报告和取消
+- [x] T005 [P] 在 `src/JellyfinRecents.Plugin/Data/RecentsDatabase.cs` 中添加 `VacuumDatabaseAsync(IProgress<double> progress) → Task<(long beforeSize, long afterSize)>` 方法：记录执行前 `.db` 文件大小 → 执行 `VACUUM` → 记录执行后文件大小 → 返回前后大小元组
 
 **Checkpoint**: RecentsDatabase 维护能力就绪 — 可以开始实现各任务类
 
@@ -46,8 +46,8 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanExpiredRecordsTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanExpired"`、`Name = "清理过期播放记录"`、`Description = "删除 2 年前的所有播放记录"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
-- [ ] T007 [US1] 在 `CleanExpiredRecordsTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteExpiredRecordsAsync(DateTime.UtcNow.AddYears(-2), progress, ct)`，并报告进度（0% → 50% → 100%）
+- [x] T006 [US1] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanExpiredRecordsTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanExpired"`、`Name = "清理过期播放记录"`、`Description = "删除 2 年前的所有播放记录"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [x] T007 [US1] 在 `CleanExpiredRecordsTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteExpiredRecordsAsync(DateTime.UtcNow.AddYears(-2), progress, ct)`，并报告进度（0% → 50% → 100%）
 
 **Checkpoint**: 任务 1 可在 Dashboard Tasks 页面显示并手动执行
 
@@ -61,8 +61,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanPerUserExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanPerUserExcess"`、`Name = "按用户整理记录"`、`Description = "对每个用户各自保留最新 10000 条播放记录，超出部分删除"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
-- [ ] T009 [US2] 在 `CleanPerUserExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeletePerUserExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
+- [x] T008 [US2] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanPerUserExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanPerUserExcess"`、`Name = "按用户整理记录"`、`Description = "对每个用户各自保留最新 10000 条播放记录，超出部分删除"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [x] T009 [US2] 在 `CleanPerUserExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeletePerUserExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
 
 **Checkpoint**: 任务 2 可在 Dashboard Tasks 页面显示并手动执行
 
@@ -76,8 +76,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanGlobalExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanGlobalExcess"`、`Name = "全局整理记录"`、`Description = "⚠ 全局操作：仅保留最新 10000 条播放记录，其余全部删除。该操作影响所有用户。"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
-- [ ] T011 [US3] 在 `CleanGlobalExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteGlobalExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
+- [x] T010 [US3] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanGlobalExcessTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.CleanGlobalExcess"`、`Name = "全局整理记录"`、`Description = "⚠ 全局操作：仅保留最新 10000 条播放记录，其余全部删除。该操作影响所有用户。"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [x] T011 [US3] 在 `CleanGlobalExcessTask.ExecuteAsync` 中调用 `RecentsDatabase.DeleteGlobalExcessAsync(10000, progress, ct)`，并报告进度（0% → 50% → 100%）
 
 **Checkpoint**: 任务 3 可在 Dashboard Tasks 页面显示并手动执行
 
@@ -91,8 +91,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T012 [US4] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanVacuumDatabaseTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.VacuumDatabase"`、`Name = "优化数据库"`、`Description = "执行 VACUUM 重建数据库文件，回收已删除记录占用的磁盘空间。执行期间数据库将被短暂锁定。"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
-- [ ] T013 [US4] 在 `CleanVacuumDatabaseTask.ExecuteAsync` 中：(a) 调用 `RecentsDatabase.VacuumDatabaseAsync(progress)`；(b) 通过 `ILogger` 输出优化前/后文件大小及节省空间；(c) 将"优化前 X MB → 优化后 Y MB，节省 Z MB"写入任务结果
+- [x] T012 [US4] 创建 `src/JellyfinRecents.Plugin/Tasks/CleanVacuumDatabaseTask.cs`，实现 `IScheduledTask`：`Key = "JellyfinRecents.VacuumDatabase"`、`Name = "优化数据库"`、`Description = "执行 VACUUM 重建数据库文件，回收已删除记录占用的磁盘空间。执行期间数据库将被短暂锁定。"`、`Category = "Jellyfin Recents"`、`GetDefaultTriggers()` 返回空集合
+- [x] T013 [US4] 在 `CleanVacuumDatabaseTask.ExecuteAsync` 中：(a) 调用 `RecentsDatabase.VacuumDatabaseAsync(progress)`；(b) 通过 `ILogger` 输出优化前/后文件大小及节省空间；(c) 将"优化前 X MB → 优化后 Y MB，节省 Z MB"写入任务结果
 
 **Checkpoint**: 任务 4 可在 Dashboard Tasks 页面显示并手动执行
 
@@ -102,12 +102,12 @@
 
 **Purpose**: 测试与验证
 
-- [ ] T014 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteExpiredRecordsAsync` 的单元测试（验证过期删除逻辑、边界条件、空表处理）
-- [ ] T015 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeletePerUserExcessAsync` 的单元测试（验证多用户、恰好边界、少量用户场景）
-- [ ] T016 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteGlobalExcessAsync` 的单元测试（验证全表截断逻辑）
-- [ ] T017 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `VacuumDatabaseAsync` 的单元测试（验证文件大小变化、空表处理）
-- [ ] T018 运行 `dotnet test tests/JellyfinRecents.Tests` 确认所有测试通过
-- [ ] T019 运行 `dotnet build src/JellyfinRecents.Plugin -c Debug` 确认编译无错误
+- [x] T014 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteExpiredRecordsAsync` 的单元测试（验证过期删除逻辑、边界条件、空表处理）
+- [x] T015 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeletePerUserExcessAsync` 的单元测试（验证多用户、恰好边界、少量用户场景）
+- [x] T016 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `DeleteGlobalExcessAsync` 的单元测试（验证全表截断逻辑）
+- [x] T017 [P] 在 `tests/JellyfinRecents.Tests/` 中添加 `VacuumDatabaseAsync` 的单元测试（验证文件大小变化、空表处理）
+- [x] T018 运行 `dotnet test tests/JellyfinRecents.Tests` 确认所有测试通过
+- [x] T019 运行 `dotnet build src/JellyfinRecents.Plugin -c Debug` 确认编译无错误
 
 ---
 
