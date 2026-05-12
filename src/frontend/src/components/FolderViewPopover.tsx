@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'preact/hooks'
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import type { AncestorEntry } from '../api/foldersApi'
 import { getItemAncestors } from '../api/foldersApi'
@@ -13,15 +13,28 @@ interface Props {
 const POPOVER_WIDTH = 220
 const POPOVER_ITEM_HEIGHT = 32
 
-function computeStyle(btn: HTMLElement, entryCount: number): Record<string, string> {
+function computeStyle(btn: HTMLElement, entryCount: number, isList: boolean): Record<string, string> {
   const r = btn.getBoundingClientRect()
   const estH = Math.min(Math.max(entryCount, 1), 8) * POPOVER_ITEM_HEIGHT + 40
-  let left = r.left
+
+  let left: number
+  if (isList) {
+    left = r.right - POPOVER_WIDTH
+    if (left < 4) left = 4
+  } else {
+    left = r.left
+    if (left + POPOVER_WIDTH > window.innerWidth - 8) {
+      left = r.right - POPOVER_WIDTH
+    }
+    if (left < 4) left = 4
+  }
+
   let top = r.bottom + 4
-  if (left + POPOVER_WIDTH > window.innerWidth - 8) left = r.right - POPOVER_WIDTH
-  if (left < 4) left = 4
-  if (top + estH > window.innerHeight - 8) top = r.top - estH - 4
+  if (top + estH > window.innerHeight - 8) {
+    top = r.top - estH - 4
+  }
   if (top < 4) top = 4
+
   return { position: 'fixed', top: `${top}px`, left: `${left}px`, zIndex: '999999' }
 }
 
@@ -35,28 +48,32 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
   const popoverRef = useRef<HTMLDivElement>(null)
   const fetchingRef = useRef(false)
 
+  const close = useCallback(() => {
+    setOpen(false)
+    setLoading(false)
+  }, [])
+
   useEffect(() => {
     if (!open) return
     function handleClick(e: MouseEvent) {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)
           && btnRef.current && !btnRef.current.contains(e.target as Node)) {
-        setOpen(false)
-        setLoading(false)
+        close()
       }
     }
     document.addEventListener('click', handleClick, true)
     return () => document.removeEventListener('click', handleClick, true)
-  }, [open])
+  }, [open, close])
 
   function updatePosition(count: number) {
     if (!btnRef.current) return
-    setStyle(computeStyle(btnRef.current, count))
+    setStyle(computeStyle(btnRef.current, count, viewMode === 'list'))
   }
 
   async function handleToggle(e: MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (open) { setOpen(false); setLoading(false); return }
+    if (open) { close(); return }
     if (fetchingRef.current) return
 
     setOpen(true)
@@ -72,7 +89,7 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
       requestAnimationFrame(() => updatePosition(filtered.length))
     } catch {
       setLoading(false)
-      setOpen(false)
+      close()
     } finally {
       fetchingRef.current = false
     }
@@ -91,9 +108,14 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
         </div>
       ) : (
         <ul class="jr-folder-popover__list">
-          {ancestors.map((a) => (
-            <li key={a.Id}>
-              <a class="jr-folder-popover__link" href={`#!/list.html?parentId=${a.Id}`}>
+          {ancestors.map((a, i) => (
+            <li key={a.Id} class={`jr-folder-popover__item jr-folder-popover__item--l${i}`}>
+              <a
+                class="jr-folder-popover__link"
+                href={`#!/list.html?parentId=${a.Id}&serverId=${a.ServerId}`}
+                onClick={close}
+              >
+                <span class="jr-folder-popover__lvl" />
                 {a.Name}
               </a>
             </li>

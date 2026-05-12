@@ -3,6 +3,7 @@ import { getCurrentUserId } from './jellyfinClient'
 export interface AncestorEntry {
   Id: string
   Name: string
+  ServerId: string
 }
 
 export async function getFolderViewEnabled(): Promise<boolean> {

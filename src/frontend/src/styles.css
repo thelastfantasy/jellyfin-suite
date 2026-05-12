@@ -815,7 +815,9 @@ a.jr-card__series-name:hover {
 }
 
 .jr-folder-popover__link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 0.4rem 0.75rem;
   color: inherit;
   text-decoration: none;
@@ -823,6 +825,39 @@ a.jr-card__series-name:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   transition: background-color 0.12s;
+}
+
+.jr-folder-popover__lvl {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 164, 220, 0.5);
+}
+
+.jr-folder-popover__item--l0 .jr-folder-popover__lvl {
+  background: rgba(0, 164, 220, 0.85);
+  box-shadow: 0 0 4px rgba(0, 164, 220, 0.4);
+}
+
+.jr-folder-popover__item--l0 .jr-folder-popover__link {
+  font-weight: 600;
+}
+
+.jr-folder-popover__item--l1 {
+  padding-left: 8px;
+}
+
+.jr-folder-popover__item--l1 .jr-folder-popover__lvl {
+  background: rgba(0, 164, 220, 0.35);
+}
+
+.jr-folder-popover__item--l2 {
+  padding-left: 16px;
+}
+
+.jr-folder-popover__item--l2 .jr-folder-popover__lvl {
+  background: rgba(0, 164, 220, 0.2);
 }
 
 .jr-folder-popover__link:hover {
