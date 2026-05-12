@@ -17,16 +17,17 @@ function computeStyle(btn: HTMLElement, entryCount: number, isList: boolean): Re
   const r = btn.getBoundingClientRect()
   const estH = Math.min(Math.max(entryCount, 1), 8) * POPOVER_ITEM_HEIGHT + 40
 
-  let left: number
+  const style: Record<string, string> = {}
+
   if (isList) {
-    left = r.right - POPOVER_WIDTH + 34
-    if (left < 4) left = 4
+    style.right = `${window.innerWidth - r.right}px`
   } else {
-    left = r.left
+    let left = r.left
     if (left + POPOVER_WIDTH > window.innerWidth - 8) {
       left = r.right - POPOVER_WIDTH
     }
     if (left < 4) left = 4
+    style.left = `${left}px`
   }
 
   let top = r.bottom + 4
@@ -34,8 +35,11 @@ function computeStyle(btn: HTMLElement, entryCount: number, isList: boolean): Re
     top = r.top - estH - 4
   }
   if (top < 4) top = 4
+  style.top = `${top}px`
 
-  return { position: 'fixed', top: `${top}px`, left: `${left}px`, zIndex: '999999' }
+  style.position = 'fixed'
+  style.zIndex = '999999'
+  return style
 }
 
 export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
