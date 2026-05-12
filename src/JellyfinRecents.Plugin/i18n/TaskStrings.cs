@@ -66,15 +66,17 @@ public static class TaskStrings
         if (!string.IsNullOrEmpty(accept))
         {
             var first = accept.Split(',')[0].Split(';')[0].Trim();
-            // 尝试完整匹配 (e.g. "ja-JP")，然后两字母 (e.g. "ja")
             if (Locales.TryGetValue(first, out var exact)) return exact;
             var twoLetter = first.Split('-')[0];
             if (Locales.TryGetValue(twoLetter, out var partial)) return partial;
         }
+        // 无 HTTP 上下文（后台任务）→ 优先中文
+        if (_httpAccessor?.HttpContext == null)
+            return Locales["zh"];
         // 回退到服务器文化
         var culture = CultureInfo.CurrentUICulture;
         var code = culture.TwoLetterISOLanguageName;
-        return Locales.TryGetValue(code, out var locale) ? locale : Locales["en"];
+        return Locales.TryGetValue(code, out var locale) ? locale : Locales["zh"];
     }
 
     public static string Get(string key)
