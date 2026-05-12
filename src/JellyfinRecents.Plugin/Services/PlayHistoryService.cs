@@ -86,6 +86,8 @@ public class PlayHistoryService
             entry.SeasonNumber = item.ParentIndexNumber;
             entry.EpisodeNumber = item.IndexNumber;
             entry.ImagePrimaryTag = null;
+            entry.HasAncestors = item.ParentId != Guid.Empty
+                || (item is IHasSeries s && s.SeriesId != Guid.Empty);
         }
     }
 

@@ -51,3 +51,4 @@ tests/JellyfinRecents.Tests/obj/
 *.db-wal
 *.db-shm
 *.db.bak
+.opencode/tmp/

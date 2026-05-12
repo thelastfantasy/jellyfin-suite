@@ -4,6 +4,7 @@ import type { Locale } from '../i18n'
 import { getTranslations } from '../i18n'
 import { LocaleContext } from '../i18n/context'
 import { getHistoryPlayed } from '../api/historyApi'
+import { getFolderViewEnabled } from '../api/foldersApi'
 import { groupByMode } from '../grouping/groupBy'
 import { sortRecords } from '../sorting/sortBy'
 import { loadSettings, saveSettings } from '../state/viewSettings'
@@ -37,6 +38,11 @@ export function App({ locale }: Props) {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [enableFolderView, setEnableFolderView] = useState(false)
+
+  useEffect(() => {
+    getFolderViewEnabled().then(setEnableFolderView)
+  }, [])
 
   async function fetchData(s: ViewSettings, page: number) {
     setLoading(true)
@@ -115,6 +121,7 @@ export function App({ locale }: Props) {
             group={group}
             showTypeLabel={settings.mediaFilter === 'all'}
             viewMode={settings.viewMode}
+            enableFolderView={enableFolderView}
             groupIndex={i}
             totalGroups={groups.length}
             hasPrevPage={pageIndex > 0}

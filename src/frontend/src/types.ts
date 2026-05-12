@@ -17,6 +17,8 @@ export interface PlayRecord {
   seriesId: string | null
   seasonNumber: number | null
   episodeNumber: number | null
+  parentId: string | null
+  hasAncestors: boolean
 }
 
 export interface TimeGroup {

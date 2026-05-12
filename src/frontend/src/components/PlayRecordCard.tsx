@@ -3,11 +3,13 @@ import type { PlayRecord, ViewMode } from '../types'
 import { getCurrentUserId } from '../api/jellyfinClient'
 import { formatPlayedDate } from '../i18n'
 import { useLocale } from '../i18n/context'
+import { FolderViewPopover } from './FolderViewPopover'
 
 interface Props {
   record: PlayRecord
   showTypeLabel?: boolean
   viewMode?: ViewMode
+  enableFolderView?: boolean
 }
 
 // Jellyfin 10.10.x 用 webpack 5 打包，playbackManager 不再全局暴露。
@@ -72,7 +74,7 @@ async function apiToggleFavorite(itemId: string, nowFavorite: boolean): Promise<
   await window.ApiClient.ajax({ url, type: nowFavorite ? 'POST' : 'DELETE' })
 }
 
-export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thumbnail' }: Props) {
+export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thumbnail', enableFolderView = false }: Props) {
   const { locale, t } = useLocale()
   const [isFav, setIsFav] = useState(record.favoritedAt !== null)
   const [favLoading, setFavLoading] = useState(false)
@@ -153,6 +155,9 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
             >
               <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
             </button>
+            {enableFolderView && record.hasAncestors && (
+              <FolderViewPopover itemId={record.itemId} viewMode="list" />
+            )}
           </div>
         </div>
       </div>
@@ -161,43 +166,48 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
 
   return (
     <div class="jr-card">
-      <a class="jr-card__thumb-link" href={detailUrl}>
-        <div class="jr-card__thumb">
-          <img
-            src={imageUrl}
-            alt={record.title}
-            loading="lazy"
-            onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement
-              img.style.display = 'none'
-              img.nextElementSibling?.classList.remove('jr-card__thumb-placeholder--hidden')
-            }}
-          />
-          <div class="jr-card__thumb-placeholder jr-card__thumb-placeholder--hidden">🎬</div>
-          {episodeCode && (
-            <div class="jr-card__ep-badge">{episodeCode}</div>
-          )}
-          {showTypeLabel && (
-            <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
-              {record.mediaType === 'video' ? t.video : t.audio}
-            </span>
-          )}
-          <div class="jr-card__overlay">
-            <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
-              <span class="material-icons">play_arrow</span>
-            </button>
-            <div class="jr-card__actions">
-              <button
-                class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
-                onClick={handleFavClick}
-                title={isFav ? t.unfavorite : t.favorite}
-              >
-                <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
+      <div class="jr-card__thumb-link-wrap">
+        <a class="jr-card__thumb-link" href={detailUrl}>
+          <div class="jr-card__thumb">
+            <img
+              src={imageUrl}
+              alt={record.title}
+              loading="lazy"
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement
+                img.style.display = 'none'
+                img.nextElementSibling?.classList.remove('jr-card__thumb-placeholder--hidden')
+              }}
+            />
+            <div class="jr-card__thumb-placeholder jr-card__thumb-placeholder--hidden">🎬</div>
+            {episodeCode && (
+              <div class="jr-card__ep-badge">{episodeCode}</div>
+            )}
+            {showTypeLabel && (
+              <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
+                {record.mediaType === 'video' ? t.video : t.audio}
+              </span>
+            )}
+            <div class="jr-card__overlay">
+              <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
+                <span class="material-icons">play_arrow</span>
               </button>
+              <div class="jr-card__actions">
+                <button
+                  class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
+                  onClick={handleFavClick}
+                  title={isFav ? t.unfavorite : t.favorite}
+                >
+                  <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </a>
+        </a>
+        {enableFolderView && record.hasAncestors && (
+          <FolderViewPopover itemId={record.itemId} showTypeLabel={showTypeLabel} />
+        )}
+      </div>
       <div class="jr-card__info">
         {record.seriesName && (
           seriesUrl
