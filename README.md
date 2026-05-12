@@ -14,6 +14,7 @@ A Jellyfin plugin that provides a customizable recently-played view with flexibl
 - **Dedup mode**: Hide repeated plays; optionally dedup within each group independently
 - **Episode info**: Series name and episode code (S×E× / SP× for specials) shown on every card
 - **Smart links**: Series name links to the series page; episode title links to the episode page
+- **Folder view**: Click the folder icon on any thumbnail to open a popover showing the item's parent folder hierarchy with direct links — supports thumbnail, poster, and list view modes
 - **View modes**: Thumbnail / poster / list
 - **Full pagination**: First / prev / jump / next / last
 - **Internationalization**: English, 简体中文, 日本語
