@@ -19,7 +19,7 @@ function computeStyle(btn: HTMLElement, entryCount: number, isList: boolean): Re
 
   let left: number
   if (isList) {
-    left = r.right - POPOVER_WIDTH
+    left = r.right - POPOVER_WIDTH + 34
     if (left < 4) left = 4
   } else {
     left = r.left
