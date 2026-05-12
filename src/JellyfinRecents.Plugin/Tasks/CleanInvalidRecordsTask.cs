@@ -62,9 +62,18 @@ public class CleanInvalidRecordsTask : IScheduledTask
                 invalidUserIds.Add(uid);
                 continue;
             }
-            var user = _userManager.GetUserById(userGuid);
-            if (user is null)
-                invalidUserIds.Add(uid);
+            try
+            {
+                var user = _userManager.GetUserById(userGuid);
+                if (user is null)
+                    invalidUserIds.Add(uid);
+            }
+            catch (MissingMethodException)
+            {
+                // Jellyfin 10.8.x 中 IUserManager.GetUserById 签名不同，跳过用户检查
+                _logger.LogWarning("CleanInvalidRecords: IUserManager.GetUserById unavailable, skipping user validation");
+                break;
+            }
         }
 
         if (invalidUserIds.Count > 0)
@@ -89,9 +98,17 @@ public class CleanInvalidRecordsTask : IScheduledTask
                 continue;
             }
 
-            var item = _libraryManager.GetItemById(itemGuid);
-            if (item is null)
-                invalidItemIds.Add(iid);
+            try
+            {
+                var item = _libraryManager.GetItemById(itemGuid);
+                if (item is null)
+                    invalidItemIds.Add(iid);
+            }
+            catch (MissingMethodException)
+            {
+                _logger.LogWarning("CleanInvalidRecords: ILibraryManager.GetItemById unavailable, skipping item validation");
+                break;
+            }
 
             checked_++;
             if (itemIds.Count > 0)
