@@ -36,4 +36,6 @@ export const ja: Translations = {
   video: '動画',
   audio: '音楽',
   quarterNames: ['冬', '春', '夏', '秋'],
+  folderViewTitle: 'フォルダビュー',
+  folderViewEmpty: '親フォルダなし',
 }

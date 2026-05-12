@@ -46,4 +46,7 @@ export interface Translations {
   audio: string
   // Quarter season names: [winter, spring, summer, autumn]
   quarterNames: [string, string, string, string]
+  // Folder view
+  folderViewTitle: string
+  folderViewEmpty: string
 }

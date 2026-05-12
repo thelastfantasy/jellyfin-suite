@@ -7,6 +7,7 @@ interface Props {
   group: TimeGroup
   showTypeLabel?: boolean
   viewMode?: ViewMode
+  enableFolderView?: boolean
   groupIndex: number
   totalGroups: number
   hasPrevPage: boolean
@@ -31,6 +32,7 @@ function scrollToGroupHeader(index: number) {
 
 export function GroupSection({
   group, showTypeLabel = false, viewMode = 'thumbnail',
+  enableFolderView = false,
   groupIndex, totalGroups, hasPrevPage, hasNextPage, onPageNav,
 }: Props) {
   if (group.records.length === 0) return null
@@ -80,6 +82,7 @@ export function GroupSection({
             record={record}
             showTypeLabel={showTypeLabel}
             viewMode={viewMode}
+            enableFolderView={enableFolderView}
           />
         ))}
       </div>
