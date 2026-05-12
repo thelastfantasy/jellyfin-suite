@@ -788,7 +788,6 @@ a.jr-card__series-name:hover {
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   padding: 0.5rem 0;
-  z-index: 99999;
   color: #e0e0e0;
   font-size: 0.82rem;
 }
@@ -829,6 +828,36 @@ a.jr-card__series-name:hover {
 .jr-folder-popover__link:hover {
   background: rgba(0, 164, 220, 0.15);
   color: #fff;
+}
+
+.jr-folder-popover__loading {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jr-folder-popover__sk {
+  display: block;
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: jr-sk-pulse 1.2s ease-in-out infinite;
+}
+
+.jr-folder-popover__sk:nth-child(2) {
+  width: 70%;
+  animation-delay: 0.15s;
+}
+
+.jr-folder-popover__sk:nth-child(3) {
+  width: 85%;
+  animation-delay: 0.3s;
+}
+
+@keyframes jr-sk-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
 }
 
 .jr-folder-btn__spinner {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
+import { createPortal } from 'preact/compat'
 import type { AncestorEntry } from '../api/foldersApi'
 import { getItemAncestors } from '../api/foldersApi'
 import { useLocale } from '../i18n/context'
@@ -9,17 +10,30 @@ interface Props {
   viewMode?: string
 }
 
+const POPOVER_WIDTH = 220
+const POPOVER_ITEM_HEIGHT = 32
+
+function computeStyle(btn: HTMLElement, entryCount: number): Record<string, string> {
+  const r = btn.getBoundingClientRect()
+  const estH = Math.min(Math.max(entryCount, 1), 8) * POPOVER_ITEM_HEIGHT + 40
+  let left = r.left
+  let top = r.bottom + 4
+  if (left + POPOVER_WIDTH > window.innerWidth - 8) left = r.right - POPOVER_WIDTH
+  if (left < 4) left = 4
+  if (top + estH > window.innerHeight - 8) top = r.top - estH - 4
+  if (top < 4) top = 4
+  return { position: 'fixed', top: `${top}px`, left: `${left}px`, zIndex: '999999' }
+}
+
 export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
   const { t } = useLocale()
   const [open, setOpen] = useState(false)
   const [ancestors, setAncestors] = useState<AncestorEntry[]>([])
   const [loading, setLoading] = useState(false)
-  const [popoverStyle, setPopoverStyle] = useState<Record<string, string>>({
-    position: 'fixed',
-    visibility: 'hidden',
-  })
+  const [style, setStyle] = useState<Record<string, string>>({})
   const btnRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const fetchingRef = useRef(false)
 
   useEffect(() => {
     if (!open) return
@@ -27,50 +41,74 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)
           && btnRef.current && !btnRef.current.contains(e.target as Node)) {
         setOpen(false)
+        setLoading(false)
       }
     }
     document.addEventListener('click', handleClick, true)
     return () => document.removeEventListener('click', handleClick, true)
   }, [open])
 
-  function computePosition() {
+  function updatePosition(count: number) {
     if (!btnRef.current) return
-    const rect = btnRef.current.getBoundingClientRect()
-    setPopoverStyle({
-      position: 'fixed',
-      top: `${rect.bottom + 4}px`,
-      left: `${Math.max(4, rect.left)}px`,
-      visibility: 'visible',
-    })
+    setStyle(computeStyle(btnRef.current, count))
   }
 
-  function handleToggle(e: MouseEvent) {
+  async function handleToggle(e: MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!open) {
-      if (ancestors.length === 0) {
-        setLoading(true)
-        getItemAncestors(itemId).then((list) => {
-          const filtered = list.length > 1 ? list.slice(0, -1) : list
-          setAncestors(filtered)
-          setLoading(false)
-          setOpen(true)
-          requestAnimationFrame(computePosition)
-        }).catch(() => setLoading(false))
-      } else {
-        setOpen(true)
-        requestAnimationFrame(computePosition)
-      }
-    } else {
+    if (open) { setOpen(false); setLoading(false); return }
+    if (fetchingRef.current) return
+
+    setOpen(true)
+    setLoading(true)
+    fetchingRef.current = true
+    requestAnimationFrame(() => updatePosition(3))
+
+    try {
+      const list = await getItemAncestors(itemId)
+      const filtered = list.length > 1 ? list.slice(0, -1) : list
+      setAncestors(filtered)
+      setLoading(false)
+      requestAnimationFrame(() => updatePosition(filtered.length))
+    } catch {
+      setLoading(false)
       setOpen(false)
+    } finally {
+      fetchingRef.current = false
     }
   }
 
+  const isList = viewMode === 'list'
+
+  const popover = open && createPortal(
+    <div ref={popoverRef} class="jr-folder-popover" style={style}>
+      <div class="jr-folder-popover__title">{t.folderViewTitle}</div>
+      {loading ? (
+        <div class="jr-folder-popover__loading">
+          <span class="jr-folder-popover__sk" />
+          <span class="jr-folder-popover__sk" />
+          <span class="jr-folder-popover__sk" />
+        </div>
+      ) : (
+        <ul class="jr-folder-popover__list">
+          {ancestors.map((a) => (
+            <li key={a.Id}>
+              <a class="jr-folder-popover__link" href={`#!/list.html?parentId=${a.Id}`}>
+                {a.Name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>,
+    document.body,
+  )
+
   return (
-    <div class={`jr-folder-btn-wrap${showTypeLabel && viewMode !== 'list' ? ' jr-folder-btn-wrap--with-type' : ''}${viewMode === 'list' ? ' jr-folder-btn-wrap--list' : ''}`}>
+    <div class={`jr-folder-btn-wrap${showTypeLabel && !isList ? ' jr-folder-btn-wrap--with-type' : ''}${isList ? ' jr-folder-btn-wrap--list' : ''}`}>
       <button
         ref={btnRef}
-        class={`jr-folder-btn${viewMode === 'list' ? ' jr-folder-btn--list' : ''}`}
+        class={`jr-folder-btn${isList ? ' jr-folder-btn--list' : ''}`}
         onClick={handleToggle}
         title={t.folderViewTitle}
       >
@@ -80,23 +118,7 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
           <span class="material-icons">folder</span>
         )}
       </button>
-      {open && (
-        <div ref={popoverRef} class="jr-folder-popover" style={popoverStyle}>
-          <div class="jr-folder-popover__title">{t.folderViewTitle}</div>
-          <ul class="jr-folder-popover__list">
-            {ancestors.map((ancestor) => (
-              <li key={ancestor.Id}>
-                <a
-                  class="jr-folder-popover__link"
-                  href={`#!/list.html?parentId=${ancestor.Id}`}
-                >
-                  {ancestor.Name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {popover}
     </div>
   )
 }
