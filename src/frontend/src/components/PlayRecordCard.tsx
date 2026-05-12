@@ -204,7 +204,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
             </div>
           </div>
         </a>
-        {enableFolderView && (
+        {enableFolderView && record.hasAncestors && (
           <FolderViewPopover itemId={record.itemId} showTypeLabel={showTypeLabel} />
         )}
       </div>
