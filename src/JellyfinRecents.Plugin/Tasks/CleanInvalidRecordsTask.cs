@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.JellyfinRecents.Compat;
 using Jellyfin.Plugin.JellyfinRecents.Data;
 using Jellyfin.Plugin.JellyfinRecents.i18n;
 using MediaBrowser.Controller.Library;
@@ -40,7 +41,7 @@ public class CleanInvalidRecordsTask : IScheduledTask
             new TaskTriggerInfo
             {
                 Type = "DailyTrigger",
-                TimeOfDayTicks = 0 // UTC 00:00
+                TimeOfDayTicks = 0
             }
         };
     }
@@ -62,8 +63,9 @@ public class CleanInvalidRecordsTask : IScheduledTask
                 invalidUserIds.Add(uid);
                 continue;
             }
-            var user = _userManager.GetUserById(userGuid);
-            if (user is null)
+
+            var userExists = _userManager.UserExists(userGuid, _logger);
+            if (userExists == false)
                 invalidUserIds.Add(uid);
         }
 
@@ -78,7 +80,6 @@ public class CleanInvalidRecordsTask : IScheduledTask
         var itemIds = await _db.GetDistinctItemIdsAsync(cancellationToken);
         var invalidItemIds = new HashSet<string>();
 
-        // 分批检查以报告进度
         var checked_ = 0;
         foreach (var iid in itemIds)
         {
@@ -89,9 +90,17 @@ public class CleanInvalidRecordsTask : IScheduledTask
                 continue;
             }
 
-            var item = _libraryManager.GetItemById(itemGuid);
-            if (item is null)
-                invalidItemIds.Add(iid);
+            try
+            {
+                var item = _libraryManager.GetItemById(itemGuid);
+                if (item is null)
+                    invalidItemIds.Add(iid);
+            }
+            catch (MissingMethodException)
+            {
+                _logger.LogWarning("CleanInvalidRecords: GetItemById unavailable, skipping item validation");
+                break;
+            }
 
             checked_++;
             if (itemIds.Count > 0)
