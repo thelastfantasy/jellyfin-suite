@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.JellyfinRecents.Compat;
 using Jellyfin.Plugin.JellyfinRecents.Data;
 using Jellyfin.Plugin.JellyfinRecents.i18n;
 using MediaBrowser.Controller.Library;
@@ -40,7 +41,7 @@ public class CleanInvalidRecordsTask : IScheduledTask
             new TaskTriggerInfo
             {
                 Type = "DailyTrigger",
-                TimeOfDayTicks = 0 // UTC 00:00
+                TimeOfDayTicks = 0
             }
         };
     }
@@ -62,18 +63,10 @@ public class CleanInvalidRecordsTask : IScheduledTask
                 invalidUserIds.Add(uid);
                 continue;
             }
-            try
-            {
-                var user = _userManager.GetUserById(userGuid);
-                if (user is null)
-                    invalidUserIds.Add(uid);
-            }
-            catch (MissingMethodException)
-            {
-                // Jellyfin 10.8.x 中 IUserManager.GetUserById 签名不同，跳过用户检查
-                _logger.LogWarning("CleanInvalidRecords: IUserManager.GetUserById unavailable, skipping user validation");
-                break;
-            }
+
+            var userExists = _userManager.UserExists(userGuid, _logger);
+            if (userExists == false)
+                invalidUserIds.Add(uid);
         }
 
         if (invalidUserIds.Count > 0)
@@ -87,7 +80,6 @@ public class CleanInvalidRecordsTask : IScheduledTask
         var itemIds = await _db.GetDistinctItemIdsAsync(cancellationToken);
         var invalidItemIds = new HashSet<string>();
 
-        // 分批检查以报告进度
         var checked_ = 0;
         foreach (var iid in itemIds)
         {
@@ -106,7 +98,7 @@ public class CleanInvalidRecordsTask : IScheduledTask
             }
             catch (MissingMethodException)
             {
-                _logger.LogWarning("CleanInvalidRecords: ILibraryManager.GetItemById unavailable, skipping item validation");
+                _logger.LogWarning("CleanInvalidRecords: GetItemById unavailable, skipping item validation");
                 break;
             }
 
