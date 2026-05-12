@@ -54,5 +54,7 @@ export async function getRecentlyPlayed(
     seriesId: item.SeriesId ? item.SeriesId.replace(/-/g, '') : null,
     seasonNumber: item.ParentIndexNumber ?? null,
     episodeNumber: item.IndexNumber ?? null,
+    parentId: null,
+    hasAncestors: false,
   }))
 }

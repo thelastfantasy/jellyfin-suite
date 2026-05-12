@@ -36,4 +36,6 @@ export const zh: Translations = {
   video: '视频',
   audio: '音频',
   quarterNames: ['冬季', '春季', '夏季', '秋季'],
+  folderViewTitle: '文件夹视图',
+  folderViewEmpty: '无上级文件夹',
 }

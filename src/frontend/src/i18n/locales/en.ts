@@ -36,4 +36,6 @@ export const en: Translations = {
   video: 'Video',
   audio: 'Audio',
   quarterNames: ['Winter', 'Spring', 'Summer', 'Autumn'],
+  folderViewTitle: 'Folder View',
+  folderViewEmpty: 'No parent folders',
 }

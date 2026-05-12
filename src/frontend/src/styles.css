@@ -244,6 +244,10 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
 }
 
+.jr-card__thumb-link-wrap {
+  position: relative;
+}
+
 .jr-card__thumb-link {
   display: block;
   text-decoration: none;
@@ -735,5 +739,192 @@ a.jr-card__series-name:hover {
 
 .jr-btn:hover {
   background: rgba(255, 255, 255, 0.16);
+}
+
+/* ── 文件夹视图按钮 ── */
+.jr-folder-btn-wrap {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 5;
+}
+
+.jr-folder-btn-wrap--with-type {
+  top: 3px;
+  left: 3px;
+}
+
+.jr-folder-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.jr-folder-btn:hover {
+  background: rgba(0, 164, 220, 0.7);
+  color: #fff;
+}
+
+.jr-folder-btn .material-icons {
+  font-size: 16px;
+}
+
+/* ── 文件夹 Popover（固定定位避免 overflow 裁剪）── */
+.jr-folder-popover {
+  min-width: 180px;
+  max-width: 280px;
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 0;
+  color: #e0e0e0;
+  font-size: 0.82rem;
+}
+
+.jr-folder-popover__title {
+  padding: 0.3rem 0.75rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+}
+
+.jr-folder-popover__loading,
+.jr-folder-popover__empty {
+  padding: 0.5rem 0.75rem;
+  opacity: 0.5;
+  font-size: 0.78rem;
+}
+
+.jr-folder-popover__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jr-folder-popover__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.4rem 0.75rem;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 0.12s;
+}
+
+.jr-folder-popover__lvl {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 164, 220, 0.5);
+}
+
+.jr-folder-popover__item--l0 .jr-folder-popover__lvl {
+  background: rgba(0, 164, 220, 0.85);
+  box-shadow: 0 0 4px rgba(0, 164, 220, 0.4);
+}
+
+.jr-folder-popover__item--l0 .jr-folder-popover__link {
+  font-weight: 600;
+}
+
+.jr-folder-popover__item--l1 {
+  padding-left: 8px;
+}
+
+.jr-folder-popover__item--l1 .jr-folder-popover__lvl {
+  background: rgba(0, 164, 220, 0.35);
+}
+
+.jr-folder-popover__item--l2 {
+  padding-left: 16px;
+}
+
+.jr-folder-popover__item--l2 .jr-folder-popover__lvl {
+  background: rgba(0, 164, 220, 0.2);
+}
+
+.jr-folder-popover__link:hover {
+  background: rgba(0, 164, 220, 0.15);
+  color: #fff;
+}
+
+.jr-folder-popover__loading {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jr-folder-popover__sk {
+  display: block;
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: jr-sk-pulse 1.2s ease-in-out infinite;
+}
+
+.jr-folder-popover__sk:nth-child(2) {
+  width: 70%;
+  animation-delay: 0.15s;
+}
+
+.jr-folder-popover__sk:nth-child(3) {
+  width: 85%;
+  animation-delay: 0.3s;
+}
+
+@keyframes jr-sk-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.jr-folder-btn__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: jr-spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+/* ── 列表模式文件夹按钮 ── */
+.jr-folder-btn-wrap--list {
+  position: static;
+}
+
+.jr-folder-btn--list {
+  width: auto;
+  height: auto;
+  padding: 0.2rem 0.25rem;
+  background: none;
+  color: rgba(255, 255, 255, 0.3);
+  text-shadow: none;
+}
+
+.jr-folder-btn--list:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jr-folder-btn--list .material-icons {
+  font-size: 22px;
 }
 
