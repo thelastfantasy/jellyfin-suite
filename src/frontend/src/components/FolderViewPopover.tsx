@@ -6,9 +6,10 @@ import { useLocale } from '../i18n/context'
 interface Props {
   itemId: string
   showTypeLabel?: boolean
+  viewMode?: string
 }
 
-export function FolderViewPopover({ itemId, showTypeLabel }: Props) {
+export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
   const { t } = useLocale()
   const [open, setOpen] = useState(false)
   const [ancestors, setAncestors] = useState<AncestorEntry[]>([])
@@ -66,10 +67,10 @@ export function FolderViewPopover({ itemId, showTypeLabel }: Props) {
   }
 
   return (
-    <div class={`jr-folder-btn-wrap${showTypeLabel ? ' jr-folder-btn-wrap--with-type' : ''}`}>
+    <div class={`jr-folder-btn-wrap${showTypeLabel && viewMode !== 'list' ? ' jr-folder-btn-wrap--with-type' : ''}${viewMode === 'list' ? ' jr-folder-btn-wrap--list' : ''}`}>
       <button
         ref={btnRef}
-        class="jr-folder-btn"
+        class={`jr-folder-btn${viewMode === 'list' ? ' jr-folder-btn--list' : ''}`}
         onClick={handleToggle}
         title={t.folderViewTitle}
       >

@@ -841,3 +841,26 @@ a.jr-card__series-name:hover {
   display: inline-block;
 }
 
+/* ── 列表模式文件夹按钮 ── */
+.jr-folder-btn-wrap--list {
+  position: static;
+}
+
+.jr-folder-btn--list {
+  width: auto;
+  height: auto;
+  padding: 0.2rem 0.25rem;
+  background: none;
+  color: rgba(255, 255, 255, 0.3);
+  text-shadow: none;
+}
+
+.jr-folder-btn--list:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jr-folder-btn--list .material-icons {
+  font-size: 22px;
+}
+

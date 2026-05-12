@@ -117,9 +117,6 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
     return (
       <div class="jr-card jr-card--list">
         <a class="jr-card__thumb jr-card__thumb--list" href={detailUrl}>
-          {enableFolderView && (
-            <FolderViewPopover itemId={record.itemId} showTypeLabel={showTypeLabel} />
-          )}
           <img
             src={imageUrl}
             alt={record.title}
@@ -158,6 +155,9 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
             >
               <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
             </button>
+            {enableFolderView && record.hasAncestors && (
+              <FolderViewPopover itemId={record.itemId} viewMode="list" />
+            )}
           </div>
         </div>
       </div>
