@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: ViewSettings = {
   groupDedup: false,
   viewMode: 'thumbnail',
   pageSize: 0,
+  pageSizes: {},
 }
 
 export function loadSettings(): ViewSettings {

@@ -11,6 +11,7 @@ import { loadSettings, saveSettings } from '../state/viewSettings'
 import { Toolbar } from './Toolbar'
 import { GroupSection } from './GroupSection'
 import { Pagination } from './Pagination'
+import { DEFAULTS } from './SettingsPopover'
 
 // 注入 scrollbar-gutter: stable 到 html
 if (typeof document !== 'undefined' && !document.getElementById('jr-scrollbar-gutter')) {
@@ -42,6 +43,14 @@ export function App({ locale }: Props) {
 
   useEffect(() => {
     getFolderViewEnabled().then(setEnableFolderView)
+  }, [])
+
+  useEffect(() => {
+    if (settings.pageSize === 0) {
+      const g = settings.groupBy
+      const v = settings.pageSizes[g] ?? DEFAULTS[g]
+      handleSettingsChange({ pageSize: v })
+    }
   }, [])
 
   async function fetchData(s: ViewSettings, page: number) {
@@ -82,7 +91,10 @@ export function App({ locale }: Props) {
   function handleSettingsChange(patch: Partial<ViewSettings>) {
     const next = { ...settings, ...patch }
     if (patch.groupBy && patch.groupBy !== settings.groupBy) {
-      next.pageSize = 0
+      next.pageSize = next.pageSizes[patch.groupBy] ?? DEFAULTS[patch.groupBy]
+    }
+    if (patch.pageSize && patch.pageSize !== settings.pageSize) {
+      next.pageSizes = { ...next.pageSizes, [settings.groupBy]: patch.pageSize }
     }
     setSettings(next)
     saveSettings(next)

@@ -43,4 +43,5 @@ export interface ViewSettings {
   groupDedup: boolean
   viewMode: ViewMode
   pageSize: number
+  pageSizes: Record<string, number>
 }
