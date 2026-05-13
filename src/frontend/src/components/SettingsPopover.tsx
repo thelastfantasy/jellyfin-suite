@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
-import { createPortal } from 'preact/compat'
+import { useState, useRef } from 'preact/hooks'
 import { MdSettings } from 'react-icons/md'
 import type { GroupByMode } from '../types'
 import { useLocale } from '../i18n/context'
+import { Popover } from './Popover'
 
 interface Props {
   groupBy: GroupByMode
@@ -45,74 +45,26 @@ function getPopoverStyle(btn: HTMLElement): Record<string, string> {
 export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
   const { t } = useLocale()
   const [open, setOpen] = useState(false)
+  const [style, setStyle] = useState<Record<string, string>>({})
   const btnRef = useRef<HTMLButtonElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
 
   const label = t.groupPerPage[groupBy]
   const presets = PRESETS[groupBy]
 
-  useEffect(() => {
-    if (!open) return
-    function handleClick(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)
-          && btnRef.current && !btnRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('click', handleClick, true)
-    return () => document.removeEventListener('click', handleClick, true)
-  }, [open])
-
   function handleToggle(e: MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+    if (!open) {
+      requestAnimationFrame(() => {
+        if (btnRef.current) setStyle(getPopoverStyle(btnRef.current))
+      })
+    }
     setOpen((v) => !v)
   }
 
   function commitSize(val: number) {
     onChange(val)
   }
-
-  const popover = open && createPortal(
-    <div
-      ref={popoverRef}
-      class="jr-settings-popover"
-      style={{
-        position: 'fixed',
-        ...getPopoverStyle(btnRef.current!),
-        zIndex: '999999',
-      }}
-    >
-      <div class="jr-settings-popover__title">{t.settingsTitle}</div>
-      <div class="jr-settings-popover__mode">{label}</div>
-      <div class="jr-settings-popover__presets">
-        {presets.map((n) => (
-          <button
-            key={n}
-            class={`jr-settings-popover__btn${pageSize === n ? ' jr-settings-popover__btn--active' : ''}`}
-            onClick={() => commitSize(n)}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
-      <div class="jr-settings-popover__row">
-        <input
-          class="jr-settings-popover__input"
-          type="number"
-          min="1"
-          max="999"
-          value={pageSize}
-          onInput={(e) => {
-            const v = parseInt((e.target as HTMLInputElement).value, 10)
-            if (v > 0) commitSize(v)
-          }}
-        />
-        <span class="jr-settings-popover__unit">{label}</span>
-      </div>
-    </div>,
-    document.body,
-  )
 
   return (
     <div class="jr-settings-btn-wrap">
@@ -124,7 +76,44 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
       >
         <MdSettings size={16} />
       </button>
-      {popover}
+      <Popover open={open} onClose={() => setOpen(false)}>
+        <div
+          class="jr-settings-popover"
+          style={{
+            position: 'fixed',
+            ...style,
+            zIndex: '999999',
+          }}
+        >
+          <div class="jr-settings-popover__title">{t.settingsTitle}</div>
+          <div class="jr-settings-popover__mode">{label}</div>
+          <div class="jr-settings-popover__presets">
+            {presets.map((n) => (
+              <button
+                key={n}
+                class={`jr-settings-popover__btn${pageSize === n ? ' jr-settings-popover__btn--active' : ''}`}
+                onClick={() => commitSize(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <div class="jr-settings-popover__row">
+            <input
+              class="jr-settings-popover__input"
+              type="number"
+              min="1"
+              max="999"
+              value={pageSize}
+              onInput={(e) => {
+                const v = parseInt((e.target as HTMLInputElement).value, 10)
+                if (v > 0) commitSize(v)
+              }}
+            />
+            <span class="jr-settings-popover__unit">{label}</span>
+          </div>
+        </div>
+      </Popover>
     </div>
   )
 }
