@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
-import { createPortal } from 'preact/compat'
+import { useState, useRef, useCallback } from 'preact/hooks'
 import { MdFolder } from 'react-icons/md'
 import type { AncestorEntry } from '../api/foldersApi'
 import { getItemAncestors } from '../api/foldersApi'
 import { useLocale } from '../i18n/context'
+import { Popover } from './Popover'
 
 interface Props {
   itemId: string
@@ -50,25 +50,12 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
   const [loading, setLoading] = useState(false)
   const [style, setStyle] = useState<Record<string, string>>({})
   const btnRef = useRef<HTMLButtonElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
   const fetchingRef = useRef(false)
 
   const close = useCallback(() => {
     setOpen(false)
     setLoading(false)
   }, [])
-
-  useEffect(() => {
-    if (!open) return
-    function handleClick(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)
-          && btnRef.current && !btnRef.current.contains(e.target as Node)) {
-        close()
-      }
-    }
-    document.addEventListener('click', handleClick, true)
-    return () => document.removeEventListener('click', handleClick, true)
-  }, [open, close])
 
   function updatePosition(count: number) {
     if (!btnRef.current) return
@@ -102,36 +89,6 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
 
   const isList = viewMode === 'list'
 
-  const popover = open && createPortal(
-    <div ref={popoverRef} class="jr-folder-popover" style={style}>
-      <div class="jr-folder-popover__title">{t.folderViewTitle}</div>
-      {loading ? (
-        <div class="jr-folder-popover__loading">
-          <span class="jr-folder-popover__sk" />
-          <span class="jr-folder-popover__sk" />
-          <span class="jr-folder-popover__sk" />
-        </div>
-      ) : (
-        <ul class="jr-folder-popover__list">
-          {ancestors.map((a, i) => (
-            <li key={a.Id} class={`jr-folder-popover__item jr-folder-popover__item--l${i}`}>
-              <a
-                class="jr-folder-popover__link"
-                href={`#!/list.html?parentId=${a.Id}&serverId=${a.ServerId}`}
-                onClick={close}
-                title={a.Name}
-              >
-                <span class="jr-folder-popover__lvl" />
-                <span class="jr-folder-popover__text">{a.Name}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>,
-    document.body,
-  )
-
   return (
     <div class={`jr-folder-btn-wrap${showTypeLabel && !isList ? ' jr-folder-btn-wrap--with-type' : ''}${isList ? ' jr-folder-btn-wrap--list' : ''}`}>
       <button
@@ -143,10 +100,37 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
         {loading ? (
           <span class="jr-folder-btn__spinner" />
         ) : (
-          <MdFolder size={20} />
+          <MdFolder size={24} />
         )}
       </button>
-      {popover}
+      <Popover open={open} onClose={close}>
+        <div class="jr-folder-popover" style={style}>
+            <div class="jr-folder-popover__title">{t.folderViewTitle}</div>
+            {loading ? (
+              <div class="jr-folder-popover__loading">
+                <span class="jr-folder-popover__sk" />
+                <span class="jr-folder-popover__sk" />
+                <span class="jr-folder-popover__sk" />
+              </div>
+            ) : (
+              <ul class="jr-folder-popover__list">
+                {ancestors.map((a, i) => (
+                  <li key={a.Id} class={`jr-folder-popover__item jr-folder-popover__item--l${i}`}>
+                    <a
+                      class="jr-folder-popover__link"
+                      href={`#!/list.html?parentId=${a.Id}&serverId=${a.ServerId}`}
+                      onClick={close}
+                      title={a.Name}
+                    >
+                      <span class="jr-folder-popover__lvl" />
+                      <span class="jr-folder-popover__text">{a.Name}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+      </Popover>
     </div>
   )
 }
