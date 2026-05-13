@@ -38,6 +38,7 @@ export interface HistoryQuery {
   mediaFilter: MediaFilter
   showRepeats: boolean
   groupDedup: boolean
+  pageSize: number
 }
 
 export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResult> {
@@ -55,6 +56,7 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
   }
   if (query.mediaFilter !== 'all') params['mediaType'] = query.mediaFilter
   if (query.groupDedup) params['groupDedup'] = 'true'
+  if (query.pageSize > 0) params['pageSize'] = String(query.pageSize)
 
   const url = window.ApiClient.getUrl('JellyfinRecents/PlayHistory', params)
   const data = (await window.ApiClient.ajax({ url, type: 'GET', dataType: 'json' })) as PlayHistoryResponse

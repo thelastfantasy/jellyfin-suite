@@ -57,6 +57,7 @@ export function App({ locale }: Props) {
         mediaFilter: s.mediaFilter,
         showRepeats: s.showRepeats,
         groupDedup: s.groupDedup,
+        pageSize: s.pageSize,
       })
 
       const grouped = groupByMode(records, s.groupBy, locale, t, s.groupDedup).map((g) => ({

@@ -42,4 +42,5 @@ export interface ViewSettings {
   showRepeats: boolean
   groupDedup: boolean
   viewMode: ViewMode
+  pageSize: number
 }

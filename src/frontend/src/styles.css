@@ -860,6 +860,99 @@ a.jr-card__series-name:hover {
   background: rgba(0, 164, 220, 0.2);
 }
 
+/* ── Settings Popover ── */
+.jr-settings-btn-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.jr-settings-popover {
+  min-width: 160px;
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 0.6rem 0.75rem;
+  color: #e0e0e0;
+  font-size: 0.82rem;
+}
+
+.jr-settings-popover__title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  margin-bottom: 0.4rem;
+}
+
+.jr-settings-popover__mode {
+  font-size: 0.72rem;
+  opacity: 0.4;
+  margin-bottom: 0.4rem;
+}
+
+.jr-settings-popover__presets {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.jr-settings-popover__btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0.25rem 0;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: background-color 0.12s;
+}
+
+.jr-settings-popover__btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.jr-settings-popover__btn--active {
+  background: rgba(0, 164, 220, 0.3);
+  border-color: rgba(0, 164, 220, 0.6);
+  color: #00a4dc;
+}
+
+.jr-settings-popover__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jr-settings-popover__input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.8rem;
+  width: 3.5rem;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.jr-settings-popover__input::-webkit-outer-spin-button,
+.jr-settings-popover__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.jr-settings-popover__input:focus {
+  border-color: var(--accent-color, #00a4dc);
+}
+
+.jr-settings-popover__unit {
+  font-size: 0.72rem;
+  opacity: 0.4;
+}
+
 .jr-folder-popover__link:hover {
   background: rgba(0, 164, 220, 0.15);
   color: #fff;

@@ -1,6 +1,7 @@
 import { MdArrowDownward, MdArrowUpward, MdGridView, MdViewModule, MdViewList } from 'react-icons/md'
 import type { GroupByMode, MediaFilter, SortByMode, ViewMode, ViewSettings } from '../types'
 import { useLocale } from '../i18n/context'
+import { SettingsPopover } from './SettingsPopover'
 
 interface Props {
   settings: ViewSettings
@@ -113,6 +114,11 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
                 <o.icon size={18} />
               </button>
             ))}
+            <SettingsPopover
+              groupBy={settings.groupBy}
+              pageSize={settings.pageSize}
+              onChange={(size) => onSettingsChange({ pageSize: size })}
+            />
           </div>
         </div>
 

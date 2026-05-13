@@ -38,4 +38,12 @@ export const ja: Translations = {
   quarterNames: ['冬', '春', '夏', '秋'],
   folderViewTitle: 'フォルダビュー',
   folderViewEmpty: '親フォルダなし',
+  settingsTitle: 'ページあたり',
+  groupPerPage: {
+    day: '日/ページ',
+    week: '週/ページ',
+    month: '月/ページ',
+    quarter: '季/ページ',
+    year: '年/ページ',
+  },
 }

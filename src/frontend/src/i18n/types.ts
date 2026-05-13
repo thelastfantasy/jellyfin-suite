@@ -49,4 +49,7 @@ export interface Translations {
   // Folder view
   folderViewTitle: string
   folderViewEmpty: string
+  // Settings popover
+  settingsTitle: string
+  groupPerPage: Record<string, string>
 }
