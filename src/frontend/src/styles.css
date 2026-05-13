@@ -758,8 +758,8 @@ a.jr-card__series-name:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: none;
   border-radius: 4px;
@@ -768,6 +768,10 @@ a.jr-card__series-name:hover {
   cursor: pointer;
   backdrop-filter: blur(4px);
   transition: background-color 0.15s, color 0.15s;
+}
+
+.jr-folder-btn .material-icons {
+  font-size: 20px;
 }
 
 .jr-folder-btn:hover {
@@ -782,7 +786,7 @@ a.jr-card__series-name:hover {
 /* ── 文件夹 Popover（固定定位避免 overflow 裁剪）── */
 .jr-folder-popover {
   min-width: 180px;
-  max-width: 280px;
+  max-width: 360px;
   background: #1e1e2e;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;

@@ -10,7 +10,7 @@ interface Props {
   viewMode?: string
 }
 
-const POPOVER_WIDTH = 220
+const POPOVER_WIDTH = 260
 const POPOVER_ITEM_HEIGHT = 32
 
 function computeStyle(btn: HTMLElement, entryCount: number, isList: boolean): Record<string, string> {
@@ -118,6 +118,7 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
                 class="jr-folder-popover__link"
                 href={`#!/list.html?parentId=${a.Id}&serverId=${a.ServerId}`}
                 onClick={close}
+                title={a.Name}
               >
                 <span class="jr-folder-popover__lvl" />
                 {a.Name}
