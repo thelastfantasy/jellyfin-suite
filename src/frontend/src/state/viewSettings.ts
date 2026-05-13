@@ -10,6 +10,8 @@ const DEFAULT_SETTINGS: ViewSettings = {
   showRepeats: false,
   groupDedup: false,
   viewMode: 'thumbnail',
+  pageSize: 0,
+  pageSizes: {},
 }
 
 export function loadSettings(): ViewSettings {

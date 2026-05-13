@@ -38,4 +38,12 @@ export const zh: Translations = {
   quarterNames: ['冬季', '春季', '夏季', '秋季'],
   folderViewTitle: '文件夹视图',
   folderViewEmpty: '无上级文件夹',
+  settingsTitle: '每页数量',
+  groupPerPage: {
+    day: '天/页',
+    week: '周/页',
+    month: '月/页',
+    quarter: '季/页',
+    year: '年/页',
+  },
 }

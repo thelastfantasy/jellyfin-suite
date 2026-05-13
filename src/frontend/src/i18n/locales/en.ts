@@ -38,4 +38,12 @@ export const en: Translations = {
   quarterNames: ['Winter', 'Spring', 'Summer', 'Autumn'],
   folderViewTitle: 'Folder View',
   folderViewEmpty: 'No parent folders',
+  settingsTitle: 'Per Page',
+  groupPerPage: {
+    day: 'days/page',
+    week: 'weeks/page',
+    month: 'months/page',
+    quarter: 'quarters/page',
+    year: 'years/page',
+  },
 }

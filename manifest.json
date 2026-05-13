@@ -9,12 +9,12 @@
     "imageUrl": "",
     "versions": [
       {
-        "version": "1.3.0.0",
-        "changelog": "https://github.com/thelastfantasy/jellyfin-recents/releases/tag/v1.3.0",
+        "version": "1.3.1.0",
+        "changelog": "https://github.com/thelastfantasy/jellyfin-recents/releases/tag/v1.3.1",
         "targetAbi": "10.8.0.0",
-        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-recents/releases/download/v1.3.0/jellyfin-recents_1.3.0.0.zip",
-        "checksum": "3190f28192a6ae92e6871f68d088d656",
-        "timestamp": "2026-05-12T12:11:57.0000000Z"
+        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-recents/releases/download/v1.3.1/jellyfin-recents_1.3.1.0.zip",
+        "checksum": "d4dd298428d7c2427e72c2d385b2f9ed",
+        "timestamp": "2026-05-13T05:12:03.0000000Z"
       }
     ]
   }
