@@ -825,9 +825,6 @@ a.jr-card__series-name:hover {
   padding: 0.4rem 0.75rem;
   color: inherit;
   text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   transition: background-color 0.12s;
 }
 
@@ -960,6 +957,13 @@ a.jr-card__series-name:hover {
 .jr-folder-popover__link:hover {
   background: rgba(0, 164, 220, 0.15);
   color: #fff;
+}
+
+.jr-folder-popover__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .jr-folder-popover__loading {

@@ -121,7 +121,7 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
                 title={a.Name}
               >
                 <span class="jr-folder-popover__lvl" />
-                {a.Name}
+                <span class="jr-folder-popover__text">{a.Name}</span>
               </a>
             </li>
           ))}
