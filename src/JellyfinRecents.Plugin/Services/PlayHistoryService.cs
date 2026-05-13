@@ -19,22 +19,24 @@ public class PlayHistoryService
 
     public async Task<PlayHistoryResponse> GetPlayHistoryAsync(
         Guid userId, string groupBy, int page, string timeZoneId,
-        string? mediaType, string sortBy, string sortOrder, bool showRepeats, bool groupDedup, CancellationToken ct)
+        string? mediaType, string sortBy, string sortOrder, bool showRepeats, bool groupDedup,
+        int pageSize, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(groupBy)) groupBy = "week";
         var tz = GetTimeZone(timeZoneId);
         var nowUtc = DateTime.UtcNow;
         var tzOffset = (int)tz.GetUtcOffset(nowUtc).TotalMinutes;
+        var ps = ResolvePageSize(groupBy, pageSize);
         List<PlayHistoryEntry> entries;
         int totalPages;
 
         if (groupBy == "day")
         {
-            // 按天：递补机制 — UTC 转本地日期，去重，按 30 天分页
+            // 按天：递补机制 — UTC 转本地日期，去重，按 pageSize 天分页
             tzOffset = (int)tz.GetUtcOffset(nowUtc).TotalMinutes;
             var dates = await _db.GetDistinctLocalDatesAsync(userId, tzOffset, ct);
-            var pageDates = dates.Skip(page * 30).Take(30).ToList();
-            totalPages = (int)Math.Ceiling(dates.Count / 30.0);
+            var pageDates = dates.Skip(page * ps).Take(ps).ToList();
+            totalPages = (int)Math.Ceiling(dates.Count / (double)ps);
 
             if (pageDates.Count == 0)
                 return new PlayHistoryResponse { Entries = [], TotalCount = 0, TotalPages = 0 };
@@ -53,11 +55,11 @@ public class PlayHistoryService
         }
         else
         {
-            var (utcStart, utcEnd) = ComputeWindow(groupBy, page, nowUtc, tz);
+            var (utcStart, utcEnd) = ComputeWindow(groupBy, page, nowUtc, tz, ps);
             entries = await _db.GetPlayHistoryByDateRangeAsync(
                 userId, utcStart, utcEnd, showRepeats, mediaType, sortBy, sortOrder, ct);
             var earliest = await _db.GetEarliestPlayedAtAsync(userId, ct);
-            totalPages = ComputeTotalPages(groupBy, nowUtc, tz, earliest);
+            totalPages = ComputeTotalPages(groupBy, nowUtc, tz, earliest, ps);
         }
 
         EnrichMetadata(entries);
@@ -105,10 +107,23 @@ public class PlayHistoryService
         return TimeZoneInfo.ConvertTimeToUtc(unspecified, tz);
     }
 
+    private static int ResolvePageSize(string groupBy, int pageSize)
+    {
+        if (pageSize > 0) return pageSize;
+        return groupBy switch
+        {
+            "day" => 30,
+            "week" => 13,
+            "month" => 6,
+            "quarter" => 2,
+            _ => 1,
+        };
+    }
+
     // ─── 固定窗口计算 ────────────────────────────────────────────────────────
 
     private static (DateTime utcStart, DateTime utcEnd) ComputeWindow(
-        string groupBy, int page, DateTime nowUtc, TimeZoneInfo tz)
+        string groupBy, int page, DateTime nowUtc, TimeZoneInfo tz, int ps)
     {
         var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
         DateTime localStart, localEnd;
@@ -117,33 +132,34 @@ public class PlayHistoryService
         {
             case "week":
             {
-                var weekOffset = page * 13;
+                var weekOffset = page * ps;
                 var dayOfWeek = (int)nowLocal.DayOfWeek;
                 var mondayOffset = dayOfWeek == 0 ? -6 : 1 - dayOfWeek;
                 var thisMonday = nowLocal.Date.AddDays(mondayOffset);
                 localEnd = thisMonday.AddDays(-weekOffset * 7 + 6).AddDays(1).AddTicks(-1);
-                localStart = thisMonday.AddDays(-(weekOffset + 12) * 7);
+                localStart = thisMonday.AddDays(-(weekOffset + ps - 1) * 7);
                 break;
             }
             case "month":
             {
-                var monthOffset = page * 6;
+                var monthOffset = page * ps;
                 var endMonth = nowLocal.Year * 12 + nowLocal.Month - 1 - monthOffset;
                 var endYear = endMonth / 12; var endM = endMonth % 12 + 1;
                 localEnd = new DateTime(endYear, endM, 1).AddMonths(1).AddTicks(-1);
-                var startMonth = endMonth - 5;
+                var startMonth = endMonth - (ps - 1);
                 var startYear = startMonth / 12; var startM = startMonth % 12 + 1;
                 localStart = new DateTime(startYear, startM, 1);
                 break;
             }
             case "quarter":
             {
-                var quarterOffset = page * 2;
+                var monthsPerPage = ps * 3;
+                var quarterOffset = page * ps;
                 var currentQuarterEnd = ((nowLocal.Month - 1) / 3 + 1) * 3;
                 var endMonthAbs = nowLocal.Year * 12 + currentQuarterEnd - 1 - quarterOffset * 3;
                 var endYear = endMonthAbs / 12; var endM = endMonthAbs % 12 + 1;
                 localEnd = new DateTime(endYear, endM, 1).AddMonths(1).AddTicks(-1);
-                var startMonthAbs = endMonthAbs - 5;
+                var startMonthAbs = endMonthAbs - (monthsPerPage - 1);
                 var startYear = startMonthAbs / 12; var startM = startMonthAbs % 12 + 1;
                 localStart = new DateTime(startYear, startM, 1);
                 break;
@@ -151,8 +167,8 @@ public class PlayHistoryService
             case "year":
             default:
             {
-                localStart = new DateTime(nowLocal.Year - page, 1, 1);
-                localEnd = new DateTime(nowLocal.Year - page, 12, 31, 23, 59, 59, 999);
+                localStart = new DateTime(nowLocal.Year - page * ps, 1, 1);
+                localEnd = new DateTime(nowLocal.Year - (page * ps + ps - 1), 12, 31, 23, 59, 59, 999);
                 break;
             }
         }
@@ -161,7 +177,7 @@ public class PlayHistoryService
     }
 
     private static int ComputeTotalPages(
-        string groupBy, DateTime nowUtc, TimeZoneInfo tz, DateTime? earliestUtc)
+        string groupBy, DateTime nowUtc, TimeZoneInfo tz, DateTime? earliestUtc, int ps)
     {
         if (earliestUtc is null) return 0;
         var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
@@ -175,21 +191,21 @@ public class PlayHistoryService
                 var thisMonday = nowLocal.Date.AddDays(dow == 0 ? -6 : 1 - dow);
                 var earliestDow = (int)earliestLocal.DayOfWeek;
                 var earliestMonday = earliestLocal.Date.AddDays(earliestDow == 0 ? -6 : 1 - earliestDow);
-                return Math.Max(1, (int)Math.Ceiling((thisMonday - earliestMonday).Days / (13.0 * 7)));
+                return Math.Max(1, (int)Math.Ceiling((thisMonday - earliestMonday).Days / (ps * 7.0)));
             }
             case "month":
             {
                 var totalMonths = (nowLocal.Year - earliestLocal.Year) * 12 + (nowLocal.Month - earliestLocal.Month);
-                return Math.Max(1, (int)Math.Ceiling((totalMonths + 1) / 6.0));
+                return Math.Max(1, (int)Math.Ceiling((totalMonths + 1) / (double)ps));
             }
             case "quarter":
             {
                 var totalMonths = (nowLocal.Year - earliestLocal.Year) * 12 + (nowLocal.Month - earliestLocal.Month);
-                return Math.Max(1, (int)Math.Ceiling((totalMonths + 3) / 6.0));
+                return Math.Max(1, (int)Math.Ceiling((totalMonths + ps * 3 - 1) / (double)(ps * 3)));
             }
             default:
             {
-                return Math.Max(1, nowLocal.Year - earliestLocal.Year + 1);
+                return Math.Max(1, (nowLocal.Year - earliestLocal.Year) / ps + 1);
             }
         }
     }

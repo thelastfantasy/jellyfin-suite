@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
+import { MdFolder } from 'react-icons/md'
 import type { AncestorEntry } from '../api/foldersApi'
 import { getItemAncestors } from '../api/foldersApi'
 import { useLocale } from '../i18n/context'
@@ -10,7 +11,7 @@ interface Props {
   viewMode?: string
 }
 
-const POPOVER_WIDTH = 220
+const POPOVER_WIDTH = 260
 const POPOVER_ITEM_HEIGHT = 32
 
 function computeStyle(btn: HTMLElement, entryCount: number, isList: boolean): Record<string, string> {
@@ -118,9 +119,10 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
                 class="jr-folder-popover__link"
                 href={`#!/list.html?parentId=${a.Id}&serverId=${a.ServerId}`}
                 onClick={close}
+                title={a.Name}
               >
                 <span class="jr-folder-popover__lvl" />
-                {a.Name}
+                <span class="jr-folder-popover__text">{a.Name}</span>
               </a>
             </li>
           ))}
@@ -141,7 +143,7 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
         {loading ? (
           <span class="jr-folder-btn__spinner" />
         ) : (
-          <span class="material-icons">folder</span>
+          <MdFolder size={20} />
         )}
       </button>
       {popover}

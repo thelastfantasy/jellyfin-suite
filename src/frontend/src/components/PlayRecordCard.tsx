@@ -192,6 +192,19 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
               <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
                 <span class="material-icons">play_arrow</span>
               </button>
+            </div>
+            {isFav && (
+              <div class="jr-card__actions jr-card__actions--sticky">
+                <button
+                  class="jr-card__fav-btn jr-card__fav-btn--active"
+                  onClick={handleFavClick}
+                  title={t.unfavorite}
+                >
+                  <span class="material-icons">favorite</span>
+                </button>
+              </div>
+            )}
+            <div class="jr-card__overlay jr-card__overlay--actions">
               <div class="jr-card__actions">
                 <button
                   class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
