@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
+import { MdFolder } from 'react-icons/md'
 import type { AncestorEntry } from '../api/foldersApi'
 import { getItemAncestors } from '../api/foldersApi'
 import { useLocale } from '../i18n/context'
@@ -142,7 +143,7 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
         {loading ? (
           <span class="jr-folder-btn__spinner" />
         ) : (
-          <span class="material-icons">folder</span>
+          <MdFolder size={20} />
         )}
       </button>
       {popover}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
+import { MdSettings } from 'react-icons/md'
 import type { GroupByMode } from '../types'
 import { useLocale } from '../i18n/context'
 
@@ -23,6 +24,22 @@ export const DEFAULTS: Record<GroupByMode, number> = {
   month: 6,
   quarter: 2,
   year: 1,
+}
+
+function getPopoverStyle(btn: HTMLElement): Record<string, string> {
+  const r = btn.getBoundingClientRect()
+  const w = 192
+  const h = 160
+
+  let left = r.left + r.width / 2 - w / 2
+  if (left < 4) left = 4
+  if (left + w > window.innerWidth - 4) left = window.innerWidth - w - 4
+
+  let top = r.bottom + 4
+  if (top + h > window.innerHeight - 4) top = r.top - h - 4
+  if (top < 4) top = 4
+
+  return { top: `${top}px`, left: `${left}px` }
 }
 
 export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
@@ -62,8 +79,7 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
       class="jr-settings-popover"
       style={{
         position: 'fixed',
-        top: `${btnRef.current!.getBoundingClientRect().bottom + 4}px`,
-        right: `${window.innerWidth - btnRef.current!.getBoundingClientRect().right}px`,
+        ...getPopoverStyle(btnRef.current!),
         zIndex: '999999',
       }}
     >
@@ -102,11 +118,11 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
     <div class="jr-settings-btn-wrap">
       <button
         ref={btnRef}
-        class={`jr-toolbar__view-btn${open ? ' jr-toolbar__view-btn--active' : ''}`}
+        class="jr-settings-gear-btn"
         onClick={handleToggle}
         title={t.settingsTitle}
       >
-        <span class="material-icons">settings</span>
+        <MdSettings size={16} />
       </button>
       {popover}
     </div>

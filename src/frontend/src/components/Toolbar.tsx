@@ -63,6 +63,11 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
+          <SettingsPopover
+            groupBy={settings.groupBy}
+            pageSize={settings.pageSize}
+            onChange={(size) => onSettingsChange({ pageSize: size })}
+          />
         </div>
 
         <div class="jr-toolbar__group">
@@ -114,11 +119,6 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
                 <o.icon size={18} />
               </button>
             ))}
-            <SettingsPopover
-              groupBy={settings.groupBy}
-              pageSize={settings.pageSize}
-              onChange={(size) => onSettingsChange({ pageSize: size })}
-            />
           </div>
         </div>
 
@@ -131,9 +131,6 @@ export function Toolbar({ settings, onSettingsChange }: Props) {
             />
             {t.showRepeats}
           </label>
-        </div>
-
-        <div class="jr-toolbar__group">
           <label class={`jr-toolbar__label jr-toolbar__label--toggle${!settings.showRepeats ? ' jr-toolbar__label--disabled' : ''}`}>
             <input
               type="checkbox"
