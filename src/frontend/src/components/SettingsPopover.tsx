@@ -17,6 +17,14 @@ const PRESETS: Record<GroupByMode, number[]> = {
   year: [1, 2, 3, 5],
 }
 
+const DEFAULTS: Record<GroupByMode, number> = {
+  day: 30,
+  week: 13,
+  month: 6,
+  quarter: 2,
+  year: 1,
+}
+
 export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
   const { t } = useLocale()
   const [open, setOpen] = useState(false)
@@ -25,7 +33,7 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
 
   const label = t.groupPerPage[groupBy]
   const presets = PRESETS[groupBy]
-  const effective = pageSize > 0 ? pageSize : presets[presets.length - 1]
+  const effective = pageSize > 0 ? pageSize : DEFAULTS[groupBy]
 
   useEffect(() => {
     if (!open) return
