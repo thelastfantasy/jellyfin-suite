@@ -81,6 +81,9 @@ export function App({ locale }: Props) {
 
   function handleSettingsChange(patch: Partial<ViewSettings>) {
     const next = { ...settings, ...patch }
+    if (patch.groupBy && patch.groupBy !== settings.groupBy) {
+      next.pageSize = 0
+    }
     setSettings(next)
     saveSettings(next)
     setPageIndex(0)
