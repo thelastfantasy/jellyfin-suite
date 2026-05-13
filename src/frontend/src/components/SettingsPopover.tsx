@@ -25,6 +25,7 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
 
   const label = t.groupPerPage[groupBy]
   const presets = PRESETS[groupBy]
+  const effective = pageSize > 0 ? pageSize : presets[presets.length - 1]
 
   useEffect(() => {
     if (!open) return
@@ -65,7 +66,7 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
         {presets.map((n) => (
           <button
             key={n}
-            class={`jr-settings-popover__btn${pageSize === n ? ' jr-settings-popover__btn--active' : ''}`}
+            class={`jr-settings-popover__btn${effective === n ? ' jr-settings-popover__btn--active' : ''}`}
             onClick={() => commitSize(n)}
           >
             {n}
@@ -78,8 +79,8 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
           type="number"
           min="1"
           max="999"
-          value={pageSize || ''}
-          placeholder={`${presets[presets.length - 1]}`}
+          value={pageSize > 0 ? pageSize : ''}
+          placeholder={`${effective}`}
           onInput={(e) => {
             const v = parseInt((e.target as HTMLInputElement).value, 10)
             if (v > 0) commitSize(v)
