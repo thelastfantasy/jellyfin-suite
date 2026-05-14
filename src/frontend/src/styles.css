@@ -738,13 +738,13 @@ a.jr-card__series-name:hover {
   transform: scale(1.1);
 }
 
-.jr-card__resume-btn .material-icons {
-  font-size: 28px;
+.jr-card__resume-btn svg {
+  display: block;
 }
 
 .jr-card__play-btn--small {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.45);
   border: none;
@@ -764,7 +764,7 @@ a.jr-card__series-name:hover {
 }
 
 .jr-card__play-btn--small .material-icons {
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .jr-card__overlay-center {
@@ -775,7 +775,33 @@ a.jr-card__series-name:hover {
 
 .jr-card__overlay-center .jr-card__play-btn--small {
   position: absolute;
-  left: calc(50% + 21px + 0.5rem);
+  left: calc(50% + 20px);
+}
+
+.jr-card__resume-btn--sm {
+  width: 26px;
+  height: 26px;
+}
+
+
+.jr-card__fromstart-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.jr-card__fromstart-btn:hover {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.jr-card__fromstart-btn .material-icons {
+  font-size: 18px;
 }
 
 .jr-card__actions--sticky {
