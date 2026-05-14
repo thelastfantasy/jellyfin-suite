@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useState, useEffect } from 'preact/hooks'
 import type { PlayRecord, ViewMode } from '../types'
 import { getCurrentUserId } from '../api/jellyfinClient'
 import { formatPlayedDate } from '../i18n'
@@ -79,6 +79,16 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   const [isFav, setIsFav] = useState(record.favoritedAt !== null)
   const [favLoading, setFavLoading] = useState(false)
 
+  useEffect(() => {
+    function handler(e: CustomEvent<{ itemId: string; favoritedAt: string | null }>) {
+      if (e.detail.itemId === record.itemId) {
+        setIsFav(e.detail.favoritedAt !== null)
+      }
+    }
+    window.addEventListener('jr-fav-change', handler as EventListener)
+    return () => window.removeEventListener('jr-fav-change', handler as EventListener)
+  }, [record.itemId])
+
   const imageUrl = record.imagePrimaryTag
     ? `/Items/${record.itemId}/Images/Primary?fillWidth=320&quality=90&tag=${record.imagePrimaryTag}`
     : `/Items/${record.itemId}/Images/Primary?fillWidth=320&quality=90`
@@ -96,12 +106,15 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
     e.stopPropagation()
     if (favLoading) return
     const next = !isFav
+    const now = next ? new Date().toISOString() : null
     setIsFav(next)
     setFavLoading(true)
     try {
       await apiToggleFavorite(record.itemId, next)
+      window.dispatchEvent(new CustomEvent('jr-fav-change', { detail: { itemId: record.itemId, favoritedAt: now } }))
     } catch {
-      setIsFav(!next) // rollback
+      setIsFav(!next)
+      window.dispatchEvent(new CustomEvent('jr-fav-change', { detail: { itemId: record.itemId, favoritedAt: record.favoritedAt?.toISOString() ?? null } }))
     } finally {
       setFavLoading(false)
     }
@@ -115,7 +128,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
 
   if (viewMode === 'list') {
     return (
-      <div class="jr-card jr-card--list">
+      <div class="jr-card jr-card--list" data-jr-id={`${record.itemId}-${record.playedDate.getTime()}`}>
         <a class="jr-card__thumb jr-card__thumb--list" href={detailUrl}>
           <img
             src={imageUrl}
@@ -165,7 +178,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   }
 
   return (
-    <div class="jr-card">
+    <div class="jr-card" data-jr-id={`${record.itemId}-${record.playedDate.getTime()}`}>
       <div class="jr-card__thumb-link-wrap">
         <a class="jr-card__thumb-link" href={detailUrl}>
           <div class="jr-card__thumb">

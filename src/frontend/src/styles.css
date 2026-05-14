@@ -161,6 +161,25 @@
   100% { background: var(--theme-dark-color, var(--card-text-area-background, #101010)); }
 }
 
+@keyframes jr-card-in {
+  from { opacity: 0.5; transform: scale(0.96); }
+  to   { opacity: 1;   transform: scale(1); }
+}
+
+.jr-group__cards .jr-card {
+  animation: jr-card-in 0.2s ease-out both;
+}
+.jr-group__cards .jr-card:nth-child(1)  { animation-delay: 0s; }
+.jr-group__cards .jr-card:nth-child(2)  { animation-delay: 0.04s; }
+.jr-group__cards .jr-card:nth-child(3)  { animation-delay: 0.08s; }
+.jr-group__cards .jr-card:nth-child(4)  { animation-delay: 0.12s; }
+.jr-group__cards .jr-card:nth-child(5)  { animation-delay: 0.16s; }
+.jr-group__cards .jr-card:nth-child(6)  { animation-delay: 0.20s; }
+.jr-group__cards .jr-card:nth-child(7)  { animation-delay: 0.24s; }
+.jr-group__cards .jr-card:nth-child(8)  { animation-delay: 0.28s; }
+.jr-group__cards .jr-card:nth-child(9)  { animation-delay: 0.32s; }
+.jr-group__cards .jr-card:nth-child(10) { animation-delay: 0.36s; }
+
 .jr-group__title--highlight {
   animation: jr-group-highlight 1.5s ease-out;
 }
