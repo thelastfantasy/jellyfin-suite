@@ -15,6 +15,7 @@ interface PlayHistoryEntry {
   EpisodeNumber?: number | null
   ImagePrimaryTag?: string | null
   HasAncestors?: boolean
+  PlaybackPositionTicks?: number | null
 }
 
 interface PlayHistoryResponse {
@@ -76,6 +77,7 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
     episodeNumber: entry.EpisodeNumber ?? null,
     parentId: null,
     hasAncestors: entry.HasAncestors ?? false,
+    playbackPositionTicks: entry.PlaybackPositionTicks ?? null,
   }))
 
   return { records, totalCount: data.TotalCount, totalPages: data.TotalPages }

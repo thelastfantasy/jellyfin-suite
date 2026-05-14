@@ -56,5 +56,6 @@ export async function getRecentlyPlayed(
     episodeNumber: item.IndexNumber ?? null,
     parentId: null,
     hasAncestors: false,
+    playbackPositionTicks: null,
   }))
 }

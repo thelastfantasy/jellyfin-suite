@@ -15,6 +15,7 @@ public class PlayHistoryEntry
     public int? EpisodeNumber { get; set; }
     public string? ImagePrimaryTag { get; set; }
     public bool HasAncestors { get; set; }
+    public long? PlaybackPositionTicks { get; set; }
 }
 
 public class PlayHistoryResponse
