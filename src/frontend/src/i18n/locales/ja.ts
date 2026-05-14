@@ -31,6 +31,7 @@ export const ja: Translations = {
   retry: '再試行',
   loadError: '読み込みに失敗しました。',
   play: '再生',
+  resume: '再開',
   favorite: 'お気に入り',
   unfavorite: 'お気に入り解除',
   video: '動画',

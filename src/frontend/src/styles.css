@@ -718,6 +718,66 @@ a.jr-card__series-name:hover {
   font-size: 28px;
 }
 
+.jr-card__resume-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(0, 164, 220, 0.88);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s, transform 0.15s;
+}
+
+.jr-card__resume-btn:hover {
+  background: rgba(0, 164, 220, 1);
+  transform: scale(1.1);
+}
+
+.jr-card__resume-btn .material-icons {
+  font-size: 28px;
+}
+
+.jr-card__play-btn--small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  border: none;
+  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 0.4rem;
+  transition: background-color 0.15s, transform 0.15s;
+}
+
+.jr-card__play-btn--small:hover {
+  background: rgba(255, 255, 255, 0.7);
+  transform: scale(1.1);
+}
+
+.jr-card__play-btn--small .material-icons {
+  font-size: 18px;
+}
+
+.jr-card__overlay-center {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.jr-card__overlay-center .jr-card__play-btn--small {
+  position: absolute;
+  left: calc(50% + 21px + 0.5rem);
+}
+
 .jr-card__actions--sticky {
   position: absolute;
   bottom: 0.35rem;
