@@ -31,6 +31,7 @@ export const en: Translations = {
   retry: 'Retry',
   loadError: 'Failed to load. Please retry.',
   play: 'Play',
+  resume: 'Resume',
   favorite: 'Favorite',
   unfavorite: 'Unfavorite',
   video: 'Video',

@@ -39,6 +39,7 @@ export interface Translations {
   loadError: string
   // Card actions
   play: string
+  resume: string
   favorite: string
   unfavorite: string
   // Media type badge
