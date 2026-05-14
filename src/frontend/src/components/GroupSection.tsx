@@ -1,6 +1,7 @@
 import { Fragment } from 'preact'
+import { useRef, useLayoutEffect } from 'preact/hooks'
 import { RiArrowDropUpFill, RiArrowDropDownFill } from 'react-icons/ri'
-import type { TimeGroup, ViewMode } from '../types'
+import type { TimeGroup, ViewMode, PlayRecord } from '../types'
 import { PlayRecordCard } from './PlayRecordCard'
 
 interface Props {
@@ -15,6 +16,10 @@ interface Props {
   onPageNav: (direction: 'prev' | 'next') => void
 }
 
+function getRecordKey(r: PlayRecord): string {
+  return `${r.itemId}-${r.playedDate.getTime()}`
+}
+
 function scrollToGroupHeader(index: number) {
   const cards = document.querySelectorAll<HTMLElement>('.jr-group__cards')
   const el = cards[index]
@@ -24,7 +29,7 @@ function scrollToGroupHeader(index: number) {
   window.scrollTo({ top: el.offsetTop - titleH - 56, behavior: 'smooth' })
   if (title) {
     title.classList.remove('jr-group__title--highlight')
-    void title.offsetWidth // reflow 以便重复触发动画
+    void title.offsetWidth
     title.classList.add('jr-group__title--highlight')
     title.addEventListener('animationend', () => title.classList.remove('jr-group__title--highlight'), { once: true })
   }
@@ -36,6 +41,88 @@ export function GroupSection({
   groupIndex, totalGroups, hasPrevPage, hasNextPage, onPageNav,
 }: Props) {
   if (group.records.length === 0) return null
+
+  const cardsRef = useRef<HTMLDivElement>(null)
+  const prevRectsRef = useRef<Map<string, DOMRect>>(new Map())
+  const prevRecordsRef = useRef<PlayRecord[]>([])
+  const cardClonesRef = useRef<Map<string, HTMLElement>>(new Map())
+
+  useLayoutEffect(() => {
+    const el = cardsRef.current
+    if (!el) return
+
+    const cards = el.querySelectorAll<HTMLElement>('.jr-card')
+
+    // 1. 捕获新位置（在任何 transform 之前）
+    const nextRects = new Map<string, DOMRect>()
+    cards.forEach(c => {
+      const id = c.getAttribute('data-jr-id')
+      if (id) nextRects.set(id, c.getBoundingClientRect())
+    })
+
+    // 2. 克隆当前卡片供下次渲染的退出动画使用（在 FLIP transform 之前捕获，位置准确）
+    const newClones = new Map<string, HTMLElement>()
+    cards.forEach(c => {
+      const id = c.getAttribute('data-jr-id')
+      if (!id) return
+      const rect = nextRects.get(id)
+      if (!rect) return
+      const clone = c.cloneNode(true) as HTMLElement
+      clone.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;margin:0;z-index:50;pointer-events:none;opacity:1;animation:none;transition:none;`
+      newClones.set(id, clone)
+    })
+
+    if (prevRectsRef.current.size > 0) {
+      const nextKeys = new Set(group.records.map(getRecordKey))
+      const elRect = el.getBoundingClientRect()
+
+      // 3. 退出动画：用上次渲染保存的克隆淡出被移除的卡片
+      prevRecordsRef.current.forEach(r => {
+        const key = getRecordKey(r)
+        if (nextKeys.has(key)) return
+        const clone = cardClonesRef.current.get(key)
+        if (!clone) return
+        // 裁剪到分组当前下边界，防止残影覆盖下方分组内容
+        const cloneTop = parseFloat(clone.style.top)
+        const cloneHeight = parseFloat(clone.style.height)
+        const overflowBottom = Math.max(0, cloneTop + cloneHeight - elRect.bottom)
+        if (overflowBottom > 0) {
+          clone.style.clipPath = `inset(0 0 ${overflowBottom}px 0)`
+        }
+        document.body.appendChild(clone)
+        requestAnimationFrame(() => {
+          clone.style.opacity = '0'
+          clone.style.transition = 'opacity 0.15s ease-out'
+          setTimeout(() => clone.remove(), 150)
+        })
+      })
+
+      // 4. FLIP：将留存卡片从旧位置平移到新位置
+      cards.forEach(c => {
+        const id = c.getAttribute('data-jr-id')
+        if (!id) return
+        const prev = prevRectsRef.current.get(id)
+        const next = nextRects.get(id)
+        if (!prev || !next) return
+
+        const dx = prev.left - next.left
+        const dy = prev.top - next.top
+        if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return
+
+        c.style.transform = `translate(${dx}px, ${dy}px)`
+        c.style.transition = 'none'
+        requestAnimationFrame(() => {
+          c.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          c.style.transform = ''
+        })
+      })
+    }
+
+    // 5. 更新 ref，克隆是在 FLIP 之前捕获的，位置正确
+    prevRectsRef.current = nextRects
+    prevRecordsRef.current = group.records.slice()
+    cardClonesRef.current = newClones
+  }, [group.records])
 
   const isFirst = groupIndex === 0
   const isLast = groupIndex === totalGroups - 1
@@ -75,10 +162,10 @@ export function GroupSection({
           </button>
         </span>
       </h2>
-      <div class={`jr-group__cards jr-group__cards--${viewMode}`}>
+      <div ref={cardsRef} class={`jr-group__cards jr-group__cards--${viewMode}`}>
         {group.records.map((record) => (
           <PlayRecordCard
-            key={`${record.itemId}-${record.playedDate.getTime()}`}
+            key={getRecordKey(record)}
             record={record}
             showTypeLabel={showTypeLabel}
             viewMode={viewMode}

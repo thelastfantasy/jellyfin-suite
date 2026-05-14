@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useState, useRef } from 'preact/hooks'
 import type { TimeGroup, ViewSettings } from '../types'
 import type { Locale } from '../i18n'
 import { getTranslations } from '../i18n'
@@ -40,6 +40,7 @@ export function App({ locale }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [enableFolderView, setEnableFolderView] = useState(false)
+  const skipSpinnerRef = useRef(false)
 
   useEffect(() => {
     getFolderViewEnabled().then(setEnableFolderView)
@@ -54,7 +55,7 @@ export function App({ locale }: Props) {
   }, [])
 
   async function fetchData(s: ViewSettings, page: number) {
-    setLoading(true)
+    if (!skipSpinnerRef.current) setLoading(true)
     setError(null)
     try {
       const { records, totalCount: count, totalPages: pages } = await getHistoryPlayed({
@@ -85,7 +86,7 @@ export function App({ locale }: Props) {
   }
 
   useEffect(() => {
-    fetchData(settings, pageIndex)
+    fetchData(settings, pageIndex).finally(() => { skipSpinnerRef.current = false })
   }, [settings, pageIndex])
 
   function handleSettingsChange(patch: Partial<ViewSettings>) {
@@ -96,9 +97,16 @@ export function App({ locale }: Props) {
     if (patch.pageSize && patch.pageSize !== settings.pageSize) {
       next.pageSizes = { ...next.pageSizes, [settings.groupBy]: patch.pageSize }
     }
+
+    if (patch.groupDedup !== undefined || patch.showRepeats !== undefined) {
+      skipSpinnerRef.current = true
+    }
+
     setSettings(next)
     saveSettings(next)
-    setPageIndex(0)
+    if (patch.groupBy || patch.pageSize || patch.mediaFilter) {
+      setPageIndex(0)
+    }
   }
 
   function handlePageChange(index: number) {
