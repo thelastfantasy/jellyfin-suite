@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
+import { MdPlayArrow, MdReplay, MdFavorite, MdFavoriteBorder } from 'react-icons/md'
 import type { PlayRecord, ViewMode } from '../types'
 import { getCurrentUserId } from '../api/jellyfinClient'
 import { formatPlayedDate } from '../i18n'
@@ -169,12 +170,22 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
               </span>
             )}
             <span class="jr-card__played-date">{formatPlayedDate(record.playedDate, locale)}</span>
+            {canResume && (
+              <>
+                <button class="jr-card__resume-btn jr-card__resume-btn--sm" onClick={handleResumeClick} title={t.resume}>
+                  <MdPlayArrow size={16} />
+                </button>
+                <button class="jr-card__fromstart-btn" onClick={handlePlayClick} title={t.play}>
+                  <MdReplay size={18} />
+                </button>
+              </>
+            )}
             <button
               class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
               onClick={handleFavClick}
               title={isFav ? t.unfavorite : t.favorite}
             >
-              <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
+              {isFav ? <MdFavorite size={22} /> : <MdFavoriteBorder size={22} />}
             </button>
             {enableFolderView && record.hasAncestors && (
               <FolderViewPopover itemId={record.itemId} viewMode="list" />
@@ -213,15 +224,15 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
               {canResume ? (
                 <div class="jr-card__overlay-center">
                   <button class="jr-card__resume-btn" onClick={handleResumeClick} title={t.resume}>
-                    <span class="material-icons">play_arrow</span>
+                    <MdPlayArrow size={28} />
                   </button>
                   <button class="jr-card__play-btn jr-card__play-btn--small" onClick={handlePlayClick} title={t.play}>
-                    <span class="material-icons">replay</span>
+                    <MdReplay size={15} />
                   </button>
                 </div>
               ) : (
                 <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
-                  <span class="material-icons">play_arrow</span>
+                  <MdPlayArrow size={28} />
                 </button>
               )}
             </div>
@@ -232,7 +243,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
                   onClick={handleFavClick}
                   title={t.unfavorite}
                 >
-                  <span class="material-icons">favorite</span>
+                  <MdFavorite size={22} />
                 </button>
               </div>
             )}
@@ -243,7 +254,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
                   onClick={handleFavClick}
                   title={isFav ? t.unfavorite : t.favorite}
                 >
-                  <span class="material-icons">{isFav ? 'favorite' : 'favorite_border'}</span>
+                  {isFav ? <MdFavorite size={22} /> : <MdFavoriteBorder size={22} />}
                 </button>
               </div>
             </div>

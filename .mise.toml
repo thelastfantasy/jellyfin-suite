@@ -1,0 +1,10 @@
+[tools]
+"conda:make" = "latest"
+
+[tasks.build]
+description = "构建前端和插件"
+run = "make build"
+
+[tasks.update]
+description = "构建并部署到本地 Jellyfin 开发容器"
+run = "make update"
