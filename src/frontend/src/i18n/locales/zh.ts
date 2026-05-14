@@ -31,6 +31,7 @@ export const zh: Translations = {
   retry: '重试',
   loadError: '加载失败，请重试',
   play: '播放',
+  resume: '续播',
   favorite: '收藏',
   unfavorite: '取消收藏',
   video: '视频',

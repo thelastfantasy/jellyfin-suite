@@ -56,14 +56,14 @@ function getPlaybackManager(): any {
   return null
 }
 
-function playItem(itemId: string): void {
+function playItem(itemId: string, startPositionTicks = 0): void {
   const pm = getPlaybackManager()
   if (!pm) { console.error('[JellyfinRecents] playbackManager not found'); return }
   const apiClient = window.ApiClient
   if (!apiClient) return
   const userId = getCurrentUserId()
   apiClient.getItem(userId, itemId).then((item: any) => {
-    pm.play({ items: [item], serverId: apiClient.serverId() })
+    pm.play({ items: [item], startPositionTicks, serverId: apiClient.serverId() })
   })
 }
 
@@ -78,6 +78,21 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   const { locale, t } = useLocale()
   const [isFav, setIsFav] = useState(record.favoritedAt !== null)
   const [favLoading, setFavLoading] = useState(false)
+  const [canResume, setCanResume] = useState(false)
+  const [resumeTicks, setResumeTicks] = useState(0)
+
+  useEffect(() => {
+    if (!window.ApiClient) return
+    const userId = getCurrentUserId()
+    const url = window.ApiClient.getUrl(`Users/${userId}/Items/${record.itemId}`)
+    window.ApiClient.ajax({ url, type: 'GET', dataType: 'json' }).then((item: any) => {
+      const ud = item?.UserData
+      if (ud && ud.PlaybackPositionTicks > 0 && !ud.Played) {
+        setCanResume(true)
+        setResumeTicks(ud.PlaybackPositionTicks)
+      }
+    }).catch(() => { /* ignore */ })
+  }, [record.itemId])
 
   useEffect(() => {
     function handler(e: CustomEvent<{ itemId: string; favoritedAt: string | null }>) {
@@ -99,6 +114,12 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
     e.preventDefault()
     e.stopPropagation()
     playItem(record.itemId)
+  }
+
+  function handleResumeClick(e: MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    playItem(record.itemId, resumeTicks)
   }
 
   async function handleFavClick(e: MouseEvent) {
@@ -202,9 +223,20 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
               </span>
             )}
             <div class="jr-card__overlay">
-              <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
-                <span class="material-icons">play_arrow</span>
-              </button>
+              {canResume ? (
+                <div class="jr-card__overlay-center">
+                  <button class="jr-card__resume-btn" onClick={handleResumeClick} title={t.resume}>
+                    <span class="material-icons">play_arrow</span>
+                  </button>
+                  <button class="jr-card__play-btn jr-card__play-btn--small" onClick={handlePlayClick} title={t.play}>
+                    <span class="material-icons">replay</span>
+                  </button>
+                </div>
+              ) : (
+                <button class="jr-card__play-btn" onClick={handlePlayClick} title={t.play}>
+                  <span class="material-icons">play_arrow</span>
+                </button>
+              )}
             </div>
             {isFav && (
               <div class="jr-card__actions jr-card__actions--sticky">
