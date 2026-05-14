@@ -78,21 +78,8 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   const { locale, t } = useLocale()
   const [isFav, setIsFav] = useState(record.favoritedAt !== null)
   const [favLoading, setFavLoading] = useState(false)
-  const [canResume, setCanResume] = useState(false)
-  const [resumeTicks, setResumeTicks] = useState(0)
-
-  useEffect(() => {
-    if (!window.ApiClient) return
-    const userId = getCurrentUserId()
-    const url = window.ApiClient.getUrl(`Users/${userId}/Items/${record.itemId}`)
-    window.ApiClient.ajax({ url, type: 'GET', dataType: 'json' }).then((item: any) => {
-      const ud = item?.UserData
-      if (ud && ud.PlaybackPositionTicks > 0 && !ud.Played) {
-        setCanResume(true)
-        setResumeTicks(ud.PlaybackPositionTicks)
-      }
-    }).catch(() => { /* ignore */ })
-  }, [record.itemId])
+  const canResume = record.playbackPositionTicks != null && record.playbackPositionTicks > 0
+  const resumeTicks = record.playbackPositionTicks ?? 0
 
   useEffect(() => {
     function handler(e: CustomEvent<{ itemId: string; favoritedAt: string | null }>) {

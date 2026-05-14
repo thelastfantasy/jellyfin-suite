@@ -19,6 +19,7 @@ export interface PlayRecord {
   episodeNumber: number | null
   parentId: string | null
   hasAncestors: boolean
+  playbackPositionTicks: number | null
 }
 
 export interface TimeGroup {

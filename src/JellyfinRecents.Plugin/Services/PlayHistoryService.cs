@@ -10,11 +10,15 @@ public class PlayHistoryService
 {
     private readonly RecentsDatabase _db;
     private readonly ILibraryManager _libraryManager;
+    private readonly IUserDataManager _userDataManager;
+    private readonly IUserManager _userManager;
 
-    public PlayHistoryService(RecentsDatabase db, ILibraryManager libraryManager)
+    public PlayHistoryService(RecentsDatabase db, ILibraryManager libraryManager, IUserDataManager userDataManager, IUserManager userManager)
     {
         _db = db;
         _libraryManager = libraryManager;
+        _userDataManager = userDataManager;
+        _userManager = userManager;
     }
 
     public async Task<PlayHistoryResponse> GetPlayHistoryAsync(
@@ -62,14 +66,14 @@ public class PlayHistoryService
             totalPages = ComputeTotalPages(groupBy, nowUtc, tz, earliest, ps);
         }
 
-        EnrichMetadata(entries);
+        EnrichMetadata(entries, userId);
 
         var totalCount = await _db.GetTotalRecordCountAsync(userId, mediaType, showRepeats, groupDedup, groupBy, tzOffset, ct);
 
         return new PlayHistoryResponse { Entries = entries, TotalCount = totalCount, TotalPages = totalPages };
     }
 
-    private void EnrichMetadata(List<PlayHistoryEntry> entries)
+    private void EnrichMetadata(List<PlayHistoryEntry> entries, Guid userId)
     {
         foreach (var entry in entries)
         {
@@ -90,6 +94,13 @@ public class PlayHistoryService
             entry.ImagePrimaryTag = null;
             entry.HasAncestors = item.ParentId != Guid.Empty
                 || (item is IHasSeries s && s.SeriesId != Guid.Empty);
+
+            // 通过反射获取 UserData，避免直接引用 Jellyfin.Data.Entities.User（10.11+ 兼容）
+            var userData = GetUserDataSafe(userId, item);
+            if (userData?.PlaybackPositionTicks > 0 && !userData.Played)
+            {
+                entry.PlaybackPositionTicks = userData.PlaybackPositionTicks;
+            }
         }
     }
 
@@ -207,6 +218,28 @@ public class PlayHistoryService
             {
                 return Math.Max(1, (nowLocal.Year - earliestLocal.Year) / ps + 1);
             }
+        }
+    }
+
+    private static System.Reflection.MethodInfo? _getUserDataMethod;
+    private static System.Reflection.MethodInfo? _getUserByIdMethod;
+
+    private UserItemData? GetUserDataSafe(Guid userId, BaseItem item)
+    {
+        try
+        {
+            _getUserDataMethod ??= typeof(IUserDataManager).GetMethod("GetUserData");
+            _getUserByIdMethod ??= typeof(IUserManager).GetMethod("GetUserById");
+            if (_getUserDataMethod is null || _getUserByIdMethod is null) return null;
+
+            var user = _getUserByIdMethod.Invoke(_userManager, [userId]);
+            if (user is null) return null;
+
+            return _getUserDataMethod.Invoke(_userDataManager, [user, item]) as UserItemData;
+        }
+        catch
+        {
+            return null;
         }
     }
 }
