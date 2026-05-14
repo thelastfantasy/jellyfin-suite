@@ -128,7 +128,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
 
   if (viewMode === 'list') {
     return (
-      <div class="jr-card jr-card--list">
+      <div class="jr-card jr-card--list" data-jr-id={`${record.itemId}-${record.playedDate.getTime()}`}>
         <a class="jr-card__thumb jr-card__thumb--list" href={detailUrl}>
           <img
             src={imageUrl}
@@ -178,7 +178,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   }
 
   return (
-    <div class="jr-card">
+    <div class="jr-card" data-jr-id={`${record.itemId}-${record.playedDate.getTime()}`}>
       <div class="jr-card__thumb-link-wrap">
         <a class="jr-card__thumb-link" href={detailUrl}>
           <div class="jr-card__thumb">
