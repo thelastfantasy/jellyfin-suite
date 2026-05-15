@@ -62,7 +62,9 @@ export interface Translations {
   posterTooMany: string
   posterMode: string
   posterDeterministic: string
+  posterDeterministicTip: string
   posterRandom: string
+  posterRandomTip: string
   posterOverlay: string
   posterBrandingLabel: string
   posterVideoInfo: string
@@ -72,8 +74,16 @@ export interface Translations {
   posterAudioEncoding: string
   posterDuration: string
   posterTimestamp: string
+  posterTimestampPos: string
+  posterTimestampPosInsideBottomLeft: string
+  posterTimestampPosOutsideBottomLeft: string
+  posterTimestampPosInsideBottomCenter: string
+  posterTimestampPosOutsideBottomCenter: string
+  posterTimestampPosInsideBottomRight: string
+  posterTimestampPosOutsideBottomRight: string
   posterTheme: string
   posterFont: string
+  posterBrandingFont: string
   posterLang: string
   posterLangEn: string
   posterLangZh: string

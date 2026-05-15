@@ -1360,6 +1360,11 @@ a.jr-card__series-name:hover {
   padding-bottom: 1rem;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
+.jr-poster-settings__section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
 .jr-poster-settings__label {
   display: block;
   font-size: 0.75rem;
@@ -1536,7 +1541,7 @@ a.jr-card__series-name:hover {
   position: fixed;
   right: 1.5rem;
   bottom: calc(1.5rem + 56px);
-  z-index: 901;
+  z-index: 999999;
   width: 320px;
   max-height: 480px;
   background: #1a1a2e;
@@ -1648,12 +1653,12 @@ a.jr-card__series-name:hover {
 .jr-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 1000000;
   background: rgba(0, 0, 0, 0.88);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  cursor: zoom-out;
   animation: jr-lightbox-in 0.18s ease;
 }
 
@@ -1662,14 +1667,52 @@ a.jr-card__series-name:hover {
   to   { opacity: 1; }
 }
 
-.jr-lightbox__img {
-  max-width: 95vw;
-  max-height: 92vh;
-  border-radius: 6px;
-  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.8);
-  cursor: default;
-  object-fit: contain;
+.jr-lightbox__view {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
 }
+
+.jr-lightbox__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.jr-lightbox__img {
+  display: block;
+  max-width: none;
+  user-select: none;
+}
+
+.jr-lightbox__zoombar {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 0.4rem;
+  z-index: 1;
+}
+
+.jr-lightbox__zoom-btn {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 6px;
+  width: 2.2rem;
+  height: 2.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  padding: 0;
+}
+
+.jr-lightbox__zoom-btn:hover { background: rgba(255, 255, 255, 0.15); }
 
 .jr-lightbox__close {
   position: absolute;
@@ -1678,11 +1721,34 @@ a.jr-card__series-name:hover {
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
-  border-radius: 50%;
-  width: 2rem;
-  height: 2rem;
-  font-size: 1rem;
-  line-height: 1;
+  border-radius: 6px;
+  width: 2.2rem;
+  height: 2.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  z-index: 1;
+}
+
+.jr-lightbox__close:hover { background: rgba(255, 255, 255, 0.15); }
+
+.jr-lightbox__footer {
+  position: absolute;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  z-index: 1;
+}
+
+.jr-lightbox__footer-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 6px;
+  width: 2.5rem;
+  height: 2.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1690,7 +1756,10 @@ a.jr-card__series-name:hover {
   transition: background 0.15s;
 }
 
-.jr-lightbox__close:hover { background: rgba(255, 255, 255, 0.15); }
+.jr-lightbox__footer-btn:hover { background: rgba(255, 255, 255, 0.22); }
+
+.jr-lightbox__footer-btn--delete { color: #e74c3c; border-color: rgba(231, 76, 60, 0.4); }
+.jr-lightbox__footer-btn--delete:hover { background: rgba(231, 76, 60, 0.2); }
 
 /* ── Mobile responsive for settings panel (T064) ───────────────────────── */
 
@@ -1733,5 +1802,47 @@ a.jr-card__series-name:hover {
     max-width: 360px;
   }
   .jr-queue-widget { right: 0.75rem; bottom: 0.75rem; }
+}
+
+/* ── Timestamp position picker (graphical) ────────────────────────── */
+.jr-tspicker {
+  position: relative;
+  width: 200px;
+  height: 156px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+  padding: 12px 12px 32px 12px;
+}
+.jr-tspicker__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.2);
+}
+.jr-tspicker__btn {
+  position: absolute;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.6rem;
+  padding: 2px 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 28px;
+  text-align: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.jr-tspicker__btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+}
+.jr-tspicker__btn--active {
+  background: var(--theme-highlight-foreground-color, #00a4dc);
+  border-color: transparent;
+  color: #fff;
 }
 

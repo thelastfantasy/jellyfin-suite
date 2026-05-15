@@ -2,12 +2,18 @@ import { useState, useCallback } from 'preact/hooks'
 import { StartJobRequest, OverlaySettingsDto, fetchPreview } from '../api/posterSheetApi'
 import { isGridValid, maxFrames as calcMaxFrames } from '../utils/gridValidation'
 import { useLocale } from '../i18n/context'
+import { Lightbox } from './Lightbox'
+import { downloadBlob } from '../utils/download'
 
-const THEMES = ['classic', 'dark', 'light', 'cinematic', 'minimal'] as const
+const THEMES = ['classic', 'dark', 'light', 'cinematic', 'minimal', 'transparent'] as const
 const FONTS = [
-  { value: 'noto-sans', label: 'Noto Sans JP' },
-  { value: 'noto-serif', label: 'Noto Serif JP' },
-] as const
+  { value: 'noto-sans' as const, label: 'Noto Sans' },
+  { value: 'noto-serif' as const, label: 'Noto Serif' },
+]
+const MODES = ['deterministic', 'random'] as const
+const LANGS = ['en', 'zh', 'ja'] as const
+
+type TimestampPos = 'inside-bottom-left' | 'outside-bottom-left' | 'inside-bottom-center' | 'outside-bottom-center' | 'inside-bottom-right' | 'outside-bottom-right'
 
 interface Props {
   videoDuration: number | null
@@ -41,8 +47,49 @@ function defaultOverlay(): OverlaySettingsDto {
     showFrameTimestamp: false,
     colorTheme: 'classic',
     fontFamily: 'noto-sans',
+    brandingFontFamily: 'noto-sans',
     lang: 'en',
+    timestampPosition: 'inside-bottom-left',
   }
+}
+
+
+function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange: (v: TimestampPos) => void }) {
+  const inside = [
+    { v: 'inside-bottom-left'   as const, style: { bottom: 4, left: 4 } },
+    { v: 'inside-bottom-center' as const, style: { bottom: 4, left: '50%', marginLeft: -14 } },
+    { v: 'inside-bottom-right'  as const, style: { bottom: 4, right: 4 } },
+  ]
+  const outside = [
+    { v: 'outside-bottom-left'  as const, style: { bottom: 2, left: 16 } },
+    { v: 'outside-bottom-center' as const, style: { bottom: 2, left: '50%', marginLeft: -14 } },
+    { v: 'outside-bottom-right' as const, style: { bottom: 2, right: 16 } },
+  ]
+  return (
+    <div class="jr-tspicker">
+      <div class="jr-tspicker__inner">
+        {inside.map(p => (
+          <button
+            key={p.v}
+            class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
+            style={p.style}
+            onClick={() => onChange(p.v)}
+            title={p.v}
+          >00:00</button>
+        ))}
+      </div>
+      {/* Outside buttons between inner and outer borders */}
+      {outside.map(p => (
+        <button
+          key={p.v}
+          class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
+          style={{...p.style, position: 'absolute'}}
+          onClick={() => onChange(p.v)}
+          title={p.v}
+        >00:00</button>
+      ))}
+    </div>
+  )
 }
 
 export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOnly = false }: Props) {
@@ -55,6 +102,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [previewLightboxOpen, setPreviewLightboxOpen] = useState(false)
 
   const isShortVideo = videoDuration !== null && videoDuration < 120
   const frameMax = videoDuration !== null ? calcMaxFrames(videoDuration) : Infinity
@@ -92,7 +140,9 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
     try {
       const blob = await fetchPreview(overlay, rows, cols)
       if (previewUrl) URL.revokeObjectURL(previewUrl)
-      setPreviewUrl(URL.createObjectURL(blob))
+      const url = URL.createObjectURL(blob)
+      setPreviewUrl(url)
+      setPreviewLightboxOpen(true)
     } catch (e: unknown) {
       setPreviewError(e instanceof Error ? (e.message ?? t.posterPreview) : t.posterPreview)
     } finally {
@@ -100,11 +150,12 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
     }
   }, [overlay, rows, cols, previewUrl, t])
 
-  // Short-video preset buttons
   const validPresets = isShortVideo
     ? ([[2,3],[2,4],[3,4],[2,6],[3,3]] as [number,number][])
         .filter(([r,c]) => r * c <= frameMax)
     : null
+
+  const brandFontOptions = FONTS
 
   return (
     <div class="jr-poster-settings">
@@ -128,14 +179,14 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
         ) : (
           <div class="jr-poster-settings__sliders">
             <div class="jr-poster-settings__slider-row">
-              <span>{t.posterRows}: {rows}</span>
-              <input type="range" min={1} max={10} value={rows}
-                onInput={(e) => updateRows(Number((e.target as HTMLInputElement).value))} />
-            </div>
-            <div class="jr-poster-settings__slider-row">
               <span>{t.posterCols}: {cols}</span>
               <input type="range" min={1} max={12} value={cols}
                 onInput={(e) => updateCols(Number((e.target as HTMLInputElement).value))} />
+            </div>
+            <div class="jr-poster-settings__slider-row">
+              <span>{t.posterRows}: {rows}</span>
+              <input type="range" min={1} max={10} value={rows}
+                onInput={(e) => updateRows(Number((e.target as HTMLInputElement).value))} />
             </div>
             <div class="jr-poster-settings__frame-count">
               {frameCount} {t.posterFrames}
@@ -149,16 +200,19 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
         )}
       </div>
 
-      {/* Mode */}
+      {/* Mode — toggle buttons */}
       <div class="jr-poster-settings__section">
         <label class="jr-poster-settings__label">{t.posterMode}</label>
-        <div class="jr-poster-settings__radio-group">
-          {(['deterministic', 'random'] as const).map(m => (
-            <label key={m} class="jr-poster-settings__radio">
-              <input type="radio" name="mode" value={m} checked={mode === m}
-                onChange={() => updateMode(m)} />
+        <div class="jr-poster-settings__theme-group">
+          {MODES.map(m => (
+            <button
+              key={m}
+              class={`jr-poster-settings__theme-btn${mode === m ? ' jr-poster-settings__theme-btn--active' : ''}`}
+              onClick={() => updateMode(m)}
+              title={m === 'deterministic' ? t.posterDeterministicTip : t.posterRandomTip}
+            >
               {m === 'deterministic' ? t.posterDeterministic : t.posterRandom}
-            </label>
+            </button>
           ))}
         </div>
       </div>
@@ -178,6 +232,22 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
               onInput={e => updateOverlay({ brandingText: (e.target as HTMLInputElement).value })} />
           )}
         </div>
+        {overlay.brandingEnabled && (
+          <div class="jr-poster-settings__sub-checks">
+            <label class="jr-poster-settings__label" style="margin-bottom:0.3rem">{t.posterBrandingFont}</label>
+            <div class="jr-poster-settings__font-group">
+              {brandFontOptions.map(f => (
+                <button
+                  key={f.value}
+                  class={`jr-poster-settings__font-btn${overlay.brandingFontFamily === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+                  onClick={() => updateOverlay({ brandingFontFamily: f.value })}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Video info */}
         <div class="jr-poster-settings__check-row">
@@ -209,60 +279,84 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             onChange={e => updateOverlay({ showFrameTimestamp: (e.target as HTMLInputElement).checked })} />
           <label for="timestamp">{t.posterTimestamp}</label>
         </div>
+
+        {/* Timestamp position — graphical picker */}
+        {overlay.showFrameTimestamp && (
+          <div class="jr-poster-settings__sub-checks">
+            <label class="jr-poster-settings__label" style="margin-bottom:0.3rem">{t.posterTimestampPos}</label>
+            <TimestampPosPicker
+              value={overlay.timestampPosition as TimestampPos}
+              onChange={v => updateOverlay({ timestampPosition: v })}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Color theme */}
+      {/* Color theme — toggle buttons */}
       <div class="jr-poster-settings__section">
         <label class="jr-poster-settings__label">{t.posterTheme}</label>
         <div class="jr-poster-settings__theme-group">
           {THEMES.map(theme => (
-            <label key={theme} class={`jr-poster-settings__theme-btn${overlay.colorTheme === theme ? ' jr-poster-settings__theme-btn--active' : ''}`}>
-              <input type="radio" name="theme" value={theme} checked={overlay.colorTheme === theme}
-                onChange={() => updateOverlay({ colorTheme: theme })} />
+            <button
+              key={theme}
+              class={`jr-poster-settings__theme-btn${overlay.colorTheme === theme ? ' jr-poster-settings__theme-btn--active' : ''}`}
+              onClick={() => updateOverlay({ colorTheme: theme })}
+            >
               {theme.charAt(0).toUpperCase() + theme.slice(1)}
-            </label>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Font family */}
+      {/* Font family — toggle buttons */}
       <div class="jr-poster-settings__section">
         <label class="jr-poster-settings__label">{t.posterFont}</label>
         <div class="jr-poster-settings__font-group">
           {FONTS.map(f => (
-            <label key={f.value} class={`jr-poster-settings__font-btn${overlay.fontFamily === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}>
-              <input type="radio" name="font" value={f.value} checked={overlay.fontFamily === f.value}
-                onChange={() => updateOverlay({ fontFamily: f.value })} />
+            <button
+              key={f.value}
+              class={`jr-poster-settings__font-btn${overlay.fontFamily === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+              onClick={() => updateOverlay({ fontFamily: f.value })}
+            >
               {f.label}
-            </label>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Overlay language */}
+      {/* Overlay language — toggle buttons */}
       <div class="jr-poster-settings__section">
         <label class="jr-poster-settings__label">{t.posterLang}</label>
-        <div class="jr-poster-settings__radio-group">
-          {([['en', t.posterLangEn], ['zh', t.posterLangZh], ['ja', t.posterLangJa]] as [string, string][]).map(([val, label]) => (
-            <label key={val} class="jr-poster-settings__radio">
-              <input type="radio" name="lang" value={val} checked={overlay.lang === val}
-                onChange={() => updateOverlay({ lang: val })} />
-              {label}
-            </label>
+        <div class="jr-poster-settings__theme-group">
+          {LANGS.map(lang => (
+            <button
+              key={lang}
+              class={`jr-poster-settings__theme-btn${overlay.lang === lang ? ' jr-poster-settings__theme-btn--active' : ''}`}
+              onClick={() => updateOverlay({ lang })}
+            >
+              {lang === 'en' ? t.posterLangEn : lang === 'zh' ? t.posterLangZh : t.posterLangJa}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Preview — always visible (FR-029: not gated by settingsOnly) */}
+      {/* Preview — always visible */}
       <div class="jr-poster-settings__section">
         <button class="jr-poster-settings__preview-btn" onClick={handlePreview} disabled={previewLoading}>
           {previewLoading ? t.posterPreviewLoading : t.posterPreview}
         </button>
         {previewError && <p class="jr-poster-settings__preview-error">{previewError}</p>}
-        {previewUrl && <img src={previewUrl} alt={t.posterPreview} class="jr-poster-settings__preview-img" />}
       </div>
 
-      {/* Generate — hidden in settings-only toolbar mode */}
+      {previewLightboxOpen && previewUrl && (
+        <Lightbox
+          src={previewUrl}
+          alt={t.posterPreview}
+          onClose={() => setPreviewLightboxOpen(false)}
+          onDownload={() => downloadBlob(previewUrl, 'poster-preview.webp')}
+        />
+      )}
+
       {!settingsOnly && (
         <button
           class="jr-poster-settings__generate-btn"
