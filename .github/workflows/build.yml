@@ -13,6 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/poster-gen
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -25,15 +33,22 @@ jobs:
           cache: "npm"
           cache-dependency-path: src/frontend/package-lock.json
 
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Test Rust
+        run: make test-rust
+
+      - name: Test frontend
+        run: make test-frontend
+
+      - name: Test C#
+        run: make test-csharp
+
       - name: Build frontend
         working-directory: src/frontend
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
 
       - name: Build plugin
         run: dotnet build src/JellyfinRecents.Plugin/JellyfinRecents.Plugin.csproj -c Release
-
-      - name: Run tests
-        run: dotnet test tests/JellyfinRecents.Tests/JellyfinRecents.Tests.csproj -c Release --no-build
-        continue-on-error: true

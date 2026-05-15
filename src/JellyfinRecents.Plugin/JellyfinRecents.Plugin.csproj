@@ -22,6 +22,15 @@
     <EmbeddedResource Include="Web\jellyfin-recents.js" Condition="Exists('Web\jellyfin-recents.js')" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="poster-gen-linux-x64" Condition="Exists('poster-gen-linux-x64')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="poster-gen-win-x64.exe" Condition="Exists('poster-gen-win-x64.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <Target Name="CopyToJellyfin" AfterTargets="Build" Condition="'$(JELLYFIN_PLUGINS_PATH)' != ''">
     <MakeDir Directories="$(JELLYFIN_PLUGINS_PATH)\JellyfinRecents" />
     <Copy SourceFiles="$(OutputPath)JellyfinRecents.Plugin.dll"

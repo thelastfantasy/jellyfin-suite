@@ -16,6 +16,7 @@ public class PlayHistoryEntry
     public string? ImagePrimaryTag { get; set; }
     public bool HasAncestors { get; set; }
     public long? PlaybackPositionTicks { get; set; }
+    public double? VideoDuration { get; set; }  // RunTimeTicks / 10_000_000, null for audio
 }
 
 public class PlayHistoryResponse

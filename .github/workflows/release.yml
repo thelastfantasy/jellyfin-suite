@@ -30,6 +30,14 @@ jobs:
           echo "ver4=$VER4" >> $GITHUB_OUTPUT
           echo "Tag: $TAG  =>  ver4: $VER4"
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/poster-gen
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -42,11 +50,33 @@ jobs:
           cache: "npm"
           cache-dependency-path: src/frontend/package-lock.json
 
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Test Rust
+        run: make test-rust
+
+      - name: Test frontend
+        run: make test-frontend
+
+      - name: Test C#
+        run: make test-csharp
+
       - name: Build frontend
         working-directory: src/frontend
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
+
+      - name: Install cross
+        run: cargo install cross --locked
+
+      - name: Build Rust binary (Linux x64)
+        working-directory: src/poster-gen
+        run: cross build --release --target x86_64-unknown-linux-gnu -j 2
+
+      - name: Build Rust binary (Windows x64)
+        working-directory: src/poster-gen
+        run: cross build --release --target x86_64-pc-windows-gnu -j 2
 
       - name: Publish plugin
         run: |
@@ -54,6 +84,12 @@ jobs:
             -c Release \
             -p:Version=${{ steps.version.outputs.ver4 }} \
             -o publish/
+
+      - name: Copy poster-gen binaries to publish dir
+        run: |
+          cp src/poster-gen/target/x86_64-unknown-linux-gnu/release/poster-gen publish/poster-gen-linux-x64
+          chmod +x publish/poster-gen-linux-x64
+          cp src/poster-gen/target/x86_64-pc-windows-gnu/release/poster-gen.exe publish/poster-gen-win-x64.exe
 
       - name: Prepare meta.json
         run: |
@@ -72,7 +108,7 @@ jobs:
           VER4="${{ steps.version.outputs.ver4 }}"
           ZIPNAME="jellyfin-recents_${VER4}.zip"
           cd publish
-          zip "../${ZIPNAME}" JellyfinRecents.Plugin.dll meta.json
+          zip "../${ZIPNAME}" JellyfinRecents.Plugin.dll meta.json poster-gen-linux-x64 poster-gen-win-x64.exe
           cd ..
           CHECKSUM="$(md5sum "${ZIPNAME}" | awk '{print $1}')"
           echo "zipname=$ZIPNAME" >> $GITHUB_OUTPUT
@@ -107,12 +143,16 @@ jobs:
           '.[0].versions = [$entry] + .[0].versions' \
           manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
 
+      - name: Stage manifest for GitHub Pages
+        run: |
+          mkdir -p /tmp/gh-pages
+          cp manifest.json /tmp/gh-pages/
+
       - name: Deploy manifest to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: .
-          include_files: manifest.json
+          publish_dir: /tmp/gh-pages
           keep_files: true
           commit_message: "chore: update manifest for v${{ steps.version.outputs.tag }}"

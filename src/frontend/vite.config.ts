@@ -51,9 +51,4 @@ export default defineConfig({
       '/JellyfinRecents': { target: process.env.VITE_JELLYFIN_URL || 'http://localhost:8600', changeOrigin: true },
     },
   },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    include: ['../../tests/frontend/**/*.test.ts', '../../tests/frontend/**/*.test.tsx'],
-  },
 })

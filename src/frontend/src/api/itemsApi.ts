@@ -57,5 +57,6 @@ export async function getRecentlyPlayed(
     parentId: null,
     hasAncestors: false,
     playbackPositionTicks: null,
+    videoDuration: item.RunTimeTicks ? item.RunTimeTicks / 10_000_000 : null,
   }))
 }

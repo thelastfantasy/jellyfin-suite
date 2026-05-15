@@ -9,6 +9,7 @@ interface Props {
   showTypeLabel?: boolean
   viewMode?: ViewMode
   enableFolderView?: boolean
+  posterUnlocked?: boolean
   groupIndex: number
   totalGroups: number
   hasPrevPage: boolean
@@ -37,7 +38,7 @@ function scrollToGroupHeader(index: number) {
 
 export function GroupSection({
   group, showTypeLabel = false, viewMode = 'thumbnail',
-  enableFolderView = false,
+  enableFolderView = false, posterUnlocked = false,
   groupIndex, totalGroups, hasPrevPage, hasNextPage, onPageNav,
 }: Props) {
   if (group.records.length === 0) return null
@@ -170,6 +171,7 @@ export function GroupSection({
             showTypeLabel={showTypeLabel}
             viewMode={viewMode}
             enableFolderView={enableFolderView}
+            posterUnlocked={posterUnlocked}
           />
         ))}
       </div>

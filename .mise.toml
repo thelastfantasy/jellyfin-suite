@@ -1,10 +1,39 @@
 [tools]
 "conda:make" = "latest"
+"aqua:nektos/act" = "latest"
 
 [tasks.build]
 description = "构建前端和插件"
 run = "make build"
 
+[tasks.build-poster-gen]
+description = "在 Docker 中构建 Rust Linux 二进制"
+run = "make build-poster-gen"
+
 [tasks.update]
 description = "构建并部署到本地 Jellyfin 开发容器"
 run = "make update"
+
+[tasks.test]
+description = "运行所有测试（Rust + TypeScript + C#）"
+run = "make test"
+
+[tasks.test-rust]
+description = "运行 Rust 单元测试"
+run = "make test-rust"
+
+[tasks.test-frontend]
+description = "运行 TypeScript/Vitest 测试"
+run = "make test-frontend"
+
+[tasks.test-csharp]
+description = "运行 C# xUnit 测试"
+run = "make test-csharp"
+
+[tasks.workflow-test]
+description = "本地运行 build workflow（需要 Docker）"
+run = "make workflow-test"
+
+[tasks.workflow-test-release]
+description = "本地运行 release workflow（构建步骤可测；GitHub Release/Pages 步骤因无真实 token 会失败）"
+run = "make workflow-test-release"

@@ -53,4 +53,34 @@ export interface Translations {
   // Settings popover
   settingsTitle: string
   groupPerPage: Record<string, string>
+  // Poster sheet settings panel
+  posterSettingsTitle: string
+  posterGrid: string
+  posterRows: string
+  posterCols: string
+  posterFrames: string
+  posterTooMany: string
+  posterMode: string
+  posterDeterministic: string
+  posterRandom: string
+  posterOverlay: string
+  posterBrandingLabel: string
+  posterVideoInfo: string
+  posterFileSize: string
+  posterResolutionFps: string
+  posterVideoEncoding: string
+  posterAudioEncoding: string
+  posterDuration: string
+  posterTimestamp: string
+  posterTheme: string
+  posterFont: string
+  posterLang: string
+  posterLangEn: string
+  posterLangZh: string
+  posterLangJa: string
+  posterPreview: string
+  posterPreviewLoading: string
+  posterGenerate: string
+  // Poster queue widget
+  posterQueue: string
 }

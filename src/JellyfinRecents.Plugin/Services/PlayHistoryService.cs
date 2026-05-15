@@ -101,6 +101,9 @@ public class PlayHistoryService
             {
                 entry.PlaybackPositionTicks = userData.PlaybackPositionTicks;
             }
+            if (item.RunTimeTicks.HasValue && item.RunTimeTicks.Value > 0
+                && string.Equals(entry.MediaType, "video", StringComparison.OrdinalIgnoreCase))
+                entry.VideoDuration = item.RunTimeTicks.Value / 10_000_000.0;
         }
     }
 
