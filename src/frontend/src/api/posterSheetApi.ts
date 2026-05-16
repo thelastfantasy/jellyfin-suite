@@ -220,3 +220,43 @@ export function loadStartJobRequest(): StartJobRequest {
   })()
   return { rows, cols, mode, seed: mode === 'random' ? crypto.randomUUID() : undefined, overlay }
 }
+
+export interface UserFontInfo {
+  key: string
+  script: 'latin' | 'cjk'
+}
+
+export async function listUserFonts(): Promise<UserFontInfo[]> {
+  const res = await apiFetch(`${BASE}/fonts`)
+  if (!res.ok) return []
+  const raw: any[] = await res.json().catch(() => [])
+  return raw.map(x => ({
+    key: typeof x === 'string' ? x : (x.key ?? ''),
+    script: (x.script === 'cjk' ? 'cjk' : 'latin') as 'latin' | 'cjk',
+  })).filter(x => x.key)
+}
+
+export async function uploadFont(file: File): Promise<{ key: string; displayName: string; script: 'latin' | 'cjk' }> {
+  const token = window.ApiClient?.accessToken()
+  const headers: Record<string, string> = token
+    ? { 'Authorization': `MediaBrowser Token="${token}"` }
+    : {}
+  const body = new FormData()
+  body.append('file', file)
+  const res = await fetch(`${BASE}/fonts`, {
+    method: 'POST',
+    headers,
+    body,
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText)
+    throw new Error(text || res.statusText)
+  }
+  const d = await res.json()
+  return { key: d.key ?? d.Key ?? '', displayName: d.displayName ?? d.DisplayName ?? '', script: d.script === 'cjk' ? 'cjk' : 'latin' }
+}
+
+export async function deleteUserFont(key: string): Promise<void> {
+  const res = await apiFetch(`${BASE}/fonts/${encodeURIComponent(key)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`Delete failed: ${res.status}`)
+}

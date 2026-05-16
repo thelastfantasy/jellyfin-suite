@@ -109,4 +109,10 @@ export const zh: Translations = {
   skipIgnoreGlobal: '忽略全局跳过片段设置',
   skipAddToGlobal: '添加至全局跳过设置',
   skipGlobalFull: '全局已满（最多 2 条），请在设置中删除一条后再添加',
+  posterCustomFonts: '自定义字体',
+  posterCustomFontHint: '适用于：品牌标签、视频信息块',
+  posterCustomFontChoose: '选择字体文件…',
+  posterCustomFontUpload: '上传',
+  posterCustomFontDelete: '移除',
+  posterCustomFontSuffix: '(自定义)',
 }

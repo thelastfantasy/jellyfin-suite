@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'preact/hooks'
+import { useState, useCallback, useEffect, useRef } from 'preact/hooks'
 import { MdAdd, MdRemove } from 'react-icons/md'
-import { StartJobRequest, OverlaySettingsDto, fetchPreview, SkipSegment, loadGlobalSkipSegments, saveGlobalSkipSegments } from '../api/posterSheetApi'
+import { StartJobRequest, OverlaySettingsDto, fetchPreview, SkipSegment, loadGlobalSkipSegments, saveGlobalSkipSegments, listUserFonts, uploadFont, deleteUserFont, UserFontInfo } from '../api/posterSheetApi'
 import { isGridValid, maxFrames as calcMaxFrames } from '../utils/gridValidation'
 import { useLocale } from '../i18n/context'
 import { Lightbox } from './Lightbox'
@@ -129,6 +129,39 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [previewLightboxOpen, setPreviewLightboxOpen] = useState(false)
 
+  const [userFonts, setUserFonts] = useState<UserFontInfo[]>([])
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    listUserFonts().then(setUserFonts).catch(() => {})
+  }, [])
+
+  async function handleUpload() {
+    if (!uploadFile) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const { key, script } = await uploadFont(uploadFile)
+      setUserFonts(prev => prev.some(f => f.key === key) ? prev : [...prev, { key, script }])
+      setUploadFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (e: unknown) {
+      setUploadError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleDeleteFont(key: string) {
+    try {
+      await deleteUserFont(key)
+      setUserFonts(prev => prev.filter(f => f.key !== key))
+    } catch { /* best-effort */ }
+  }
+
   const isShortVideo = videoDuration !== null && videoDuration < 120
   const frameMax = videoDuration !== null ? calcMaxFrames(videoDuration) : Infinity
   const frameCount = rows * cols
@@ -209,6 +242,17 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const brandLatin  = hasLatin(brandText)
   const showLatin   = brandLatin || !brandCJK
   const showCJK     = brandCJK || !brandLatin
+
+  const toFontOption = ({ key }: UserFontInfo) => ({
+    value: key,
+    label: `${key.slice('custom-'.length)} ${t.posterCustomFontSuffix}`,
+    custom: true,
+  })
+  // Custom fonts are only added to the branding pickers (Latin/CJK), filtered by detected script.
+  // They are NOT offered for the overlay/timestamp font — that always uses a bundled font.
+  const latinFontsAll = [...LATIN_FONTS, ...userFonts.filter(f => f.script === 'latin').map(toFontOption)]
+  const cjkFontsAll   = [...CJK_FONTS,   ...userFonts.filter(f => f.script === 'cjk').map(toFontOption)]
+  const overlayFontsAll = [...OVERLAY_FONTS]
 
   return (
     <div class="jr-poster-settings">
@@ -327,12 +371,12 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
                   {brandCJK ? t.posterBrandingLatinFont : t.posterBrandingFont}
                 </label>
                 <div class="jr-poster-settings__font-group">
-                  {LATIN_FONTS.map(f => (
+                  {latinFontsAll.map(f => (
                     <button
                       key={f.value}
                       disabled={headless}
-                      class={`jr-poster-settings__font-btn${overlay.brandingLatinFont === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
-                      style={f.style}
+                      class={`jr-poster-settings__font-btn${'custom' in f && f.custom ? ' jr-poster-settings__font-btn--custom' : ''}${overlay.brandingLatinFont === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+                      style={'style' in f ? (f as { style: string }).style : ''}
                       onClick={() => updateOverlay({ brandingLatinFont: f.value })}
                     >
                       {f.label}
@@ -347,11 +391,11 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
                   {brandLatin ? t.posterBrandingCjkFont : t.posterBrandingFont}
                 </label>
                 <div class="jr-poster-settings__font-group">
-                  {CJK_FONTS.map(f => (
+                  {cjkFontsAll.map(f => (
                     <button
                       key={f.value}
                       disabled={headless}
-                      class={`jr-poster-settings__font-btn${overlay.brandingCjkFont === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+                      class={`jr-poster-settings__font-btn${'custom' in f && f.custom ? ' jr-poster-settings__font-btn--custom' : ''}${overlay.brandingCjkFont === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
                       onClick={() => updateOverlay({ brandingCjkFont: f.value })}
                     >
                       {f.label}
@@ -428,10 +472,10 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
       <div class="jr-poster-settings__section">
         <label class="jr-poster-settings__label">{t.posterFont}</label>
         <div class="jr-poster-settings__font-group">
-          {OVERLAY_FONTS.map(f => (
+          {overlayFontsAll.map(f => (
             <button
               key={f.value}
-              class={`jr-poster-settings__font-btn${overlay.fontFamily === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+              class={`jr-poster-settings__font-btn${'custom' in f && f.custom ? ' jr-poster-settings__font-btn--custom' : ''}${overlay.fontFamily === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
               onClick={() => updateOverlay({ fontFamily: f.value })}
             >
               {f.label}
@@ -454,6 +498,61 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Custom fonts */}
+      <div class="jr-poster-settings__section">
+        <label class="jr-poster-settings__label">{t.posterCustomFonts}</label>
+        <p class="jr-poster-settings__hint">{t.posterCustomFontHint}</p>
+        {userFonts.length > 0 && (
+          <div class="jr-poster-settings__custom-font-list">
+            {userFonts.map(({ key, script }) => (
+              <div key={key} class="jr-poster-settings__custom-font-row">
+                <span class="jr-poster-settings__custom-font-name">{key.slice('custom-'.length)}</span>
+                <span class="jr-poster-settings__custom-font-tag">{script}</span>
+                <button
+                  class="jr-poster-settings__custom-font-del"
+                  onClick={() => handleDeleteFont(key)}
+                  title={t.posterCustomFontDelete}
+                >
+                  <MdRemove size={14} />
+                  {t.posterCustomFontDelete}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Hidden native file input triggered by styled button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".ttf,.otf"
+          style="display:none"
+          onChange={e => setUploadFile((e.target as HTMLInputElement).files?.[0] ?? null)}
+        />
+        <div class="jr-poster-settings__custom-font-upload">
+          <button
+            class="jr-poster-settings__theme-btn"
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            {t.posterCustomFontChoose}
+          </button>
+          {uploadFile && (
+            <>
+              <span class="jr-poster-settings__custom-font-selected">{uploadFile.name}</span>
+              <button
+                class="jr-poster-settings__theme-btn jr-poster-settings__theme-btn--accent"
+                disabled={uploading}
+                onClick={handleUpload}
+                type="button"
+              >
+                {t.posterCustomFontUpload}
+              </button>
+            </>
+          )}
+        </div>
+        {uploadError && <p class="jr-poster-settings__preview-error">{uploadError}</p>}
       </div>
 
       {/* Preview + Disable row */}

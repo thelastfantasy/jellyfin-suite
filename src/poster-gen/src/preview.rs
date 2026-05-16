@@ -89,7 +89,7 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
     };
 
     let is_transparent = renderer.theme.header_bg[3] == 0;
-    let has_qr = header_h > 0 && !is_transparent && args.branding_enabled;
+    let has_qr = header_h > 0 && args.branding_enabled;
     let qr_strip_w = if has_qr { crate::qr::qr_strip_width() } else { 0 };
 
     // Original canvas width (icon/text boundary); widen cells to fill total canvas.
@@ -119,23 +119,37 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
 
     let mut grid = RgbaImage::new(grid_w, grid_h);
 
+    let theme = text_renderer::get_theme(&args.color_theme);
+
     if !is_transparent {
+        let [cr, cg, cb] = renderer.theme.canvas_bg;
         for pixel in grid.pixels_mut() {
-            *pixel = image::Rgba([0u8, 0, 0, 255]);
+            *pixel = image::Rgba([cr, cg, cb, 255]);
         }
     }
     if !is_transparent {
         crate::logo::render_logo(&mut grid, icon_area_w, grid_h);
     }
 
-    // Fill each cell with diagonal stripe placeholder
-    let theme = text_renderer::get_theme(&args.color_theme);
-    let base_greys: [u8; 6] = [45, 50, 55, 50, 55, 45];
+    // Derive placeholder stripe colors from the theme canvas background.
+    // For light themes the stripes are darker; for dark themes they are lighter.
+    let [br, bg_c, bb] = theme.canvas_bg;
+    let luma = br as u32 + bg_c as u32 + bb as u32;
+    let is_light_theme = luma > 380;
+    let (stripe_a, stripe_b): ([u8; 3], [u8; 3]) = if is_light_theme {
+        (
+            [br.saturating_sub(30), bg_c.saturating_sub(28), bb.saturating_sub(25)],
+            [br.saturating_sub(15), bg_c.saturating_sub(13), bb.saturating_sub(10)],
+        )
+    } else {
+        (
+            [br.saturating_add(18), bg_c.saturating_add(18), bb.saturating_add(22)],
+            [br.saturating_add(30), bg_c.saturating_add(30), bb.saturating_add(36)],
+        )
+    };
 
     for row in 0..rows {
         for col in 0..cols {
-            let idx = (row * cols + col) as usize;
-            let grey = base_greys[idx % base_greys.len()];
             let (cx, cy) = layout.cell_origin(col, row);
 
             for py in cy..cy + cell_h {
@@ -149,8 +163,9 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
                             255,
                         ])
                     } else {
-                        let stripe = ((px - cx + py - cy) / 24) % 2;
-                        image::Rgba([grey + stripe as u8 * 8, grey + stripe as u8 * 8, grey + stripe as u8 * 8, 255])
+                        let stripe = ((px - cx + py - cy) / 24) % 2 == 0;
+                        let [r, g, b] = if stripe { stripe_a } else { stripe_b };
+                        image::Rgba([r, g, b, 255])
                     };
                     grid.put_pixel(px, py, color);
                 }
@@ -171,7 +186,7 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
 
     // Render QR into the pre-allocated strip.
     if has_qr {
-        crate::qr::render_qr_in_strip(&mut grid, icon_area_w, qr_strip_w, header_h, renderer.theme.header_bg, renderer.theme.accent_color);
+        crate::qr::render_qr_in_strip(&mut grid, icon_area_w, qr_strip_w, header_h, &renderer.theme);
     }
 
     // WebP encode

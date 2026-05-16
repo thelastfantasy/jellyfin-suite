@@ -22,6 +22,70 @@ public class FontAcquisitionService : IHostedService
     // Fallback: Alibaba Cloud mirror (mirrors.aliyun.com) — reliable inside China.
     //           The mirror hosts GitHub Release ZIPs; we extract the Regular weight OTF.
     // Users may also place a custom file at the "custom-font-*.otf" path to bypass all downloads.
+
+    // System font paths are probed before downloading.
+    // Jellyfin's official Docker image (Debian bookworm) installs Noto CJK via fonts-noto-cjk
+    // to /usr/share/fonts/opentype/noto/. OTF is preferred over TTC because ab_glyph only
+    // reads index 0 from a TTC collection, which may not be the intended variant.
+    private static readonly string[] NotoSansSystemPaths =
+    [
+        "/usr/share/fonts/opentype/noto/NotoSansCJKjp-Regular.otf",
+        "/usr/share/fonts/noto-cjk/NotoSansCJKjp-Regular.otf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ];
+
+    private static readonly string[] NotoSerifSystemPaths =
+    [
+        "/usr/share/fonts/opentype/noto/NotoSerifCJKjp-Regular.otf",
+        "/usr/share/fonts/noto-cjk/NotoSerifCJKjp-Regular.otf",
+        "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
+    ];
+
+    private static readonly string[] NotoEmojiSystemPaths =
+    [
+        "/usr/share/fonts/truetype/noto/NotoEmoji-Regular.ttf",
+        "/usr/share/fonts/noto/NotoEmoji-Regular.ttf",
+        "/usr/share/fonts/truetype/noto-emoji/NotoEmoji-Regular.ttf",
+    ];
+
+    // Roboto is available via fonts-roboto-hinted / fonts-roboto-unhinted on Debian/Ubuntu.
+    private static readonly string[] RobotoSystemPaths =
+    [
+        "/usr/share/fonts/truetype/roboto/hinted/Roboto-Regular.ttf",
+        "/usr/share/fonts/truetype/roboto/unhinted/Roboto-Regular.ttf",
+        "/usr/share/fonts/truetype/roboto/Roboto-Regular.ttf",
+        "/usr/share/fonts/roboto/Roboto-Regular.ttf",
+    ];
+
+    private static readonly string[] RobotoMonoSystemPaths =
+    [
+        "/usr/share/fonts/truetype/roboto/hinted/RobotoMono-Regular.ttf",
+        "/usr/share/fonts/truetype/roboto/RobotoMono-Regular.ttf",
+        "/usr/share/fonts/roboto/RobotoMono-Regular.ttf",
+    ];
+
+    // Oswald, Playfair Display, and Cinzel are not in standard Linux package repos,
+    // but probe anyway in case the user has manually installed them.
+    private static readonly string[] OswaldSystemPaths =
+    [
+        "/usr/share/fonts/truetype/oswald/Oswald-Regular.ttf",
+        "/usr/share/fonts/oswald/Oswald-Regular.ttf",
+    ];
+
+    private static readonly string[] PlayfairSystemPaths =
+    [
+        "/usr/share/fonts/truetype/playfair/PlayfairDisplay-Regular.ttf",
+        "/usr/share/fonts/playfair-display/PlayfairDisplay-Regular.ttf",
+    ];
+
+    private static readonly string[] CinzelSystemPaths =
+    [
+        "/usr/share/fonts/truetype/cinzel/Cinzel-Regular.ttf",
+        "/usr/share/fonts/cinzel/Cinzel-Regular.ttf",
+    ];
+
     private static readonly FontSource[] NotoSansSources =
     [
         new("https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf"),
@@ -104,32 +168,62 @@ public class FontAcquisitionService : IHostedService
         Directory.CreateDirectory(fontsDir);
 
         NotoSansPath = await AcquireFontAsync(
-            fontsDir, "NotoSansJP.otf", "custom-font-sans.otf", NotoSansSources, ct);
+            fontsDir, "NotoSansJP.otf", "custom-font-sans.otf", NotoSansSources, ct, NotoSansSystemPaths);
         NotoSerifPath = await AcquireFontAsync(
-            fontsDir, "NotoSerifJP.otf", "custom-font-serif.otf", NotoSerifSources, ct);
+            fontsDir, "NotoSerifJP.otf", "custom-font-serif.otf", NotoSerifSources, ct, NotoSerifSystemPaths);
         RobotoMonoPath = await AcquireFontAsync(
-            fontsDir, "RobotoMono-Regular.ttf", "custom-font-mono.ttf", RobotoMonoSources, ct);
+            fontsDir, "RobotoMono-Regular.ttf", "custom-font-mono.ttf", RobotoMonoSources, ct, RobotoMonoSystemPaths);
         RobotoPath = await AcquireFontAsync(
-            fontsDir, "Roboto-Regular.ttf", "custom-font-roboto.ttf", RobotoSources, ct);
+            fontsDir, "Roboto-Regular.ttf", "custom-font-roboto.ttf", RobotoSources, ct, RobotoSystemPaths);
         OswaldPath = await AcquireFontAsync(
-            fontsDir, "Oswald-Regular.ttf", "custom-font-oswald.ttf", OswaldSources, ct);
+            fontsDir, "Oswald-Regular.ttf", "custom-font-oswald.ttf", OswaldSources, ct, OswaldSystemPaths);
         PlayfairPath = await AcquireFontAsync(
-            fontsDir, "PlayfairDisplay-Regular.ttf", "custom-font-playfair.ttf", PlayfairSources, ct);
+            fontsDir, "PlayfairDisplay-Regular.ttf", "custom-font-playfair.ttf", PlayfairSources, ct, PlayfairSystemPaths);
         CinzelPath = await AcquireFontAsync(
-            fontsDir, "Cinzel-Regular.ttf", "custom-font-cinzel.ttf", CinzelSources, ct);
+            fontsDir, "Cinzel-Regular.ttf", "custom-font-cinzel.ttf", CinzelSources, ct, CinzelSystemPaths);
         NotoEmojiPath = await AcquireFontAsync(
-            fontsDir, "NotoEmoji-Regular.ttf", "custom-font-emoji.ttf", NotoEmojiSources, ct);
+            fontsDir, "NotoEmoji-Regular.ttf", "custom-font-emoji.ttf", NotoEmojiSources, ct, NotoEmojiSystemPaths);
     }
 
     private async Task<string?> AcquireFontAsync(
         string fontsDir, string cacheFileName, string customFileName,
-        IReadOnlyList<FontSource> sources, CancellationToken ct)
+        IReadOnlyList<FontSource> sources, CancellationToken ct,
+        IReadOnlyList<string>? systemPaths = null)
     {
-        // 1. User-placed custom file takes priority — no download needed
+        // 1. User-placed custom file takes top priority — no download needed
         var customPath = Path.Combine(fontsDir, customFileName);
         if (File.Exists(customPath)) return customPath;
 
-        // 2. Already cached and checksum valid
+        // 2. Bundled font — ships inside the "Jellyfin Recents + Fonts" release zip alongside the DLL.
+        //    The zip extracts fonts/ next to JellyfinRecents.Plugin.dll, so probing the assembly
+        //    directory requires no data-path write and works immediately after install.
+        var assemblyDir = Path.GetDirectoryName(typeof(FontAcquisitionService).Assembly.Location);
+        if (assemblyDir is not null)
+        {
+            var bundledPath = Path.Combine(assemblyDir, "fonts", cacheFileName);
+            if (File.Exists(bundledPath))
+            {
+                _logger.LogInformation("Using bundled font: {Path}", bundledPath);
+                return bundledPath;
+            }
+        }
+
+        // 3. System font probe — use OS-installed font if available (no download needed).
+        //    OTF is listed before TTC so ab_glyph gets a single-font file; TTC index 0
+        //    may not be the intended variant when multiple languages are packed together.
+        if (systemPaths is not null)
+        {
+            foreach (var sysPath in systemPaths)
+            {
+                if (File.Exists(sysPath))
+                {
+                    _logger.LogInformation("Using system font: {Path}", sysPath);
+                    return sysPath;
+                }
+            }
+        }
+
+        // 4. Already cached and checksum valid
         var cachedPath = Path.Combine(fontsDir, cacheFileName);
         var checksumPath = cachedPath + ".sha256";
         if (File.Exists(cachedPath) && File.Exists(checksumPath))
@@ -144,7 +238,7 @@ public class FontAcquisitionService : IHostedService
             catch { /* checksum mismatch — fall through to re-download */ }
         }
 
-        // 3. Try each source in order; return on first success
+        // 5. Try each source in order; return on first success
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         foreach (var source in sources)
         {

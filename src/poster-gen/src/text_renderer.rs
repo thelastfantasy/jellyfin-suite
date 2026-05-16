@@ -75,15 +75,21 @@ fn badge_pos(
     }
 }
 
-/// RGBA theme colors
+/// RGBA theme colors — all per-theme palette decisions live here, no runtime guessing.
 #[derive(Clone)]
 pub struct ThemeColors {
-    pub header_bg: [u8; 4],  // RGBA
-    pub text_color: [u8; 3], // RGB
-    pub accent_color: [u8; 3],
-    pub badge_bg: [u8; 4],   // RGBA for per-frame timestamp badge
-    pub badge_text: [u8; 3],
-    pub canvas_bg: [u8; 3],  // RGB for body/canvas background fill
+    pub header_bg: [u8; 4],     // RGBA — header strip background
+    pub text_color: [u8; 3],    // RGB  — video-info body text
+    pub accent_color: [u8; 3],  // RGB  — branding label / filename highlight
+    pub badge_bg: [u8; 4],      // RGBA — timestamp badge background
+    pub badge_text: [u8; 3],    // RGB  — timestamp badge text
+    pub canvas_bg: [u8; 3],     // RGB  — thumbnail grid background
+    // QR bubble colours — declared per-theme so qr.rs needs no heuristics
+    pub qr_bubble: [u8; 4],     // RGBA — rounded bubble background
+    pub qr_module_a: [u8; 3],   // RGB  — data-module colour at top row
+    pub qr_module_b: [u8; 3],   // RGB  — data-module colour at bottom (lerped; flat = same as a)
+    pub qr_finder_dark: [u8; 3],// RGB  — finder pattern outer/inner ring
+    pub qr_finder_light: [u8; 3],// RGB — finder pattern middle ring (should match qr_bubble)
 }
 
 /// What to render and how — font/theme/grid are handled by Renderer and passed separately.
@@ -351,54 +357,90 @@ impl Renderer {
 
 pub fn get_theme(name: &str) -> ThemeColors {
     match name {
+        // Deep black / bright-blue — maximum contrast dark mode
         "dark" => ThemeColors {
-            header_bg: [18, 18, 18, 200],
-            text_color: [220, 220, 220],
-            accent_color: [100, 180, 255],
-            badge_bg: [18, 18, 18, 180],
-            badge_text: [200, 200, 200],
-            canvas_bg: [12, 12, 12],
+            header_bg:        [10, 10, 12, 240],
+            text_color:       [235, 235, 235],
+            accent_color:     [80, 170, 255],
+            badge_bg:         [10, 10, 12, 200],
+            badge_text:       [215, 215, 215],
+            canvas_bg:        [0, 0, 0],
+            qr_bubble:        [248, 249, 252, 222],
+            qr_module_a:      [80, 170, 255],
+            qr_module_b:      [0, 120, 220],
+            qr_finder_dark:   [80, 170, 255],
+            qr_finder_light:  [248, 249, 252],
         },
+        // Light gray — readability on bright backgrounds
         "light" => ThemeColors {
-            header_bg: [240, 240, 240, 200],
-            text_color: [30, 30, 30],
-            accent_color: [0, 100, 200],
-            badge_bg: [240, 240, 240, 160],
-            badge_text: [30, 30, 30],
-            canvas_bg: [245, 245, 245],
+            header_bg:        [232, 233, 235, 220],
+            text_color:       [25, 25, 30],
+            accent_color:     [0, 90, 190],
+            badge_bg:         [225, 225, 228, 200],
+            badge_text:       [25, 25, 30],
+            canvas_bg:        [210, 212, 215],
+            // White bubble + near-black modules — maximum scan contrast on a light header
+            qr_bubble:        [250, 250, 252, 230],
+            qr_module_a:      [28, 28, 32],
+            qr_module_b:      [28, 28, 32],
+            qr_finder_dark:   [28, 28, 32],
+            qr_finder_light:  [250, 250, 252],
         },
+        // Warm amber/gold on near-black — cinematic film look
         "cinematic" => ThemeColors {
-            header_bg: [10, 5, 0, 210],
-            text_color: [255, 230, 180],
-            accent_color: [200, 150, 50],
-            badge_bg: [10, 5, 0, 190],
-            badge_text: [255, 230, 180],
-            canvas_bg: [0, 0, 0],
+            header_bg:        [10, 5, 0, 210],
+            text_color:       [255, 230, 180],
+            accent_color:     [200, 150, 50],
+            badge_bg:         [10, 5, 0, 190],
+            badge_text:       [255, 230, 180],
+            canvas_bg:        [0, 0, 0],
+            qr_bubble:        [248, 243, 228, 218],
+            qr_module_a:      [200, 150, 50],
+            qr_module_b:      [155, 100, 20],
+            qr_finder_dark:   [200, 150, 50],
+            qr_finder_light:  [248, 243, 228],
         },
+        // Nearly invisible header — minimum chrome, content-first
         "minimal" => ThemeColors {
-            header_bg: [0, 0, 0, 100],
-            text_color: [255, 255, 255],
-            accent_color: [255, 255, 255],
-            badge_bg: [0, 0, 0, 100],
-            badge_text: [255, 255, 255],
-            canvas_bg: [10, 10, 10],
+            header_bg:        [22, 22, 24, 90],
+            text_color:       [255, 255, 255],
+            accent_color:     [200, 200, 200],
+            badge_bg:         [0, 0, 0, 140],
+            badge_text:       [210, 210, 210],
+            canvas_bg:        [22, 22, 24],
+            qr_bubble:        [248, 248, 250, 218],
+            qr_module_a:      [185, 185, 195],
+            qr_module_b:      [140, 140, 152],
+            qr_finder_dark:   [185, 185, 195],
+            qr_finder_light:  [248, 248, 250],
         },
+        // Transparent canvas — QR bubble floats over whatever is composited beneath
         "transparent" => ThemeColors {
-            header_bg: [0, 0, 0, 0],
-            text_color: [255, 255, 255],
-            accent_color: [0, 164, 220],
-            badge_bg: [0, 0, 0, 160],
-            badge_text: [255, 255, 255],
-            canvas_bg: [0, 0, 0],
+            header_bg:        [0, 0, 0, 0],
+            text_color:       [255, 255, 255],
+            accent_color:     [0, 164, 220],
+            badge_bg:         [0, 0, 0, 160],
+            badge_text:       [255, 255, 255],
+            canvas_bg:        [0, 0, 0],
+            qr_bubble:        [248, 249, 252, 220],
+            qr_module_a:      [170, 92, 195],
+            qr_module_b:      [0, 164, 220],
+            qr_finder_dark:   [0, 164, 220],
+            qr_finder_light:  [246, 248, 252],
         },
-        // "classic" and default — medium gray (lighter than dark)
+        // "classic" and default — Jellyfin slate-blue with brand gradient QR
         _ => ThemeColors {
-            header_bg: [45, 45, 50, 200],
-            text_color: [255, 255, 255],
-            accent_color: [0, 164, 220],
-            badge_bg: [30, 30, 35, 180],
-            badge_text: [255, 255, 255],
-            canvas_bg: [25, 25, 30],
+            header_bg:        [40, 42, 52, 210],
+            text_color:       [255, 255, 255],
+            accent_color:     [0, 164, 220],
+            badge_bg:         [28, 30, 38, 190],
+            badge_text:       [255, 255, 255],
+            canvas_bg:        [30, 32, 40],
+            qr_bubble:        [248, 249, 252, 218],
+            qr_module_a:      [170, 92, 195],
+            qr_module_b:      [0, 164, 220],
+            qr_finder_dark:   [0, 164, 220],
+            qr_finder_light:  [246, 248, 252],
         },
     }
 }
@@ -598,6 +640,7 @@ fn draw_text_ttf(img: &mut RgbaImage,
 /// Render branding text with per-character font and cap-height normalisation.
 /// `latin_scale` and `cjk_scale` are computed by `Renderer::new()` by probing actual glyph heights;
 /// they shrink/grow the effective render size so caps appear the same height as the reference font.
+/// Fallback chain per character: primary font → cross font (other script) → emoji font → Twemoji SVG.
 fn draw_text_mixed_branding(
     img: &mut RgbaImage,
     latin_font: Option<&FontArc>,
@@ -614,33 +657,50 @@ fn draw_text_mixed_branding(
     let img_w = img.width();
     let img_h = img.height();
     let mut cx = x as f32;
+    let baseline = y as f32 + scale_px as f32;
 
-    for ch in text.chars() {
+    'chars: for ch in text.chars() {
         let class = classify_char(ch);
-        let (selected_font, factor) = match class {
-            CharClass::Cjk => (cjk_font.or(latin_font), cjk_scale),
-            _ => (latin_font.or(cjk_font), latin_scale),
+        // Primary font is chosen by character class; cross-font is the other family.
+        // If primary font lacks the glyph, cross-font is tried before emoji/Twemoji.
+        let (primary_opt, primary_factor, cross_opt, cross_factor) = match class {
+            CharClass::Cjk => (cjk_font, cjk_scale, latin_font, latin_scale),
+            _ => (latin_font, latin_scale, cjk_font, cjk_scale),
         };
+        let primary_px = ((scale_px as f32 * primary_factor).round() as u32).max(1);
+        let cross_px   = ((scale_px as f32 * cross_factor).round()   as u32).max(1);
 
-        let Some(font) = selected_font else { continue };
-        // Apply cap-height normalisation: scale_px is the "reference" size; effective_px
-        // is scaled so that the visual cap height matches the reference font at scale_px.
-        let effective_px = ((scale_px as f32 * factor).round() as u32).max(1);
-        let scale = PxScale::from(effective_px as f32);
-        // All chars share the same baseline (bottom of reference caps), regardless of font.
-        let baseline = y as f32 + scale_px as f32;
-
-        let primary_id = font.glyph_id(ch);
-        let primary_outline = if primary_id.0 != 0 { font.outline_glyph(primary_id.with_scale(scale)) } else { None };
-
-        let (active_font, active_id, active_outline) = if primary_outline.is_some() {
-            (font, primary_id, primary_outline)
-        } else if let Some(ef) = emoji_font {
-            let eid = ef.glyph_id(ch);
-            if eid.0 != 0 { let eo = ef.outline_glyph(eid.with_scale(scale)); (ef, eid, eo) }
-            else { (font, primary_id, None) }
-        } else {
-            (font, primary_id, None)
+        // Resolve: primary → cross → emoji → Twemoji/none
+        let (active_font, active_id, active_outline, active_scale) = 'resolve: {
+            if let Some(font) = primary_opt {
+                let sc = PxScale::from(primary_px as f32);
+                let id = font.glyph_id(ch);
+                if id.0 != 0 {
+                    if let Some(outline) = font.outline_glyph(id.with_scale(sc)) {
+                        break 'resolve (font, id, Some(outline), sc);
+                    }
+                }
+            }
+            if let Some(font) = cross_opt {
+                let sc = PxScale::from(cross_px as f32);
+                let id = font.glyph_id(ch);
+                if id.0 != 0 {
+                    if let Some(outline) = font.outline_glyph(id.with_scale(sc)) {
+                        break 'resolve (font, id, Some(outline), sc);
+                    }
+                }
+            }
+            if let Some(ef) = emoji_font {
+                let sc = PxScale::from(primary_px as f32);
+                let eid = ef.glyph_id(ch);
+                if eid.0 != 0 {
+                    break 'resolve (ef, eid, ef.outline_glyph(eid.with_scale(sc)), sc);
+                }
+            }
+            // Nothing has this glyph — use any available font for h_advance, try Twemoji below
+            let Some(font) = primary_opt.or(cross_opt).or(emoji_font) else { continue 'chars };
+            let sc = PxScale::from(primary_px as f32);
+            (font, font.glyph_id(ch), None, sc)
         };
 
         let h_advance;
@@ -661,18 +721,18 @@ fn draw_text_mixed_branding(
                     c[3] = ((1.0 - a) * c[3] as f32 + a * 255.0) as u8;
                 }
             });
-            h_advance = active_font.as_scaled(scale).h_advance(active_id);
+            h_advance = active_font.as_scaled(active_scale).h_advance(active_id);
         } else {
-            // Emoji Twemoji SVG fallback — size it to match the reference cap height
-            let ref_baseline = y as f32 + scale_px as f32;
+            // Twemoji SVG fallback — size it to match the reference cap height
             let ref_scale = PxScale::from(scale_px as f32);
-            let ascent = font.as_scaled(ref_scale).ascent();
-            let glyph_top = probe_glyph_top(font, ref_scale, ref_baseline, ascent);
-            let emoji_size = (ref_baseline - glyph_top).round() as u32;
+            let probe_font = primary_opt.or(cross_opt).unwrap_or(active_font);
+            let ascent = probe_font.as_scaled(ref_scale).ascent();
+            let glyph_top = probe_glyph_top(probe_font, ref_scale, baseline, ascent);
+            let emoji_size = (baseline - glyph_top).round() as u32;
             let offset = (emoji_size as f32 * 0.08).round() as u32;
             let emoji_y = (glyph_top.max(0.0) as u32).saturating_add(offset);
             let rendered = render_twemoji(img, ch, cx as u32, emoji_y, emoji_size);
-            h_advance = if rendered { emoji_size as f32 } else { active_font.as_scaled(scale).h_advance(active_id) };
+            h_advance = if rendered { emoji_size as f32 } else { active_font.as_scaled(active_scale).h_advance(active_id) };
         }
 
         cx += h_advance;
@@ -690,7 +750,7 @@ fn measure_text_mixed_branding(
     scale_px: u32,
 ) -> u32 {
     use twemoji_assets::svg::SvgTwemojiAsset;
-    let any_font = latin_font.or(cjk_font);
+    let any_font = latin_font.or(cjk_font).or(emoji_font);
     let Some(fallback) = any_font else {
         return text.len() as u32 * scale_px / 6;
     };
@@ -701,24 +761,44 @@ fn measure_text_mixed_branding(
 
     text.chars().map(|ch| {
         let class = classify_char(ch);
-        let (font, factor) = match class {
-            CharClass::Cjk => (cjk_font.or(latin_font), cjk_scale),
-            _ => (latin_font.or(cjk_font), latin_scale),
+        let (primary_opt, primary_factor, cross_opt, cross_factor) = match class {
+            CharClass::Cjk => (cjk_font, cjk_scale, latin_font, latin_scale),
+            _ => (latin_font, latin_scale, cjk_font, cjk_scale),
         };
-        let Some(f) = font else { return scale_px as f32 / 6.0 };
-        let effective_px = ((scale_px as f32 * factor).round() as u32).max(1);
-        let scale = PxScale::from(effective_px as f32);
-        let sc = f.as_scaled(scale);
-        let id = f.glyph_id(ch);
-        if id.0 != 0 && f.outline_glyph(id.with_scale(scale)).is_some() { return sc.h_advance(id); }
-        if let Some(ef) = emoji_font {
-            let eid = ef.glyph_id(ch);
-            if eid.0 != 0 && ef.outline_glyph(eid.with_scale(scale)).is_some() {
-                return ef.as_scaled(scale).h_advance(eid);
+        let primary_px = ((scale_px as f32 * primary_factor).round() as u32).max(1);
+        let cross_px   = ((scale_px as f32 * cross_factor).round()   as u32).max(1);
+
+        // Primary font
+        if let Some(f) = primary_opt {
+            let sc = PxScale::from(primary_px as f32);
+            let id = f.glyph_id(ch);
+            if id.0 != 0 && f.outline_glyph(id.with_scale(sc)).is_some() {
+                return f.as_scaled(sc).h_advance(id);
             }
         }
+        // Cross-font fallback
+        if let Some(f) = cross_opt {
+            let sc = PxScale::from(cross_px as f32);
+            let id = f.glyph_id(ch);
+            if id.0 != 0 && f.outline_glyph(id.with_scale(sc)).is_some() {
+                return f.as_scaled(sc).h_advance(id);
+            }
+        }
+        // Emoji font
+        if let Some(ef) = emoji_font {
+            let sc = PxScale::from(primary_px as f32);
+            let eid = ef.glyph_id(ch);
+            if eid.0 != 0 && ef.outline_glyph(eid.with_scale(sc)).is_some() {
+                return ef.as_scaled(sc).h_advance(eid);
+            }
+        }
+        // Twemoji SVG
         if SvgTwemojiAsset::from_emoji(&ch.to_string()).is_some() { return emoji_advance; }
-        sc.h_advance(id)
+        // Fallback advance
+        let sc = PxScale::from(primary_px as f32);
+        primary_opt.or(cross_opt).or(emoji_font)
+            .map(|f| f.as_scaled(sc).h_advance(f.glyph_id(ch)))
+            .unwrap_or(scale_px as f32 / 6.0)
     }).sum::<f32>() as u32
 }
 

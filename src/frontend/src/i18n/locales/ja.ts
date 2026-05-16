@@ -109,4 +109,10 @@ export const ja: Translations = {
   skipIgnoreGlobal: 'グローバルスキップ設定を無視',
   skipAddToGlobal: 'グローバルスキップ設定に追加',
   skipGlobalFull: 'グローバルが満杯（最大2件）。設定で1件削除してから追加してください。',
+  posterCustomFonts: 'カスタムフォント',
+  posterCustomFontHint: '適用先：ブランドラベル・動画情報ブロック',
+  posterCustomFontChoose: 'フォントファイルを選択…',
+  posterCustomFontUpload: 'アップロード',
+  posterCustomFontDelete: '削除',
+  posterCustomFontSuffix: '(カスタム)',
 }

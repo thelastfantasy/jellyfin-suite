@@ -119,4 +119,10 @@ export interface Translations {
   skipIgnoreGlobal: string
   skipAddToGlobal: string
   skipGlobalFull: string
+  posterCustomFonts: string
+  posterCustomFontHint: string
+  posterCustomFontChoose: string
+  posterCustomFontUpload: string
+  posterCustomFontDelete: string
+  posterCustomFontSuffix: string
 }

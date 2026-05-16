@@ -1304,6 +1304,7 @@ a.jr-card__series-name:hover {
 .jr-poster-settings-modal__close:hover { color: #fff; }
 .jr-poster-settings-modal__body {
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
   padding: 1rem;
 }
@@ -1328,6 +1329,7 @@ a.jr-card__series-name:hover {
   width: min(92vw, 640px);
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   position: relative;
 }
 .jr-poster-overlay__close {
@@ -1506,6 +1508,94 @@ a.jr-card__series-name:hover {
   border-color: transparent;
   color: #fff;
 }
+.jr-poster-settings__font-btn--custom {
+  border-color: rgba(255, 180, 50, 0.5);
+  color: #ffb432;
+}
+.jr-poster-settings__font-btn--custom.jr-poster-settings__font-btn--active {
+  background: #c8860a;
+  border-color: transparent;
+  color: #fff;
+}
+.jr-poster-settings__theme-btn--accent {
+  background: rgba(0, 164, 220, 0.15);
+  border-color: rgba(0, 164, 220, 0.5);
+  color: #00a4dc;
+}
+.jr-poster-settings__theme-btn--accent:hover:not(:disabled) {
+  background: rgba(0, 164, 220, 0.25);
+}
+.jr-poster-settings__hint {
+  margin: 0.1rem 0 0.5rem;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.45);
+}
+.jr-poster-settings__custom-font-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+}
+.jr-poster-settings__custom-font-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+}
+.jr-poster-settings__custom-font-name {
+  flex: 1;
+  font-size: 0.85rem;
+  color: #ffb432;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.jr-poster-settings__custom-font-tag {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 0.3rem;
+  flex-shrink: 0;
+}
+.jr-poster-settings__custom-font-del {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  background: rgba(220,60,60,0.12);
+  border: 1px solid rgba(220,60,60,0.3);
+  border-radius: 4px;
+  color: rgba(220,100,100,0.9);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.jr-poster-settings__custom-font-del:hover {
+  background: rgba(220,60,60,0.25);
+  border-color: rgba(220,60,60,0.6);
+  color: #f08080;
+}
+.jr-poster-settings__custom-font-upload {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.jr-poster-settings__custom-font-selected {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .jr-poster-settings__mode-desc {
   margin: 0.4rem 0 0;
   font-size: 0.8rem;
@@ -1666,6 +1756,7 @@ a.jr-card__series-name:hover {
 .jr-queue-popover__header-close:hover { color: #fff; }
 .jr-queue-popover__list {
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
   padding: 0.5rem;
   display: flex;
@@ -2055,6 +2146,7 @@ a.jr-card__series-name:hover {
 
 .jr-skip-body {
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
   padding: 0.75rem 1rem;
 }
@@ -2218,9 +2310,55 @@ a.jr-card__series-name:hover {
   cursor: not-allowed;
 }
 
+.jr-skip-global-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.4rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.jr-skip-global-display__title {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.1rem;
+}
+.jr-skip-global-display__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.jr-skip-global-display__range {
+  flex: 1;
+  font-size: 0.78rem;
+  font-family: monospace;
+  color: rgba(255,255,255,0.7);
+}
+.jr-skip-global-display__del {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: rgba(220,60,60,0.15);
+  color: rgba(220,90,90,0.9);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.jr-skip-global-display__del:hover {
+  background: rgba(220,60,60,0.3);
+}
+
 .jr-skip-full-tooltip {
   position: fixed;
-  z-index: 1000000;
+  z-index: 1000002;
   background: rgba(30, 30, 30, 0.97);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;

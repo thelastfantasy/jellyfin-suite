@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.JellyfinRecents.Models;
 using Jellyfin.Plugin.JellyfinRecents.Services;
+using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,17 +22,22 @@ public class PosterSheetController : ControllerBase
     private readonly PosterSheetJobService _jobService;
     private readonly FontAcquisitionService _fontService;
     private readonly ILibraryManager _libraryManager;
+    private readonly IApplicationPaths _appPaths;
     private readonly ILogger<PosterSheetController> _logger;
+
+    private string FontsDir => Path.Combine(_appPaths.DataPath, "fonts");
 
     public PosterSheetController(
         PosterSheetJobService jobService,
         FontAcquisitionService fontService,
         ILibraryManager libraryManager,
+        IApplicationPaths appPaths,
         ILogger<PosterSheetController> logger)
     {
         _jobService = jobService;
         _fontService = fontService;
         _libraryManager = libraryManager;
+        _appPaths = appPaths;
         _logger = logger;
     }
 
@@ -325,5 +332,272 @@ public class PosterSheetController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    [HttpGet("fonts")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult ListUserFonts()
+    {
+        Directory.CreateDirectory(FontsDir);
+        var result = Directory.GetFiles(FontsDir)
+            .Select(path => new { path, name = Path.GetFileName(path) })
+            .Where(x => x.name != null && x.name.StartsWith("custom-", StringComparison.Ordinal) &&
+                (x.name.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                 x.name.EndsWith(".otf", StringComparison.OrdinalIgnoreCase)))
+            .Select(x =>
+            {
+                var key = Path.GetFileNameWithoutExtension(x.name)!;
+                var script = "latin";
+                try
+                {
+                    var bytes = System.IO.File.ReadAllBytes(x.path);
+                    if (FontCoversCjk(bytes)) script = "cjk";
+                }
+                catch { /* default to latin */ }
+                return new { key, script };
+            })
+            .OrderBy(x => x.key)
+            .ToArray();
+        return Ok(result);
+    }
+
+    private const long FontMaxBytes = 30L * 1024 * 1024;
+
+    // Valid sfnt magic bytes for TTF/OTF — anything else is rejected even if extension matches.
+    // TTC (ttcf) is intentionally excluded: ab_glyph only reads index 0 of a collection.
+    private static readonly byte[][] FontMagics =
+    [
+        [0x00, 0x01, 0x00, 0x00], // TrueType 1.0
+        [0x74, 0x72, 0x75, 0x65], // 'true'  Mac TrueType
+        [0x4F, 0x54, 0x54, 0x4F], // 'OTTO'  OpenType / CFF
+    ];
+
+    [HttpPost("fonts")]
+    [RequestSizeLimit(FontMaxBytes)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UploadFont(IFormFile file)
+    {
+        // 1. Extension whitelist
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext != ".ttf" && ext != ".otf")
+            return BadRequest("Only .ttf and .otf font files are accepted.");
+
+        // 2. Declared size limit (guards against unbuffered streams)
+        if (file.Length > FontMaxBytes)
+            return BadRequest("Font file exceeds 30 MB limit.");
+
+        // 3. Read into memory (size already bounded above)
+        byte[] fontBytes;
+        using (var ms = new MemoryStream((int)Math.Min(file.Length, FontMaxBytes)))
+        {
+            await file.CopyToAsync(ms);
+            fontBytes = ms.ToArray();
+        }
+
+        // 4. Magic-byte validation — rejects renamed zips, executables, PDFs, etc.
+        if (!HasValidFontMagic(fontBytes))
+            return BadRequest("File header is not a valid TTF or OTF font.");
+
+        // 5. Read internal font family name from name table
+        var internalName = ReadFontFamilyName(fontBytes);
+        if (string.IsNullOrWhiteSpace(internalName))
+            return BadRequest("Could not read font family name from file.");
+
+        var sanitized = SanitizeFontName(internalName);
+        if (string.IsNullOrEmpty(sanitized))
+            return BadRequest("Font family name contains no usable characters.");
+
+        Directory.CreateDirectory(FontsDir);
+        var dest = Path.Combine(FontsDir, $"custom-{sanitized}{ext}");
+        await System.IO.File.WriteAllBytesAsync(dest, fontBytes);
+
+        var script = FontCoversCjk(fontBytes) ? "cjk" : "latin";
+        return Ok(new { key = $"custom-{sanitized}", displayName = internalName, script });
+    }
+
+    internal static bool HasValidFontMagic(byte[] data)
+    {
+        if (data.Length < 4) return false;
+        foreach (var magic in FontMagics)
+        {
+            if (data[0] == magic[0] && data[1] == magic[1] &&
+                data[2] == magic[2] && data[3] == magic[3])
+                return true;
+        }
+        return false;
+    }
+
+    internal static string? ReadFontFamilyName(byte[] data)
+    {
+        try
+        {
+            using var ms = new MemoryStream(data);
+            using var br = new BinaryReader(ms);
+
+            R32(br); // sfVersion
+            var numTables = R16(br);
+            br.ReadBytes(6); // searchRange + entrySelector + rangeShift
+
+            long nameTableOffset = -1;
+            for (int i = 0; i < numTables; i++)
+            {
+                var tag = new string(br.ReadChars(4));
+                br.ReadBytes(4); // checksum
+                var offset = R32(br);
+                br.ReadBytes(4); // length
+                if (tag == "name") nameTableOffset = offset;
+            }
+
+            if (nameTableOffset < 0) return null;
+
+            ms.Seek(nameTableOffset, SeekOrigin.Begin);
+            R16(br); // format
+            var count = R16(br);
+            var strOffset = R16(br);
+
+            string? preferred = null, family = null, full = null;
+
+            for (int i = 0; i < count; i++)
+            {
+                var platformId = R16(br);
+                var encodingId = R16(br);
+                R16(br); // languageId
+                var nameId = R16(br);
+                var length = R16(br);
+                var strOff = R16(br);
+
+                // Windows platform (3) + Unicode BMP encoding (1) only
+                if (platformId != 3 || encodingId != 1) continue;
+                if (nameId is not (1 or 4 or 16)) continue;
+
+                var savedPos = ms.Position;
+                ms.Seek(nameTableOffset + strOffset + strOff, SeekOrigin.Begin);
+                var nameBytes = br.ReadBytes(length);
+                var str = Encoding.BigEndianUnicode.GetString(nameBytes);
+                ms.Seek(savedPos, SeekOrigin.Begin);
+
+                if (nameId == 16 && preferred == null) preferred = str;
+                else if (nameId == 1 && family == null) family = str;
+                else if (nameId == 4 && full == null) full = str;
+            }
+
+            // Preferred Family > Family > Full Name
+            return preferred ?? family ?? full;
+        }
+        catch { return null; }
+    }
+
+    internal static string SanitizeFontName(string name)
+    {
+        var sb = new StringBuilder();
+        foreach (var ch in name)
+        {
+            if (char.IsLetterOrDigit(ch))
+                sb.Append(ch);
+            else if (sb.Length > 0 && sb[sb.Length - 1] != '-')
+                sb.Append('-');
+        }
+        var result = sb.ToString().Trim('-');
+        return result.Length > 64 ? result[..64] : result;
+    }
+
+    /// Returns true if the font's cmap format-4 subtable covers any segment in the CJK
+    /// Unified Ideographs range (U+4E00–U+9FFF), indicating a CJK-capable font.
+    internal static bool FontCoversCjk(byte[] data)
+    {
+        try
+        {
+            using var ms = new MemoryStream(data);
+            using var br = new BinaryReader(ms);
+
+            R32(br); // sfVersion
+            var numTables = R16(br);
+            br.ReadBytes(6); // searchRange + entrySelector + rangeShift
+
+            long cmapTableOffset = -1;
+            for (int i = 0; i < numTables; i++)
+            {
+                var tag = new string(br.ReadChars(4));
+                br.ReadBytes(4); // checksum
+                var offset = R32(br);
+                br.ReadBytes(4); // length
+                if (tag == "cmap") cmapTableOffset = (long)offset;
+            }
+            if (cmapTableOffset < 0) return false;
+
+            ms.Seek(cmapTableOffset, SeekOrigin.Begin);
+            R16(br); // cmap version
+            var numSubtables = R16(br);
+
+            long format4Offset = -1;
+            for (int i = 0; i < numSubtables; i++)
+            {
+                var platformId = R16(br);
+                var encodingId = R16(br);
+                var subtableOff = R32(br);
+                // Platform 3 (Windows), Encoding 1 (Unicode BMP) — standard cmap subtable
+                if (platformId == 3 && encodingId == 1 && format4Offset < 0)
+                    format4Offset = cmapTableOffset + (long)subtableOff;
+            }
+            if (format4Offset < 0) return false;
+
+            ms.Seek(format4Offset, SeekOrigin.Begin);
+            var format = R16(br);
+            if (format != 4) return false;
+            R16(br); // length
+            R16(br); // language
+            var segCountX2 = R16(br);
+            var segCount = segCountX2 / 2;
+            br.ReadBytes(6); // searchRange + entrySelector + rangeShift
+
+            var endCounts   = new int[segCount];
+            var startCounts = new int[segCount];
+            for (int i = 0; i < segCount; i++) endCounts[i] = R16(br);
+            R16(br); // reservedPad
+            for (int i = 0; i < segCount; i++) startCounts[i] = R16(br);
+
+            // Check if any segment overlaps the CJK Unified Ideographs block (U+4E00–U+9FFF)
+            const int cjkStart = 0x4E00;
+            const int cjkEnd   = 0x9FFF;
+            for (int i = 0; i < segCount; i++)
+            {
+                if (startCounts[i] <= cjkEnd && endCounts[i] >= cjkStart)
+                    return true;
+            }
+            return false;
+        }
+        catch { return false; }
+    }
+
+    private static ushort R16(BinaryReader br)
+    {
+        var b = br.ReadBytes(2);
+        return (ushort)((b[0] << 8) | b[1]);
+    }
+
+    private static uint R32(BinaryReader br)
+    {
+        var b = br.ReadBytes(4);
+        return ((uint)b[0] << 24) | ((uint)b[1] << 16) | ((uint)b[2] << 8) | b[3];
+    }
+
+    [HttpDelete("fonts/{key}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult DeleteUserFont(string key)
+    {
+        if (!key.StartsWith("custom-", StringComparison.Ordinal))
+            return BadRequest("Only user-uploaded fonts (prefixed with 'custom-') can be deleted.");
+
+        Directory.CreateDirectory(FontsDir);
+        var ttf = Path.Combine(FontsDir, key + ".ttf");
+        var otf = Path.Combine(FontsDir, key + ".otf");
+
+        if (System.IO.File.Exists(ttf)) { System.IO.File.Delete(ttf); return NoContent(); }
+        if (System.IO.File.Exists(otf)) { System.IO.File.Delete(otf); return NoContent(); }
+
+        return NotFound($"Font '{key}' not found.");
     }
 }

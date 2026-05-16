@@ -18,6 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>JellyfinRecents.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Web\config.html" />
     <EmbeddedResource Include="Web\jellyfin-recents.js" Condition="Exists('Web\jellyfin-recents.js')" />
   </ItemGroup>

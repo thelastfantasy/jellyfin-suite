@@ -22,6 +22,7 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
   const fitScaleRef = useRef(1)
   const natRef      = useRef({ w: 0, h: 0 })
   const dragRef     = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
+  const pinchRef    = useRef<{ dist: number; mx: number; my: number } | null>(null)
 
   // Only cursor needs React state (tiny)
   const [dragging, setDragging] = useState(false)
@@ -85,7 +86,7 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
     applyTransform()
   }, [applyTransform])
 
-  // Drag panning
+  // Mouse drag panning
   const onMouseDown = useCallback((e: MouseEvent) => {
     if (e.button !== 0) return
     e.preventDefault()
@@ -104,6 +105,83 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup',  onUp)
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [applyTransform])
+
+  // Touch: single-finger pan + two-finger pinch-to-zoom
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        const t = e.touches[0]
+        setDragging(true)
+        dragRef.current = { sx: t.clientX, sy: t.clientY, px: panRef.current.x, py: panRef.current.y }
+        pinchRef.current = null
+      } else if (e.touches.length === 2) {
+        dragRef.current = null
+        setDragging(false)
+        const t0 = e.touches[0], t1 = e.touches[1]
+        pinchRef.current = {
+          dist: Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY),
+          mx: (t0.clientX + t1.clientX) / 2,
+          my: (t0.clientY + t1.clientY) / 2,
+        }
+      }
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault()
+      const view = viewRef.current
+      if (!view) return
+      const rect = view.getBoundingClientRect()
+
+      if (e.touches.length === 1) {
+        const d = dragRef.current
+        if (!d) return
+        const t = e.touches[0]
+        panRef.current = { x: d.px + (t.clientX - d.sx), y: d.py + (t.clientY - d.sy) }
+        applyTransform()
+      } else if (e.touches.length === 2) {
+        const p = pinchRef.current
+        if (!p) return
+        const t0 = e.touches[0], t1 = e.touches[1]
+        const newMx   = (t0.clientX + t1.clientX) / 2
+        const newMy   = (t0.clientY + t1.clientY) / 2
+        const newDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY)
+
+        const oldS = scaleRef.current
+        const newS = Math.max(0.05, Math.min(20, oldS * (newDist / p.dist)))
+        const ratio = newS / oldS
+
+        // Zoom around old midpoint then translate to new midpoint:
+        // newPan = newMid - (oldMid - oldPan) * ratio
+        panRef.current = {
+          x: (newMx - rect.left) - ((p.mx - rect.left) - panRef.current.x) * ratio,
+          y: (newMy - rect.top)  - ((p.my - rect.top)  - panRef.current.y) * ratio,
+        }
+        scaleRef.current = newS
+        pinchRef.current = { dist: newDist, mx: newMx, my: newMy }
+        applyTransform()
+      }
+    }
+
+    const onTouchEnd = () => {
+      dragRef.current  = null
+      pinchRef.current = null
+      setDragging(false)
+    }
+
+    view.addEventListener('touchstart',  onTouchStart, { passive: true })
+    view.addEventListener('touchmove',   onTouchMove,  { passive: false })
+    view.addEventListener('touchend',    onTouchEnd)
+    view.addEventListener('touchcancel', onTouchEnd)
+    return () => {
+      view.removeEventListener('touchstart',  onTouchStart)
+      view.removeEventListener('touchmove',   onTouchMove)
+      view.removeEventListener('touchend',    onTouchEnd)
+      view.removeEventListener('touchcancel', onTouchEnd)
+    }
   }, [applyTransform])
 
   // Initial fit after image loads

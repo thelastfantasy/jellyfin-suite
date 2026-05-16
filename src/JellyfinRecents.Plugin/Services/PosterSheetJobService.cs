@@ -244,16 +244,28 @@ public class PosterSheetJobService : IDisposable
         }
     }
 
-    private string? ResolveFontPath(string fontKey) => fontKey switch
+    private string? ResolveFontPath(string fontKey)
     {
-        "noto-sans" or "noto-sans-jp" => _fontService.NotoSansPath,
-        "noto-serif" or "noto-serif-jp" => _fontService.NotoSerifPath,
-        "roboto" => _fontService.RobotoPath ?? _fontService.NotoSansPath,
-        "oswald" => _fontService.OswaldPath ?? _fontService.NotoSansPath,
-        "playfair" => _fontService.PlayfairPath ?? _fontService.NotoSerifPath,
-        "cinzel" => _fontService.CinzelPath ?? _fontService.NotoSerifPath,
-        _ => _fontService.NotoSansPath,
-    };
+        if (fontKey.StartsWith("custom-", StringComparison.Ordinal))
+        {
+            var fontsDir = Path.Combine(_appPaths.DataPath, "fonts");
+            var ttf = Path.Combine(fontsDir, fontKey + ".ttf");
+            var otf = Path.Combine(fontsDir, fontKey + ".otf");
+            if (File.Exists(ttf)) return ttf;
+            if (File.Exists(otf)) return otf;
+            return null;
+        }
+        return fontKey switch
+        {
+            "noto-sans" or "noto-sans-jp" => _fontService.NotoSansPath,
+            "noto-serif" or "noto-serif-jp" => _fontService.NotoSerifPath,
+            "roboto" => _fontService.RobotoPath ?? _fontService.NotoSansPath,
+            "oswald" => _fontService.OswaldPath ?? _fontService.NotoSansPath,
+            "playfair" => _fontService.PlayfairPath ?? _fontService.NotoSerifPath,
+            "cinzel" => _fontService.CinzelPath ?? _fontService.NotoSerifPath,
+            _ => _fontService.NotoSansPath,
+        };
+    }
 
     // Build CLI args for poster-gen (default subcommand = generate)
     private string BuildArgs(PosterSheetJob job)

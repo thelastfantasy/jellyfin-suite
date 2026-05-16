@@ -57,10 +57,11 @@ workflow-test:
 	act -W .github/workflows/build.yml
 
 # Release workflow：构建步骤可测，GitHub Release/Pages 步骤因需真实 token 会失败（属正常）
+# gh auth token 仅用于拉取 Action 定义（公开仓库），Release/Pages 上传因 local repo 而失败属预期
 workflow-test-release:
 	act push -W .github/workflows/release.yml \
 		-e .github/act-events/tag-push.json \
-		--secret GITHUB_TOKEN=fake-local-token \
+		--secret GITHUB_TOKEN=$$(gh auth token) \
 		--env GITHUB_REF=refs/tags/v0.0.0-test \
 		--env GITHUB_REPOSITORY=local/jellyfin-recents
 

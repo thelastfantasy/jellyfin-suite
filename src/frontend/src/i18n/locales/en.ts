@@ -109,4 +109,10 @@ export const en: Translations = {
   skipIgnoreGlobal: 'Ignore global skip settings',
   skipAddToGlobal: 'Add to global skip settings',
   skipGlobalFull: 'Global full (max 2). Remove one in settings first.',
+  posterCustomFonts: 'Custom Fonts',
+  posterCustomFontHint: 'Applies to: branding label and video info block',
+  posterCustomFontChoose: 'Choose font…',
+  posterCustomFontUpload: 'Upload',
+  posterCustomFontDelete: 'Remove',
+  posterCustomFontSuffix: '(Custom)',
 }

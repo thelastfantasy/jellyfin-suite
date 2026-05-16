@@ -320,6 +320,30 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
 
         {/* Footer */}
         <div class="jr-skip-footer">
+          {/* Global skip intervals — shown for awareness / quick deletion */}
+          {globalSkipsLocal.some(s => s.endMs > s.startMs) && (
+            <div class="jr-skip-global-display">
+              <span class="jr-skip-global-display__title">{t.posterGlobalSkip}</span>
+              {globalSkipsLocal.map((seg, idx) => seg.endMs > seg.startMs ? (
+                <div key={idx} class="jr-skip-global-display__row">
+                  <span class="jr-skip-global-display__range">
+                    {msToDisplay(seg.startMs)}&nbsp;—&nbsp;{msToDisplay(seg.endMs)}
+                  </span>
+                  <button
+                    class="jr-skip-global-display__del"
+                    title="删除"
+                    onClick={() => {
+                      const next = globalSkipsLocal.filter((_, i) => i !== idx)
+                      saveGlobalSkipSegments(next)
+                      setGlobalSkipsLocal(next)
+                    }}
+                  >
+                    <MdRemove size={13} />
+                  </button>
+                </div>
+              ) : null)}
+            </div>
+          )}
           <label class={`jr-skip-footer__ignore-label${!hasGlobalSkips ? ' jr-skip-footer__ignore-label--disabled' : ''}`}>
             <input
               type="checkbox"

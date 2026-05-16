@@ -133,7 +133,7 @@ pub fn stitch_grid(
 
     // Fill background: transparent for "transparent" theme, black otherwise
     let is_transparent = renderer.theme.header_bg[3] == 0;
-    let has_qr = has_header && !is_transparent && options.branding_enabled;
+    let has_qr = has_header && options.branding_enabled;
     let qr_strip_w = if has_qr { crate::qr::qr_strip_width() } else { 0 };
 
     // Original canvas width is the icon placement boundary (where QR strip begins).
@@ -203,7 +203,7 @@ pub fn stitch_grid(
 
     // Render QR into the pre-allocated strip (no canvas expansion needed).
     if has_qr {
-        crate::qr::render_qr_in_strip(&mut grid, icon_area_w, qr_strip_w, header_h, renderer.theme.header_bg, renderer.theme.accent_color);
+        crate::qr::render_qr_in_strip(&mut grid, icon_area_w, qr_strip_w, header_h, &renderer.theme);
     }
 
     // WebP encode

@@ -33,6 +33,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: src/frontend/package-lock.json
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Install frontend dependencies
         working-directory: src/frontend
         run: npm ci
