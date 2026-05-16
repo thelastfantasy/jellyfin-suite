@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'bun:test'
 import { isGridValid, maxFrames } from '../../src/frontend/src/utils/gridValidation'
 
 describe('isGridValid', () => {

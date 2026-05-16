@@ -1,15 +1,16 @@
-import { Fragment } from 'preact'
 import { MdArrowDownward, MdArrowUpward, MdGridView, MdViewModule, MdViewList } from 'react-icons/md'
 import type { GroupByMode, MediaFilter, SortByMode, ViewMode, ViewSettings } from '../types'
 import { useLocale } from '../i18n/context'
 import { SettingsPopover } from './SettingsPopover'
 import { registerPosterViewClick } from '../state/posterSheetUnlock'
 import { PosterSheetSettingsPanel } from './PosterSheetSettingsPanel'
+import { Popover } from './Popover'
 
 interface Props {
   settings: ViewSettings
   onSettingsChange: (patch: Partial<ViewSettings>) => void
   onPosterUnlocked?: () => void
+  onDisablePoster?: () => void
   posterUnlocked?: boolean
   showPosterSettings?: boolean
   onTogglePosterSettings?: () => void
@@ -24,7 +25,7 @@ const VIEW_MODE_ICONS: { value: ViewMode; icon: IconComponent }[] = [
   { value: 'list', icon: MdViewList as IconComponent },
 ]
 
-export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, posterUnlocked = false, showPosterSettings = false, onTogglePosterSettings }: Props) {
+export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisablePoster, posterUnlocked = false, showPosterSettings = false, onTogglePosterSettings }: Props) {
   const { t } = useLocale()
 
   const GROUP_OPTIONS: { value: GroupByMode; label: string }[] = [
@@ -56,7 +57,6 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, posterUn
   }
 
   return (
-    <Fragment>
     <div class="jr-toolbar">
       {/* 左侧：数据筛选控制（分组 / 排序 / 类型） */}
       <div class="jr-toolbar__left">
@@ -135,49 +135,57 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, posterUn
           </div>
         </div>
 
-        <div class="jr-toolbar__group">
-          <label class="jr-toolbar__label jr-toolbar__label--toggle">
-            <input
-              type="checkbox"
-              checked={settings.showRepeats}
-              onChange={(e) => onSettingsChange({ showRepeats: (e.target as HTMLInputElement).checked })}
-            />
-            {t.showRepeats}
-          </label>
-          <label class={`jr-toolbar__label jr-toolbar__label--toggle${!settings.showRepeats ? ' jr-toolbar__label--disabled' : ''}`}>
-            <input
-              type="checkbox"
-              checked={settings.groupDedup}
-              disabled={!settings.showRepeats}
-              onChange={(e) => onSettingsChange({ groupDedup: (e.target as HTMLInputElement).checked })}
-            />
-            {t.groupDedup}
-          </label>
-        </div>
-
-        {posterUnlocked && (
-          <div class="jr-toolbar__poster-row">
-            <button
-              class={`jr-toolbar__poster-toggle${showPosterSettings ? ' jr-toolbar__poster-toggle--active' : ''}`}
-              title="Poster sheet settings"
-              onClick={onTogglePosterSettings}
-            >
-              <MdGridView size={16} />
-              <span>海报设置</span>
-            </button>
+        <div class="jr-toolbar__right-stack">
+          <div class="jr-toolbar__group">
+            <label class="jr-toolbar__label jr-toolbar__label--toggle">
+              <input
+                type="checkbox"
+                checked={settings.showRepeats}
+                onChange={(e) => onSettingsChange({ showRepeats: (e.target as HTMLInputElement).checked })}
+              />
+              {t.showRepeats}
+            </label>
+            <label class={`jr-toolbar__label jr-toolbar__label--toggle${!settings.showRepeats ? ' jr-toolbar__label--disabled' : ''}`}>
+              <input
+                type="checkbox"
+                checked={settings.groupDedup}
+                disabled={!settings.showRepeats}
+                onChange={(e) => onSettingsChange({ groupDedup: (e.target as HTMLInputElement).checked })}
+              />
+              {t.groupDedup}
+            </label>
           </div>
-        )}
+
+          {posterUnlocked && (
+            <div class="jr-toolbar__poster-row">
+              <button
+                class={`jr-toolbar__poster-toggle${showPosterSettings ? ' jr-toolbar__poster-toggle--active' : ''}`}
+                title={t.posterQueueSettings}
+                onClick={onTogglePosterSettings}
+              >
+                <MdGridView size={16} />
+                <span>{t.posterQueueSettings}</span>
+              </button>
+            </div>
+          )}
+          <Popover open={!!(posterUnlocked && showPosterSettings)} onClose={() => onTogglePosterSettings?.()}>
+            <div class="jr-poster-settings-modal">
+              <div class="jr-poster-settings-modal__header">
+                <span>{t.posterQueueSettings}</span>
+                <button class="jr-poster-settings-modal__close" onClick={() => onTogglePosterSettings?.()}>✕</button>
+              </div>
+              <div class="jr-poster-settings-modal__body">
+                <PosterSheetSettingsPanel
+                  videoDuration={null}
+                  onGenerate={() => {}}
+                  settingsOnly={true}
+                  onDisable={onDisablePoster}
+                />
+              </div>
+            </div>
+          </Popover>
+        </div>
       </div>
     </div>
-    {posterUnlocked && showPosterSettings && (
-      <div class="jr-poster-toolbar-panel">
-        <PosterSheetSettingsPanel
-          videoDuration={null}
-          onGenerate={() => {}}
-          settingsOnly={true}
-        />
-      </div>
-    )}
-    </Fragment>
   )
 }

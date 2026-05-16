@@ -57,6 +57,8 @@ tests/JellyfinRecents.Tests/obj/
 src/poster-gen/target/
 
 # poster-gen 编译产物（运行时从 Docker 构建，不入仓库）
+src/poster-gen/poster-gen-linux-x64
+src/poster-gen/poster-gen-win-x64.exe
 src/JellyfinRecents.Plugin/poster-gen-linux-x64
 src/JellyfinRecents.Plugin/poster-gen-win-x64.exe
 

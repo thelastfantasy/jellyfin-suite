@@ -4,6 +4,7 @@ public class PosterSheetStatusDto
 {
     public string JobId { get; set; } = string.Empty;
     public string ItemId { get; set; } = string.Empty;
+    public string ItemTitle { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int Progress { get; set; }
     public int Total { get; set; }

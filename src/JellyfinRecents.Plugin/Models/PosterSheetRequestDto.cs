@@ -1,6 +1,13 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Jellyfin.Plugin.JellyfinRecents.Models;
+
+public class SkipSegmentDto
+{
+    public long StartMs { get; set; }
+    public long EndMs { get; set; }
+}
 
 public class PosterSheetRequestDto
 {
@@ -15,6 +22,8 @@ public class PosterSheetRequestDto
     public string? Seed { get; set; }
 
     public OverlaySettings Overlay { get; set; } = new();
+
+    public List<SkipSegmentDto>? SkipSegments { get; set; }
 }
 
 public class PreviewRequestDto

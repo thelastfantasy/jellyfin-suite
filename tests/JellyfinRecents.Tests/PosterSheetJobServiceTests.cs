@@ -42,7 +42,7 @@ public class PosterSheetJobServiceTests : IDisposable
     public void GetOrCreateJob_NewItem_ReturnsJobWithCorrectProperties()
     {
         var req = new PosterSheetRequestDto { Rows = 3, Cols = 4 };
-        var job = _svc.GetOrCreateJob("item-1", req, "/nonexistent/video.mkv");
+        var job = _svc.GetOrCreateJob("item-1", "Test Item 1", req, "/nonexistent/video.mkv");
 
         Assert.Equal("item-1", job.ItemId);
         Assert.Equal(3, job.Rows);
@@ -53,7 +53,7 @@ public class PosterSheetJobServiceTests : IDisposable
     public void GetOrCreateJob_SameItemWhileActive_ReturnsSameJob()
     {
         var req = new PosterSheetRequestDto { Rows = 3, Cols = 4 };
-        var job1 = _svc.GetOrCreateJob("item-2", req, "/nonexistent/video.mkv");
+        var job1 = _svc.GetOrCreateJob("item-2", "Test Item 2", req, "/nonexistent/video.mkv");
 
         // Background task finishes almost instantly when binary is absent.
         // Wait for it to settle, then force status back to Running so the
@@ -63,7 +63,7 @@ public class PosterSheetJobServiceTests : IDisposable
             millisecondsTimeout: 2000);
         job1.Status = JobStatus.Running;
 
-        var job2 = _svc.GetOrCreateJob("item-2", req, "/nonexistent/video.mkv");
+        var job2 = _svc.GetOrCreateJob("item-2", "Test Item 2", req, "/nonexistent/video.mkv");
 
         Assert.Equal(job1.Id, job2.Id);
     }
@@ -72,10 +72,10 @@ public class PosterSheetJobServiceTests : IDisposable
     public void GetOrCreateJob_DeterministicMode_SeedIsStable()
     {
         var req = new PosterSheetRequestDto { Mode = "deterministic" };
-        var job1 = _svc.GetOrCreateJob("item-seed-a", req, "/path");
+        var job1 = _svc.GetOrCreateJob("item-seed-a", "Seed Test", req, "/path");
         _svc.CancelJob(job1.Id);
 
-        var job2 = _svc.GetOrCreateJob("item-seed-a", req, "/path");
+        var job2 = _svc.GetOrCreateJob("item-seed-a", "Seed Test", req, "/path");
 
         Assert.Equal(job1.Seed, job2.Seed);
     }
@@ -86,7 +86,7 @@ public class PosterSheetJobServiceTests : IDisposable
     public void CancelJob_ExistingJob_SetsCancelledStatus()
     {
         var req = new PosterSheetRequestDto { Rows = 2, Cols = 2 };
-        var job = _svc.GetOrCreateJob("item-cancel", req, "/nonexistent");
+        var job = _svc.GetOrCreateJob("item-cancel", "Cancel Test", req, "/nonexistent");
 
         _svc.CancelJob(job.Id);
 
@@ -107,7 +107,7 @@ public class PosterSheetJobServiceTests : IDisposable
     public void GetJob_ExistingJobId_ReturnsJob()
     {
         var req = new PosterSheetRequestDto();
-        var created = _svc.GetOrCreateJob("item-get", req, "/path");
+        var created = _svc.GetOrCreateJob("item-get", "Get Test", req, "/path");
 
         var found = _svc.GetJob(created.Id);
 

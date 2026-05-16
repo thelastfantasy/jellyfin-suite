@@ -3,6 +3,7 @@ import { useRef, useLayoutEffect } from 'preact/hooks'
 import { RiArrowDropUpFill, RiArrowDropDownFill } from 'react-icons/ri'
 import type { TimeGroup, ViewMode, PlayRecord } from '../types'
 import { PlayRecordCard } from './PlayRecordCard'
+import { useLocale } from '../i18n/context'
 
 interface Props {
   group: TimeGroup
@@ -43,6 +44,7 @@ export function GroupSection({
 }: Props) {
   if (group.records.length === 0) return null
 
+  const { t } = useLocale()
   const cardsRef = useRef<HTMLDivElement>(null)
   const prevRectsRef = useRef<Map<string, DOMRect>>(new Map())
   const prevRecordsRef = useRef<PlayRecord[]>([])
@@ -149,7 +151,7 @@ export function GroupSection({
             class="jr-group__nav-btn"
             onClick={handleUp}
             disabled={!canUp}
-            title="Previous group"
+            title={t.groupPrev}
           >
             <RiArrowDropUpFill />
           </button>
@@ -157,7 +159,7 @@ export function GroupSection({
             class="jr-group__nav-btn"
             onClick={handleDown}
             disabled={!canDown}
-            title="Next group"
+            title={t.groupNext}
           >
             <RiArrowDropDownFill />
           </button>

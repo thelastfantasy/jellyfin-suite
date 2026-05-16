@@ -6,8 +6,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "bun test ../../tests/frontend/",
+    "test:watch": "bun test --watch ../../tests/frontend/"
   },
   "dependencies": {
     "@jellyfin/sdk": "^0.10.0",

@@ -7,10 +7,14 @@ export PATH := /c/Program Files/nodejs:$(PATH)
 build-frontend:
 	cd src/frontend && npm run build
 
-# Build Linux Rust binary via cross (glibc 2.31 sysroot, compatible with Jellyfin container)
+# Build Linux Rust binary via Docker (cross 在 Windows 上有工具链检测 bug，改用 docker run 直接编译)
 build-poster-gen:
-	cd src/poster-gen && cross build --release --target x86_64-unknown-linux-gnu -j 2
-	cp src/poster-gen/target/x86_64-unknown-linux-gnu/release/poster-gen \
+	MSYS_NO_PATHCONV=1 docker run --rm \
+		-v "$$(cygpath -m $(CURDIR))/src/poster-gen:/workspace" \
+		-w /workspace \
+		rust:1.88-slim-bookworm \
+		cargo build --release
+	cp src/poster-gen/target/release/poster-gen \
 		src/JellyfinRecents.Plugin/poster-gen-linux-x64
 
 # Build Windows Rust binary natively (run on Windows where cargo targets Windows by default)
@@ -31,7 +35,7 @@ update: build-poster-gen build
 		jellyfin-dev:/config/plugins/JellyfinRecents/poster-gen-linux-x64
 	docker restart jellyfin-dev
 	@echo "Waiting for Jellyfin to start..."
-	@sleep 8
+	@sleep 20
 	@MSYS_NO_PATHCONV=1 docker exec jellyfin-dev \
 		curl -s -o /dev/null -w "Health check: %{http_code}\n" http://localhost:8096/health
 
@@ -41,7 +45,7 @@ test-rust:
 	cd src/poster-gen && cargo test
 
 test-frontend:
-	npx --prefix src/frontend vitest run --config src/frontend/vitest.config.ts
+	cd src/frontend && bun test ../../tests/frontend/
 
 test-csharp:
 	dotnet test tests/JellyfinRecents.Tests

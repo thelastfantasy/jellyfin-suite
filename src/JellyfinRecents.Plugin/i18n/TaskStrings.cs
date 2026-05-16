@@ -28,6 +28,8 @@ public static class TaskStrings
             ["CleanVacuum.Desc"] = "执行 VACUUM 重建数据库文件，回收已删除记录占用的磁盘空间。执行期间数据库将被短暂锁定。",
             ["CleanInvalid.Name"] = "清理无效记录",
             ["CleanInvalid.Desc"] = "删除用户已不存在或媒体已删除的无效播放记录，每日自动执行",
+            ["CleanPosterSheets.Name"] = "清理过期海报图片",
+            ["CleanPosterSheets.Desc"] = "删除超过 24 小时的已生成海报图片文件，每日凌晨 3 点自动执行",
         },
         ["ja"] = new()
         {
@@ -41,6 +43,8 @@ public static class TaskStrings
             ["CleanVacuum.Desc"] = "VACUUMを実行してデータベースファイルを再構築し、削除済みレコードのディスク領域を回収します。実行中はデータベースが一時的にロックされます。",
             ["CleanInvalid.Name"] = "無効なレコードを削除",
             ["CleanInvalid.Desc"] = "存在しないユーザーまたは削除されたメディアの無効な再生記録を削除します。毎日自動実行されます。",
+            ["CleanPosterSheets.Name"] = "期限切れポスター画像を削除",
+            ["CleanPosterSheets.Desc"] = "生成から24時間以上経過したポスター画像ファイルを削除します。毎日午前3時に自動実行されます。",
         },
         ["en"] = new()
         {
@@ -54,6 +58,8 @@ public static class TaskStrings
             ["CleanVacuum.Desc"] = "Runs VACUUM to rebuild the database file and reclaim disk space from deleted records. The database will be briefly locked.",
             ["CleanInvalid.Name"] = "Delete invalid records",
             ["CleanInvalid.Desc"] = "Deletes playback records from deleted users or removed media. Runs automatically every day.",
+            ["CleanPosterSheets.Name"] = "Delete expired poster sheets",
+            ["CleanPosterSheets.Desc"] = "Deletes generated poster sheet files older than 24 hours. Runs automatically at 3:00 AM daily.",
         },
     };
 

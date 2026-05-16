@@ -71,9 +71,30 @@ public class PosterSheetController : ControllerBase
         if (string.IsNullOrEmpty(inputPath))
             return UnprocessableEntity("Item has no file path.");
 
-        var job = _jobService.GetOrCreateJob(itemId, req, inputPath);
+        var job = _jobService.GetOrCreateJob(itemId, item.Name, req, inputPath);
 
         return Accepted(new StartJobResponseDto { JobId = job.Id });
+    }
+
+    /// <summary>
+    /// List all known poster sheet jobs (for UI restore after navigation).
+    /// </summary>
+    [HttpGet("jobs")]
+    [ProducesResponseType(typeof(IEnumerable<PosterSheetStatusDto>), StatusCodes.Status200OK)]
+    public IActionResult ListJobs()
+    {
+        var dtos = _jobService.GetAllJobs().Select(job => new PosterSheetStatusDto
+        {
+            JobId = job.Id,
+            ItemId = job.ItemId,
+            ItemTitle = job.ItemTitle,
+            Status = job.Status.ToString().ToLowerInvariant(),
+            Progress = job.Progress,
+            Total = job.Total,
+            Error = job.Error,
+            MediaInfo = job.MediaInfo,
+        });
+        return Ok(dtos);
     }
 
     /// <summary>
@@ -120,7 +141,7 @@ public class PosterSheetController : ControllerBase
             return NotFound("Output file not found.");
 
         var bytes = System.IO.File.ReadAllBytes(job.OutputPath);
-        return File(bytes, "image/jpeg");
+            return File(bytes, "image/webp");
     }
 
     /// <summary>
@@ -187,18 +208,18 @@ public class PosterSheetController : ControllerBase
     }
 
     /// <summary>
-    /// Cancel a running or queued job.
+    /// Cancel (if running), delete the output file, and remove the job from memory.
     /// </summary>
     [HttpDelete("{jobId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult CancelJob(string jobId)
+    public IActionResult DeleteJob(string jobId)
     {
         var job = _jobService.GetJob(jobId);
         if (job is null)
             return NotFound($"Job {jobId} not found.");
 
-        _jobService.CancelJob(jobId);
+        _jobService.DeleteJob(jobId);
         return NoContent();
     }
 
@@ -225,7 +246,7 @@ public class PosterSheetController : ControllerBase
 
         var tempOutput = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(),
-            $"postersheet-preview-{Guid.NewGuid():N}.jpg");
+            $"postersheet-preview-{Guid.NewGuid():N}.webp");
 
         try
         {
@@ -275,7 +296,7 @@ public class PosterSheetController : ControllerBase
             }
 
             var bytes = await System.IO.File.ReadAllBytesAsync(tempOutput);
-            return File(bytes, "image/jpeg");
+        return File(bytes, "image/webp");
         }
         finally
         {
@@ -299,9 +320,8 @@ public class PosterSheetController : ControllerBase
     {
         if (_jobService.TryGetCachedPath(itemId, rows, cols, seed, overlayHash, out _))
         {
-            // Also check for an existing job with the same params
-            var existingJob = _jobService.GetJob(itemId);  // by itemId if any
-            return Ok(new CacheCheckResponseDto { Cached = true, JobId = existingJob?.Id });
+            var activeJobId = _jobService.GetActiveJobIdForItem(itemId);
+            return Ok(new CacheCheckResponseDto { Cached = true, JobId = activeJobId });
         }
 
         return NoContent();

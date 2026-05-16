@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
 import { startJob, pollStatus, getImageUrl, JobStatusDto, loadStartJobRequest } from '../api/posterSheetApi'
 import { addJob, updateJob } from '../state/posterJobStore'
+import { useLocale } from '../i18n/context'
 
 interface Props {
   itemId: string
@@ -114,10 +115,12 @@ export function PosterSheetOverlay({ itemId, itemTitle, onClose }: Props) {
     })
   }, [itemId, itemTitle])
 
+  const { t } = useLocale()
+
   return (
     <div class="jr-poster-overlay" onClick={(e) => e.target === e.currentTarget && handleClose()}>
       <div class="jr-poster-overlay__panel">
-        <button class="jr-poster-overlay__close" onClick={handleClose} title="Close">✕</button>
+        <button class="jr-poster-overlay__close" onClick={handleClose} title={t.lightboxClose}>✕</button>
 
         {phase === 'running' && (
           <div class="jr-poster-overlay__progress">

@@ -1,8 +1,9 @@
 mod frame_extractor;
-mod font_manager;
 mod image_stitcher;
+mod logo;
 mod media_info;
 mod preview;
+mod qr;
 mod text_renderer;
 
 use clap::{Args, Parser, Subcommand};
@@ -59,9 +60,21 @@ struct GenerateArgs {
     #[arg(long, default_value = "deterministic")]
     mode: String,
 
-    /// Optional path to TTF font
+    /// Optional path to TTF font for info text
     #[arg(long)]
     font_path: Option<String>,
+
+    /// Optional separate TTF font for branding label
+    #[arg(long)]
+    branding_font_path: Option<String>,
+
+    /// Optional monospace TTF font for timestamp badges (falls back to font_path)
+    #[arg(long)]
+    timestamp_font_path: Option<String>,
+
+    /// Optional monochrome emoji TTF font for branding label emoji fallback
+    #[arg(long)]
+    emoji_font_path: Option<String>,
 
     /// Thumbnail width in pixels
     #[arg(long, default_value_t = 320)]
@@ -110,6 +123,14 @@ struct GenerateArgs {
     /// Overlay label language: en|zh|ja
     #[arg(long, default_value = "en")]
     lang: String,
+
+    /// Timestamp badge position
+    #[arg(long, default_value_t = crate::image_stitcher::TimestampPosition::InsideBottomLeft)]
+    timestamp_position: crate::image_stitcher::TimestampPosition,
+
+    /// Skip time segments when sampling frames (repeatable, format: START_MS:END_MS)
+    #[arg(long, value_name = "START_MS:END_MS")]
+    skip_segment: Vec<String>,
 }
 
 #[derive(Args, Debug, Clone, Default)]
@@ -122,9 +143,21 @@ struct PreviewArgs {
     #[arg(long, default_value = "classic")]
     color_theme: String,
 
-    /// Optional path to TTF font
+    /// Optional path to TTF font for info text
     #[arg(long)]
     font_path: Option<String>,
+
+    /// Optional separate TTF font for branding label
+    #[arg(long)]
+    branding_font_path: Option<String>,
+
+    /// Optional monospace TTF font for timestamp badges (falls back to font_path)
+    #[arg(long)]
+    timestamp_font_path: Option<String>,
+
+    /// Optional monochrome emoji TTF font for branding label emoji fallback
+    #[arg(long)]
+    emoji_font_path: Option<String>,
 
     /// Branding label
     #[arg(long, default_value = "Jellyfin Recents")]
@@ -173,6 +206,10 @@ struct PreviewArgs {
     /// Overlay label language: en|zh|ja
     #[arg(long, default_value = "en")]
     lang: String,
+
+    /// Timestamp badge position
+    #[arg(long, default_value_t = crate::image_stitcher::TimestampPosition::InsideBottomLeft)]
+    timestamp_position: crate::image_stitcher::TimestampPosition,
 }
 
 fn main() {
@@ -218,6 +255,47 @@ pub fn jittered_timestamps(duration: f64, total: usize, seed_hex: &str) -> Vec<f
     }).collect()
 }
 
+fn parse_skip_segments(segs: &[String]) -> Vec<(f64, f64)> {
+    segs.iter().filter_map(|s| {
+        let mut parts = s.splitn(2, ':');
+        let start: f64 = parts.next()?.parse().ok()?;
+        let end: f64 = parts.next()?.parse().ok()?;
+        if end > start { Some((start / 1000.0, end / 1000.0)) } else { None }
+    }).collect()
+}
+
+fn available_intervals(duration: f64, skip: &[(f64, f64)]) -> Vec<(f64, f64)> {
+    let mut sorted = skip.to_vec();
+    sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    let mut result = Vec::new();
+    let mut cursor = 0.0f64;
+    for (s, e) in &sorted {
+        let s = s.clamp(0.0, duration);
+        let e = e.clamp(0.0, duration);
+        if s > cursor { result.push((cursor, s)); }
+        if e > cursor { cursor = e; }
+    }
+    if cursor < duration { result.push((cursor, duration)); }
+    result
+}
+
+fn apply_skip(timestamps: Vec<f64>, duration: f64, skip: &[(f64, f64)]) -> Vec<f64> {
+    if skip.is_empty() { return timestamps; }
+    let intervals = available_intervals(duration, skip);
+    let avail: f64 = intervals.iter().map(|(s, e)| e - s).sum();
+    if avail <= 0.0 { return timestamps; }
+    timestamps.iter().map(|&t| {
+        let compressed = (t / duration * avail).min(avail - f64::EPSILON);
+        let mut acc = 0.0;
+        for &(s, e) in &intervals {
+            let len = e - s;
+            if compressed < acc + len { return s + (compressed - acc); }
+            acc += len;
+        }
+        intervals.last().map(|&(_, e)| e).unwrap_or(t)
+    }).collect()
+}
+
 fn parse_seed_u64(s: &str) -> u64 {
     let hex = s.chars().filter(|c| c.is_ascii_hexdigit()).take(16).collect::<String>();
     u64::from_str_radix(&hex, 16).unwrap_or(0xdeadbeef_cafebabe)
@@ -246,7 +324,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
     let rows = args.rows.clamp(1, 10);
     let cols = args.cols.clamp(1, 12);
 
-    // Extract media info first (need duration)
+    // Extract media info first (need duration + source dimensions)
     let media_info = media_info::extract_media_info(&args.ffmpeg_path, &input)
         .map_err(|e| format!("Media info extraction failed: {e}"))?;
 
@@ -255,15 +333,29 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
         return Err("Could not determine video duration".to_string());
     }
 
+    // Cap thumb_width to source resolution to avoid upscaling low-res videos
+    let thumb_width = if media_info.source_width > 0 {
+        args.thumb_width.min(media_info.source_width)
+    } else {
+        args.thumb_width
+    };
+
+    // Portrait video + visible header: enforce a readable minimum column count
+    let has_header = !args.no_branding || !args.no_video_info;
+    let is_portrait = media_info.source_height > media_info.source_width;
+    let cols = if is_portrait && has_header { cols.max(3) } else { cols };
+
     let total = (rows * cols) as usize;
     let timestamps = if args.mode == "random" {
         jittered_timestamps(duration, total, args.seed.as_deref().unwrap_or(""))
     } else {
         even_timestamps(duration, total)
     };
+    let skip = parse_skip_segments(&args.skip_segment);
+    let timestamps = apply_skip(timestamps, duration, &skip);
 
     // Cap rayon parallelism to prevent OOM with large source frames
-    let num_threads = if args.thumb_width >= 1920 { 2 } else if args.thumb_width >= 1280 { 3 } else { 4 };
+    let num_threads = if thumb_width >= 1920 { 2 } else if thumb_width >= 1280 { 3 } else { 4 };
     let _ = rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global();
 
     // Extract frames in parallel with progress reporting
@@ -278,7 +370,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
                 &args.ffmpeg_path,
                 &input,
                 ts,
-                args.thumb_width,
+                thumb_width,
             );
 
             // Increment counter and print progress
@@ -304,9 +396,9 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
                 Err(e) => {
                     // Non-fatal: use a blank frame placeholder
                     eprintln!("WARNING: frame {idx} failed: {e}");
-                    let blank = image::DynamicImage::ImageRgb8(image::RgbImage::new(
-                        args.thumb_width,
-                        args.thumb_width * 9 / 16,
+                    let blank = image::DynamicImage::ImageRgba8(image::RgbaImage::new(
+                        thumb_width,
+                        thumb_width * 9 / 16,
                     ));
                     frames.push((blank, timestamps[idx]));
                 }
@@ -319,8 +411,14 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
         .map_err(|e| format!("Failed to serialize media info: {e}"))?;
     println!("MEDIA_INFO {info_json}");
 
-    // Build overlay config
-    let overlay_cfg = text_renderer::OverlayConfig {
+    let renderer = text_renderer::Renderer::new(
+        args.font_path.as_deref(),
+        args.branding_font_path.as_deref(),
+        args.timestamp_font_path.as_deref(),
+        args.emoji_font_path.as_deref(),
+        &args.color_theme,
+    );
+    let options = text_renderer::RenderOptions {
         branding_enabled: !args.no_branding,
         branding_text: args.branding_text.clone(),
         video_info_enabled: !args.no_video_info,
@@ -330,24 +428,11 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
         show_audio_encoding: !args.no_audio_encoding,
         show_duration: !args.no_duration,
         show_frame_timestamp: args.show_timestamp,
-        color_theme: args.color_theme.clone(),
-        font_path: args.font_path.clone(),
         lang: args.lang.clone(),
-        frame_timestamps: timestamps.clone(),
-        rows,
-        cols,
-        cell_width: args.thumb_width,
-        cell_height: args.thumb_width * 9 / 16, // will be overridden by stitcher
+        timestamp_position: args.timestamp_position.clone(),
     };
 
-    let stitch_cfg = image_stitcher::StitchConfig {
-        rows,
-        cols,
-        cell_width: args.thumb_width,
-        cell_height: args.thumb_width * 9 / 16,
-    };
-
-    image_stitcher::stitch_grid(frames, &stitch_cfg, &output, &overlay_cfg, &media_info)
+    image_stitcher::stitch_grid(frames, thumb_width, rows, cols, &output, &options, &renderer, &media_info, &timestamps)
         .map_err(|e| format!("Stitching failed: {e}"))?;
 
     let abs_output = std::fs::canonicalize(&output)
@@ -362,6 +447,9 @@ fn run_preview_cmd(args: PreviewArgs) -> Result<(), String> {
         output: args.output,
         color_theme: args.color_theme,
         font_path: args.font_path,
+        branding_font_path: args.branding_font_path,
+        timestamp_font_path: args.timestamp_font_path,
+        emoji_font_path: args.emoji_font_path,
         branding_enabled: !args.no_branding,
         branding_text: args.branding_text,
         video_info_enabled: !args.no_video_info,
@@ -374,6 +462,7 @@ fn run_preview_cmd(args: PreviewArgs) -> Result<(), String> {
         rows: args.rows,
         cols: args.cols,
         lang: args.lang,
+        timestamp_position: args.timestamp_position,
     };
 
     preview::run_preview(preview_args)

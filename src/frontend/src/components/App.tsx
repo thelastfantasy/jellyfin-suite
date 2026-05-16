@@ -118,6 +118,12 @@ export function App({ locale }: Props) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  function handleDisablePoster() {
+    localStorage.removeItem('jr-poster-unlocked')
+    setPosterUnlocked(false)
+    setShowPosterSettings(false)
+  }
+
   return (
     <LocaleContext.Provider value={{ locale, t }}>
       <div class="jr-app">
@@ -125,6 +131,7 @@ export function App({ locale }: Props) {
           settings={settings}
           onSettingsChange={handleSettingsChange}
           onPosterUnlocked={() => setPosterUnlocked(true)}
+          onDisablePoster={handleDisablePoster}
           posterUnlocked={posterUnlocked}
           showPosterSettings={showPosterSettings}
           onTogglePosterSettings={() => setShowPosterSettings(v => !v)}

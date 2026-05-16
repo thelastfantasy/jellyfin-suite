@@ -4,6 +4,11 @@ const WINDOW_MS = 5000
 let clicks = 0
 let timer: ReturnType<typeof setTimeout> | null = null
 
+export function _resetState(): void {
+  clicks = 0
+  if (timer) { clearTimeout(timer); timer = null }
+}
+
 export function registerPosterViewClick(): boolean {
   clicks++
   if (timer) clearTimeout(timer)

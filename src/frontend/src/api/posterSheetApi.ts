@@ -10,7 +10,15 @@ export interface OverlaySettingsDto {
   showFrameTimestamp: boolean
   colorTheme: string
   fontFamily: string
+  brandingLatinFont: string
+  brandingCjkFont: string
   lang: string
+  timestampPosition: string
+}
+
+export interface SkipSegment {
+  startMs: number
+  endMs: number
 }
 
 export interface StartJobRequest {
@@ -19,6 +27,42 @@ export interface StartJobRequest {
   mode: 'deterministic' | 'random'
   seed?: string
   overlay: OverlaySettingsDto
+  skipSegments?: SkipSegment[]
+}
+
+export function loadSkipSegments(): SkipSegment[] {
+  try { return JSON.parse(localStorage.getItem('jr-poster-skip-segments') ?? '[]') ?? [] }
+  catch { return [] }
+}
+
+export function saveSkipSegments(segs: SkipSegment[]): void {
+  localStorage.setItem('jr-poster-skip-segments', JSON.stringify(segs))
+}
+
+export function loadGlobalSkipSegments(): SkipSegment[] {
+  try { return JSON.parse(localStorage.getItem('jr-poster-global-skip') ?? '[]') ?? [] }
+  catch { return [] }
+}
+
+export function saveGlobalSkipSegments(segs: SkipSegment[]): void {
+  localStorage.setItem('jr-poster-global-skip', JSON.stringify(segs))
+}
+
+/** 合并两组区间，排序并消除重叠，过滤无效段（end <= start）。 */
+export function mergeSegments(a: SkipSegment[], b: SkipSegment[]): SkipSegment[] {
+  const all = [...a, ...b].filter(s => s.endMs > s.startMs)
+  if (all.length === 0) return []
+  all.sort((x, y) => x.startMs - y.startMs)
+  const merged: SkipSegment[] = [{ ...all[0] }]
+  for (let i = 1; i < all.length; i++) {
+    const last = merged[merged.length - 1]
+    if (all[i].startMs <= last.endMs) {
+      last.endMs = Math.max(last.endMs, all[i].endMs)
+    } else {
+      merged.push({ ...all[i] })
+    }
+  }
+  return merged
 }
 
 export interface JobStatusDto {
@@ -77,7 +121,16 @@ export async function startJob(itemId: string, req: StartJobRequest): Promise<st
 export async function pollStatus(jobId: string): Promise<JobStatusDto> {
   const res = await apiFetch(`${BASE}/${jobId}/status`)
   if (!res.ok) throw new Error(`Status fetch failed: ${res.status}`)
-  return res.json()
+  const d: any = await res.json()
+  return {
+    jobId: d.jobId ?? d.JobId ?? '',
+    itemId: d.itemId ?? d.ItemId ?? '',
+    status: (d.status ?? d.Status ?? 'running') as JobStatusDto['status'],
+    progress: d.progress ?? d.Progress ?? 0,
+    total: d.total ?? d.Total ?? 0,
+    error: d.error ?? d.Error ?? null,
+    mediaInfo: d.mediaInfo ?? d.MediaInfo ?? null,
+  }
 }
 
 export function getImageUrl(jobId: string): string {
@@ -89,13 +142,42 @@ export async function cancelJob(jobId: string): Promise<void> {
   await apiFetch(`${BASE}/${jobId}`, { method: 'DELETE' })
 }
 
+export interface JobListItemDto {
+  jobId: string
+  itemId: string
+  itemTitle: string
+  status: 'queued' | 'running' | 'done' | 'error' | 'cancelled'
+  progress: number
+  total: number
+  error: string | null
+}
+
+export async function listJobs(): Promise<JobListItemDto[]> {
+  try {
+    const res = await apiFetch(`${BASE}/jobs`)
+    if (!res.ok) return []
+    const raw: any[] = await res.json()
+    return raw.map(d => ({
+      jobId: d.jobId ?? d.JobId ?? '',
+      itemId: d.itemId ?? d.ItemId ?? '',
+      itemTitle: d.itemTitle ?? d.ItemTitle ?? '',
+      status: (d.status ?? d.Status ?? 'done') as JobListItemDto['status'],
+      progress: d.progress ?? d.Progress ?? 0,
+      total: d.total ?? d.Total ?? 0,
+      error: d.error ?? d.Error ?? null,
+    }))
+  } catch {
+    return []
+  }
+}
+
 export async function checkCache(
   itemId: string, rows: number, cols: number, seed: string, overlayHash: string
 ): Promise<boolean> {
   const params = new URLSearchParams({ rows: String(rows), cols: String(cols), seed, overlayHash })
   const res = await apiFetch(`${BASE}/cache/${itemId}?${params}`)
   if (res.status === 204) return false
-  if (res.ok) { const d = await res.json(); return d.cached }
+  if (res.ok) { const d = await res.json(); return d.cached ?? d.Cached ?? false }
   return false
 }
 
@@ -120,8 +202,11 @@ function defaultOverlay(): OverlaySettingsDto {
     showDuration: true,
     showFrameTimestamp: false,
     colorTheme: 'classic',
-    fontFamily: 'noto-sans',
+    fontFamily: 'noto-sans-jp',
+    brandingLatinFont: 'noto-sans',
+    brandingCjkFont: 'noto-sans-jp',
     lang: 'en',
+    timestampPosition: 'inside-bottom-left',
   }
 }
 

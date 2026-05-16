@@ -1,5 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'preact/hooks'
+import { createPortal } from 'preact/compat'
 import { MdClose, MdDownload, MdDelete, MdZoomIn, MdZoomOut, MdFitScreen } from 'react-icons/md'
+import { useLocale } from '../i18n/context'
 
 interface Props {
   src: string
@@ -138,9 +140,10 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
     applyTransform()
   }, [computeFit, centerAt, applyTransform])
 
+  const { t } = useLocale()
   const hasFooter = onDownload || onDelete
 
-  return (
+  return createPortal(
     <div
       class="jr-lightbox"
       onClick={onClose}
@@ -150,13 +153,13 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
     >
       {/* Zoom toolbar */}
       <div class="jr-lightbox__zoombar" onClick={e => e.stopPropagation()}>
-        <button class="jr-lightbox__zoom-btn" onClick={() => zoomBy(1.3)} title="Zoom in">
+        <button class="jr-lightbox__zoom-btn" onClick={() => zoomBy(1.3)} title={t.lightboxZoomIn}>
           <MdZoomIn size={20} />
         </button>
-        <button class="jr-lightbox__zoom-btn" onClick={() => zoomBy(1 / 1.3)} title="Zoom out">
+        <button class="jr-lightbox__zoom-btn" onClick={() => zoomBy(1 / 1.3)} title={t.lightboxZoomOut}>
           <MdZoomOut size={20} />
         </button>
-        <button class="jr-lightbox__zoom-btn" onClick={handleFit} title="Fit to screen">
+        <button class="jr-lightbox__zoom-btn" onClick={handleFit} title={t.lightboxFit}>
           <MdFitScreen size={18} />
         </button>
       </div>
@@ -164,7 +167,7 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
       <button
         class="jr-lightbox__close"
         onClick={e => { e.stopPropagation(); onClose() }}
-        aria-label="Close"
+        aria-label={t.lightboxClose}
       >
         <MdClose size={20} />
       </button>
@@ -193,7 +196,7 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
       {hasFooter && (
         <div class="jr-lightbox__footer" onClick={e => e.stopPropagation()}>
           {onDownload && (
-            <button class="jr-lightbox__footer-btn" onClick={onDownload} title="Download">
+            <button class="jr-lightbox__footer-btn" onClick={onDownload} title={t.lightboxDownload}>
               <MdDownload size={20} />
             </button>
           )}
@@ -201,13 +204,14 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
             <button
               class="jr-lightbox__footer-btn jr-lightbox__footer-btn--delete"
               onClick={onDelete}
-              title="Delete"
+              title={t.lightboxDelete}
             >
               <MdDelete size={20} />
             </button>
           )}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   )
 }

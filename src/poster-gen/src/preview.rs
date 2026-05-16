@@ -1,15 +1,19 @@
 // Preview subcommand: placeholder grid + theme rendering
 
-use image::{ImageEncoder, RgbImage};
+use image::{ImageEncoder, RgbaImage};
 use std::io::BufWriter;
 
 use crate::media_info::MediaInfo;
-use crate::text_renderer::{self, OverlayConfig};
+use crate::text_renderer::{self, RenderOptions, Renderer};
+use crate::image_stitcher::GridLayout;
 
 pub struct PreviewArgs {
     pub output: String,
     pub color_theme: String,
     pub font_path: Option<String>,
+    pub branding_font_path: Option<String>,
+    pub timestamp_font_path: Option<String>,
+    pub emoji_font_path: Option<String>,
     pub branding_enabled: bool,
     pub branding_text: String,
     pub video_info_enabled: bool,
@@ -22,6 +26,7 @@ pub struct PreviewArgs {
     pub rows: u32,
     pub cols: u32,
     pub lang: String,
+    pub timestamp_position: crate::image_stitcher::TimestampPosition,
 }
 
 /// Sample hardcoded MediaInfo for preview mode.
@@ -31,6 +36,8 @@ fn sample_media_info() -> MediaInfo {
         file_size: "4.2 GB".to_string(),
         file_size_bytes: 4_509_715_660,
         resolution: "1920\u{d7}1080".to_string(),
+        source_width: 1920,
+        source_height: 1080,
         fps: 23.976,
         video_codec: "H.265".to_string(),
         bit_depth: Some(10),
@@ -50,22 +57,73 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
     let cols: u32 = args.cols;
     let rows: u32 = args.rows;
     let total_w = 1200u32;
-    let cell_w: u32 = total_w / cols;
-    let cell_h: u32 = cell_w * 9 / 16;
+    let orig_cell_w: u32 = total_w / cols;
+    let orig_cell_h: u32 = orig_cell_w * 9 / 16;
     let header_h: u32 = if args.video_info_enabled || args.branding_enabled {
-        crate::text_renderer::HEADER_H
+        crate::image_stitcher::HEADER_H
     } else {
         0
     };
 
-    let grid_w = cols * cell_w;
-    let grid_h = rows * cell_h + header_h;
+    let renderer = Renderer::new(
+        args.font_path.as_deref(),
+        args.branding_font_path.as_deref(),
+        args.timestamp_font_path.as_deref(),
+        args.emoji_font_path.as_deref(),
+        &args.color_theme,
+    );
+    let options = RenderOptions {
+        branding_enabled: args.branding_enabled,
+        branding_text: args.branding_text.clone(),
+        video_info_enabled: args.video_info_enabled,
+        show_file_size: args.show_file_size,
+        show_resolution_fps: args.show_resolution_fps,
+        show_video_encoding: args.show_video_encoding,
+        show_audio_encoding: args.show_audio_encoding,
+        show_duration: args.show_duration,
+        show_frame_timestamp: args.show_frame_timestamp,
+        lang: args.lang.clone(),
+        timestamp_position: args.timestamp_position,
+    };
 
-    let mut grid = RgbImage::new(grid_w, grid_h);
+    let is_transparent = renderer.theme.header_bg[3] == 0;
+    let has_qr = header_h > 0 && !is_transparent && args.branding_enabled;
+    let qr_strip_w = if has_qr { crate::qr::qr_strip_width() } else { 0 };
 
-    // Fill background black
-    for pixel in grid.pixels_mut() {
-        *pixel = image::Rgb([0u8, 0, 0]);
+    // Original canvas width (icon/text boundary); widen cells to fill total canvas.
+    let icon_area_w = crate::image_stitcher::GRID_PADDING * 2
+        + cols * orig_cell_w
+        + (cols - 1) * crate::image_stitcher::CELL_GAP;
+    let total_canvas_w = icon_area_w + qr_strip_w;
+    let cell_w = if qr_strip_w > 0 && cols > 0 {
+        (total_canvas_w
+            - crate::image_stitcher::GRID_PADDING * 2
+            - (cols - 1) * crate::image_stitcher::CELL_GAP)
+            / cols
+    } else {
+        orig_cell_w
+    };
+    let cell_h = if orig_cell_w > 0 {
+        (cell_w as f64 * orig_cell_h as f64 / orig_cell_w as f64).round() as u32
+    } else {
+        orig_cell_h
+    };
+    let cell_h = cell_h.max(1);
+
+    let layout = GridLayout::compute(rows, cols, cell_w, cell_h, header_h, args.timestamp_position,
+        qr_strip_w, icon_area_w);
+    let grid_w = layout.canvas_w();
+    let grid_h = layout.canvas_h(args.show_frame_timestamp);
+
+    let mut grid = RgbaImage::new(grid_w, grid_h);
+
+    if !is_transparent {
+        for pixel in grid.pixels_mut() {
+            *pixel = image::Rgba([0u8, 0, 0, 255]);
+        }
+    }
+    if !is_transparent {
+        crate::logo::render_logo(&mut grid, icon_area_w, grid_h);
     }
 
     // Fill each cell with diagonal stripe placeholder
@@ -76,22 +134,21 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
         for col in 0..cols {
             let idx = (row * cols + col) as usize;
             let grey = base_greys[idx % base_greys.len()];
-            let cx = col * cell_w;
-            let cy = row * cell_h + header_h;
+            let (cx, cy) = layout.cell_origin(col, row);
 
             for py in cy..cy + cell_h {
                 for px in cx..cx + cell_w {
                     let is_border = px == cx || px == cx + cell_w - 1 || py == cy || py == cy + cell_h - 1;
                     let color = if is_border {
-                        image::Rgb([
+                        image::Rgba([
                             (theme.accent_color[0] as u32 / 4) as u8,
                             (theme.accent_color[1] as u32 / 4) as u8,
                             (theme.accent_color[2] as u32 / 4) as u8,
+                            255,
                         ])
                     } else {
-                        // Subtle diagonal stripe
                         let stripe = ((px - cx + py - cy) / 24) % 2;
-                        image::Rgb([grey + stripe as u8 * 8, grey + stripe as u8 * 8, grey + stripe as u8 * 8])
+                        image::Rgba([grey + stripe as u8 * 8, grey + stripe as u8 * 8, grey + stripe as u8 * 8, 255])
                     };
                     grid.put_pixel(px, py, color);
                 }
@@ -107,42 +164,29 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
         .map(|i| spacing / 2.0 + i as f64 * spacing)
         .collect();
 
-    let overlay_cfg = OverlayConfig {
-        branding_enabled: args.branding_enabled,
-        branding_text: args.branding_text.clone(),
-        video_info_enabled: args.video_info_enabled,
-        show_file_size: args.show_file_size,
-        show_resolution_fps: args.show_resolution_fps,
-        show_video_encoding: args.show_video_encoding,
-        show_audio_encoding: args.show_audio_encoding,
-        show_duration: args.show_duration,
-        show_frame_timestamp: args.show_frame_timestamp,
-        color_theme: args.color_theme.clone(),
-        font_path: args.font_path.clone(),
-        lang: args.lang.clone(),
-        frame_timestamps,
-        rows,
-        cols,
-        cell_width: cell_w,
-        cell_height: cell_h,
-    };
-
     let info = sample_media_info();
-    text_renderer::render_overlay(&mut grid, &info, &overlay_cfg);
+    renderer.render(&mut grid, &info, &options, &layout, &frame_timestamps);
 
-    // JPEG encode with quality 88
+    // Render QR into the pre-allocated strip.
+    if has_qr {
+        crate::qr::render_qr_in_strip(&mut grid, icon_area_w, qr_strip_w, header_h, renderer.theme.header_bg, renderer.theme.accent_color);
+    }
+
+    // WebP encode
+    let final_w = grid.width();
+    let final_h = grid.height();
     let file = std::fs::File::create(&args.output)
         .map_err(|e| format!("Cannot create output file '{}': {e}", args.output))?;
     let writer = BufWriter::new(file);
-    let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(writer, 88);
+    let encoder = image::codecs::webp::WebPEncoder::new_lossless(writer);
     encoder
         .write_image(
             grid.as_raw(),
-            grid_w,
-            grid_h,
-            image::ExtendedColorType::Rgb8,
+            final_w,
+            final_h,
+            image::ExtendedColorType::Rgba8,
         )
-        .map_err(|e| format!("JPEG encoding failed: {e}"))?;
+        .map_err(|e| format!("WebP encoding failed: {e}"))?;
 
     let abs_path = std::fs::canonicalize(&args.output)
         .unwrap_or_else(|_| std::path::PathBuf::from(&args.output));
@@ -167,6 +211,9 @@ mod tests {
             output,
             color_theme: "classic".to_string(),
             font_path: None,
+            branding_font_path: None,
+            timestamp_font_path: None,
+            emoji_font_path: None,
             branding_enabled: true,
             branding_text: "Test Branding".to_string(),
             video_info_enabled: true,
@@ -179,37 +226,49 @@ mod tests {
             rows: 2,
             cols: 3,
             lang: "en".to_string(),
+            timestamp_position: crate::image_stitcher::TimestampPosition::InsideBottomLeft,
         }
     }
 
     #[test]
-    fn preview_creates_valid_jpeg() {
-        let out = tmp_path("jr_test_preview_valid.jpg");
+    fn preview_creates_valid_webp() {
+        let out = tmp_path("jr_test_preview_valid.webp");
         run_preview(default_args(out.clone())).expect("preview should succeed");
 
         let bytes = std::fs::read(&out).expect("output file should exist");
-        // JPEG magic bytes: FF D8 FF
-        assert_eq!(&bytes[..3], &[0xFF, 0xD8, 0xFF], "output must be a valid JPEG");
+        // WebP magic bytes: RIFF
+        assert_eq!(&bytes[..4], b"RIFF", "output must be a valid WebP");
         let _ = std::fs::remove_file(&out);
     }
 
     #[test]
     fn preview_correct_dimensions_with_header() {
-        let out = tmp_path("jr_test_preview_dims.jpg");
+        let out = tmp_path("jr_test_preview_dims.webp");
         run_preview(default_args(out.clone())).expect("preview should succeed");
 
         let img = image::open(&out).expect("should open as image");
-        // 3 cols × 400 px wide (1200 / 3 = 400)
-        assert_eq!(img.width(), 1200, "width should be 3 × 400");
-        // 2 rows × 225 + HEADER_H
-        assert_eq!(img.height(), 2 * 225 + crate::text_renderer::HEADER_H, "height should be 2 × 225 + HEADER_H");
+        let qr_w = crate::qr::qr_strip_width();
+        // icon_area_w = pad*2 + 3*(1200/3) + 2*gap = 16 + 1200 + 8 = 1224
+        let orig_cell_w = 1200u32 / 3;
+        let orig_cell_h = orig_cell_w * 9 / 16;
+        let icon_area_w = crate::image_stitcher::GRID_PADDING * 2
+            + 3 * orig_cell_w + 2 * crate::image_stitcher::CELL_GAP;
+        let total_canvas_w = icon_area_w + qr_w;
+        let eff_cw = (total_canvas_w - crate::image_stitcher::GRID_PADDING * 2 - 2 * crate::image_stitcher::CELL_GAP) / 3;
+        let eff_ch = (eff_cw as f64 * orig_cell_h as f64 / orig_cell_w as f64).round() as u32;
+        assert_eq!(img.width(), icon_area_w + qr_w, "width should include gaps, padding, and QR strip");
+        let expected_h = crate::image_stitcher::HEADER_H + 16 + 2 * eff_ch + 4;
+        assert_eq!(img.height(), expected_h, "height should include header, gaps and padding");
         let _ = std::fs::remove_file(&out);
     }
 
     #[test]
     fn preview_no_overlay_omits_header() {
-        let out = tmp_path("jr_test_preview_nooverlay.jpg");
+        let out = tmp_path("jr_test_preview_nooverlay.webp");
         run_preview(PreviewArgs {
+            branding_font_path: None,
+            timestamp_font_path: None,
+            emoji_font_path: None,
             output: out.clone(),
             color_theme: "dark".to_string(),
             font_path: None,
@@ -225,19 +284,20 @@ mod tests {
             rows: 2,
             cols: 3,
             lang: "en".to_string(),
+            timestamp_position: crate::image_stitcher::TimestampPosition::InsideBottomLeft,
         })
         .expect("preview should succeed without overlay");
 
         let img = image::open(&out).expect("should open as image");
-        // No header: exactly 2 rows × 225 = 450
-        assert_eq!(img.height(), 450, "height should be 2 × 225 (no header)");
+        // No header: pad*2 + 2 rows*225 + (2-1)*4 gap = 16 + 450 + 4 = 470
+        assert_eq!(img.height(), 470, "height should include padding and gaps (no header)");
         let _ = std::fs::remove_file(&out);
     }
 
     #[test]
-    fn preview_all_themes_produce_valid_jpeg() {
+    fn preview_all_themes_produce_valid_webp() {
         for theme in ["classic", "dark", "light", "cinematic", "minimal"] {
-            let out = tmp_path(&format!("jr_test_preview_{theme}.jpg"));
+            let out = tmp_path(&format!("jr_test_preview_{theme}.webp"));
             let mut args = default_args(out.clone());
             args.color_theme = theme.to_string();
             args.show_frame_timestamp = true;
@@ -245,7 +305,7 @@ mod tests {
             run_preview(args).unwrap_or_else(|e| panic!("preview theme={theme} failed: {e}"));
 
             let bytes = std::fs::read(&out).expect("file should exist");
-            assert_eq!(&bytes[..3], &[0xFF, 0xD8, 0xFF], "theme={theme}: not a JPEG");
+            assert_eq!(&bytes[..4], b"RIFF", "theme={theme}: not a WebP");
             assert!(bytes.len() > 1024, "theme={theme}: file suspiciously small");
             let _ = std::fs::remove_file(&out);
         }
@@ -253,7 +313,7 @@ mod tests {
 
     #[test]
     fn preview_output_file_is_nonempty() {
-        let out = tmp_path("jr_test_preview_size.jpg");
+        let out = tmp_path("jr_test_preview_size.webp");
         run_preview(default_args(out.clone())).expect("preview should succeed");
 
         let meta = std::fs::metadata(&out).expect("file should exist");

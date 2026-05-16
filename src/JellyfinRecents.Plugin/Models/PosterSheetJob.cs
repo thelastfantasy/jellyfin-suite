@@ -4,6 +4,7 @@ public enum JobStatus { Queued, Running, Done, Error, Cancelled }
 public enum JobMode { Deterministic, Random }
 public enum ColorTheme { Classic, Dark, Light, Cinematic, Minimal }
 public enum FontFamily { NotoSans, NotoSerif }
+public enum TimestampPosition { InsideBottomLeft, OutsideBottomLeft, InsideBottomCenter, OutsideBottomCenter, InsideBottomRight, OutsideBottomRight }
 
 public class OverlaySettings
 {
@@ -18,7 +19,10 @@ public class OverlaySettings
     public bool ShowFrameTimestamp { get; set; } = false;
     public string ColorTheme { get; set; } = "classic";
     public string FontFamily { get; set; } = "noto-sans";
+    public string BrandingLatinFont { get; set; } = "noto-sans";
+    public string BrandingCjkFont { get; set; } = "noto-sans-jp";
     public string Lang { get; set; } = "en";
+    public string TimestampPosition { get; set; } = "inside-bottom-left";
 }
 
 public class MediaInfoDto
@@ -44,11 +48,13 @@ public class PosterSheetJob
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string ItemId { get; set; } = string.Empty;
+    public string ItemTitle { get; set; } = string.Empty;
     public int Rows { get; set; }
     public int Cols { get; set; }
     public JobMode Mode { get; set; }
     public string Seed { get; set; } = string.Empty;
     public OverlaySettings Overlay { get; set; } = new();
+    public List<SkipSegmentDto>? SkipSegments { get; set; }
     public JobStatus Status { get; set; } = JobStatus.Queued;
     public int Progress { get; set; }
     public int Total { get; set; }

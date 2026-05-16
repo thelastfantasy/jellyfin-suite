@@ -9,6 +9,9 @@ pub struct MediaInfo {
     pub file_size: String,
     pub file_size_bytes: u64,
     pub resolution: String,
+    /// Raw source width in pixels (used to cap thumb_width and detect portrait orientation)
+    pub source_width: u32,
+    pub source_height: u32,
     pub fps: f64,
     pub video_codec: String,
     pub bit_depth: Option<i32>,
@@ -106,22 +109,24 @@ fn parse_ffprobe_json(json_str: &str, input: &str) -> Result<MediaInfo, String> 
     // FPS: parse r_frame_rate like "24000/1001"
     let fps = parse_fps(video_stream["r_frame_rate"].as_str().unwrap_or("0/1"));
 
-    // Bit depth
+    // Bit depth — bits_per_raw_sample may be "0" for some codecs (AV1); fall back to pix_fmt
     let bit_depth = video_stream["bits_per_raw_sample"]
         .as_str()
         .and_then(|s| s.parse::<i32>().ok())
-        .or_else(|| video_stream["bits_per_raw_sample"].as_i64().map(|v| v as i32));
+        .filter(|&d| d > 0)
+        .or_else(|| video_stream["bits_per_raw_sample"].as_i64().filter(|&d| d > 0).map(|v| v as i32))
+        .or_else(|| parse_bit_depth_from_pix_fmt(video_stream["pix_fmt"].as_str().unwrap_or("")));
 
     // HDR type
     let color_transfer = video_stream["color_transfer"].as_str().unwrap_or("");
     let color_primaries = video_stream["color_primaries"].as_str().unwrap_or("");
     let hdr_type = detect_hdr(color_transfer, color_primaries);
 
-    // Colour space
+    // Colour space — normalize ffprobe lowercase values to display names
     let colour_space = video_stream["color_space"]
         .as_str()
         .filter(|s| !s.is_empty() && *s != "unknown")
-        .map(|s| s.to_string());
+        .map(normalize_colour_space);
 
     // Duration from format
     let duration_secs: f64 = format["duration"]
@@ -143,9 +148,9 @@ fn parse_ffprobe_json(json_str: &str, input: &str) -> Result<MediaInfo, String> 
         .map(|f| f.to_string_lossy().into_owned())
         .unwrap_or_else(|| input.to_string());
 
-    // Audio info from first audio stream
+    // Audio info from the highest-quality audio stream (most channels), falling back to first
     let (audio_codec, audio_format, audio_bitrate, audio_sample_rate): (Option<String>, Option<String>, Option<String>, Option<u32>) =
-        if let Some(a) = audio_streams.first() {
+        if let Some(a) = audio_streams.iter().max_by_key(|a| a["channels"].as_u64().unwrap_or(0)) {
             let codec = a["codec_name"]
                 .as_str()
                 .map(|s| friendly_audio_codec(s));
@@ -171,6 +176,8 @@ fn parse_ffprobe_json(json_str: &str, input: &str) -> Result<MediaInfo, String> 
         file_size,
         file_size_bytes,
         resolution,
+        source_width: width as u32,
+        source_height: height as u32,
         fps,
         video_codec,
         bit_depth,
@@ -255,26 +262,53 @@ fn friendly_audio_codec(name: &str) -> String {
 }
 
 fn channel_layout_name(layout: &str, channels: u64) -> String {
-    if !layout.is_empty() && layout != "unknown" {
-        match layout {
-            "mono" => "mono".to_string(),
-            "stereo" => "stereo".to_string(),
-            "5.1" | "5.1(side)" => "5.1".to_string(),
-            "7.1" | "7.1(wide)" => "7.1".to_string(),
-            "2.1" => "2.1".to_string(),
-            "3.0" | "3.0(back)" => "3.0".to_string(),
-            "4.0" | "quad" | "quad(side)" => "4.0".to_string(),
-            other => other.to_string(),
+    match layout {
+        "mono" => "1ch".to_string(),
+        "stereo" => "2ch".to_string(),
+        "2.1" => "2.1ch".to_string(),
+        "3.0" | "3.0(back)" => "3ch".to_string(),
+        "4.0" | "quad" | "quad(side)" => "4ch".to_string(),
+        "5.1" | "5.1(side)" => "5.1ch".to_string(),
+        "7.1" | "7.1(wide)" => "7.1ch".to_string(),
+        _ => match channels {
+            1 => "1ch".to_string(),
+            2 => "2ch".to_string(),
+            6 => "5.1ch".to_string(),
+            8 => "7.1ch".to_string(),
+            n if n > 0 => format!("{n}ch"),
+            _ => String::new(),
+        },
+    }
+}
+
+fn normalize_colour_space(cs: &str) -> String {
+    match cs {
+        "bt709" => "BT.709".to_string(),
+        "bt2020nc" | "bt2020" | "bt2020c" => "BT.2020".to_string(),
+        "bt470bg" | "bt470m" => "BT.601".to_string(),
+        "smpte170m" => "SMPTE 170M".to_string(),
+        "smpte240m" => "SMPTE 240M".to_string(),
+        "smpte432" => "P3-D65".to_string(),
+        "iec61966_2_1" | "iec61966-2-1" => "sRGB".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// Extract bit depth from pix_fmt string (e.g. "yuv420p10le" → 10, "yuv420p" → 8).
+fn parse_bit_depth_from_pix_fmt(pix_fmt: &str) -> Option<i32> {
+    if pix_fmt.is_empty() { return None; }
+    if let Some(pos) = pix_fmt.rfind('p') {
+        let after = &pix_fmt[pos + 1..];
+        let digits: String = after.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            return digits.parse().ok();
         }
-    } else {
-        match channels {
-            1 => "mono".to_string(),
-            2 => "stereo".to_string(),
-            6 => "5.1".to_string(),
-            8 => "7.1".to_string(),
-            n => format!("{n}ch"),
+        // 'p' at end with no digit suffix → standard 8-bit planar
+        if pix_fmt.starts_with("yuv") || pix_fmt.starts_with("rgb") || pix_fmt.starts_with("gbr") {
+            return Some(8);
         }
     }
+    None
 }
 
 fn detect_hdr(color_transfer: &str, color_primaries: &str) -> Option<String> {

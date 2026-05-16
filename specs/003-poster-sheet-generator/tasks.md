@@ -407,10 +407,67 @@ Start with the Rust binary in complete isolation. Build it, run `cargo test`, in
 
 - [X] T095 Fix font option names: "Noto Sans JP" → "Noto Sans", "Noto Serif JP" → "Noto Serif" in `PosterSheetSettingsPanel.tsx` FONTS array.
 - [X] T096 Remove unused `hasCJK`/`hasLatin` helpers and dead filter — all fonts support Latin; `brandFontOptions = FONTS` directly.
-- [ ] T097 Download additional Latin font files via `FontAcquisitionService.cs`: add Noto Sans (Latin subset) and Noto Serif (Latin subset) font acquisition with SHA-256 verification, following the same pattern as existing CJK fonts.
+- [ ] T097 Download western/Latin font files via `FontAcquisitionService.cs` (FR-050): add acquisition for 4 additional fonts — **Roboto Regular**, **Oswald Regular**, **Playfair Display Regular**, **Cinzel Regular** — each downloaded from Google Fonts static CDN, verified with SHA-256, cached under `{dataDir}/fonts/` as `roboto-regular.ttf`, `oswald-regular.ttf`, `playfair-regular.ttf`, `cinzel-regular.ttf`; expose as nullable properties `RobotoPath`, `OswaldPath`, `PlayfairPath`, `CinzelPath`; existing `NotoSansPath`/`NotoSerifPath` cover the "noto-sans" and "noto-serif" Latin options without separate downloads; log actionable error if download fails in `src/JellyfinRecents.Plugin/Services/FontAcquisitionService.cs`
+- [X] T101 Update `OverlaySettingsDto` TypeScript type: replaced `brandingFontFamily` with `brandingLatinFont` + `brandingCjkFont`; updated `defaultOverlay()` in both `posterSheetApi.ts` and `PosterSheetSettingsPanel.tsx`; C# model + job service CLI args remain TODO (see T103) in `src/frontend/src/api/posterSheetApi.ts`
+- [X] T102 Implement conditional branding font picker UI in `PosterSheetSettingsPanel.tsx` (FR-050): `hasCJK`/`hasLatin` detection on live branding text; pure Latin → 6-option western picker (Noto Sans/Serif/Roboto/Oswald/Playfair/Cinzel) with per-font style hints; pure CJK → 2-option CJK picker (Noto Sans JP/Serif JP); mixed → both pickers with labelled headings; `posterBrandingLatinFont`/`posterBrandingCjkFont` i18n keys added to all 3 locales and `types.ts`; overlay font selector (labels/timestamps) now uses `OVERLAY_FONTS` (CJK-capable only)
+- [ ] T103 Implement per-character-run branding font rendering in Rust (FR-054): add `--branding-latin-font` and `--branding-cjk-font` CLI flags to `main.rs`; in `text_renderer.rs`, implement `segment_by_script(text: &str) -> Vec<(ScriptClass, &str)>` where `ScriptClass` is Latin or CJK (detect by Unicode codepoint range); implement `render_mixed_text(img, segments, latin_font, cjk_font, x, y, scale, color)` that renders each segment with its font and accumulates x-advance; use this for the branding label; fall back to single-font rendering if only one font is loaded in `src/poster-gen/src/main.rs` + `src/poster-gen/src/text_renderer.rs`
 
 ### UI polish (FR-051–FR-053)
 
 - [X] T098 Swap grid rows/cols order in `PosterSheetSettingsPanel.tsx`: columns slider now appears first, rows second.
 - [X] T099 Add descriptive tooltip `title` to Mode toggle buttons: Deterministic tip and Random tip added to all three locale files + `Translations` type.
 - [X] T100 Remove bottom border from preview section: added `.jr-poster-settings__section:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }` in `styles.css`.
+
+---
+
+## Phase 14: QR Code Watermark (FR-055)
+
+**Purpose**: Render a colorful gradient QR code containing the plugin GitHub repo URL in the poster sheet header (right side, next to the Jellyfin logo); fall back to the canvas bottom-right corner if the header has insufficient horizontal space.
+
+**QR content**: `https://github.com/<owner>/jellyfin-recents` — confirm exact URL before implementing T106.
+
+**⚠️ ORDERING**: T105 must complete before T106 and T107. T106 and T107 are independent of each other and can run in parallel.
+
+- [X] T104 [P] Add `qrcode = "0.14"` to `[dependencies]` in `src/poster-gen/Cargo.toml`
+
+- [X] T105 Create `src/poster-gen/src/qr.rs`: implement `pub fn render_qr(img: &mut image::RgbaImage, url: &str, origin_x: u32, origin_y: u32, module_px: u32)` — (1) generate the QR matrix via `qrcode::QrCode::with_error_correction_level(url.as_bytes(), qrcode::EcLevel::H)` and call `.to_colors()` to get the module grid; (2) for each dark module at `(col, row)`, compute a gradient color by linearly interpolating from Jellyfin blue `[0, 164, 220]` (top row) to Jellyfin purple `[170, 92, 195]` (bottom row) with alpha `200`; for light modules use transparent `[0,0,0,0]`; (3) blit each module as a filled `module_px × module_px` square using `imageproc::drawing::draw_filled_rect_mut`; (4) expose a helper `pub fn module_count(url: &str) -> u32` that returns the QR side length in modules (needed by callers to compute `origin_x`/`origin_y`); add `mod qr;` and `pub use qr::*;` in `src/poster-gen/src/main.rs` in `src/poster-gen/src/qr.rs`
+
+- [X] T106 Wire QR watermark into `image_stitcher.rs`: (1) define `const QR_URL: &str = "https://github.com/<owner>/jellyfin-recents"` at the top of the file; (2) after the Jellyfin logo is composited onto the canvas, compute `module_count = qr::module_count(QR_URL)` and choose `module_px = ((HEADER_H as f32 - 16.0) / module_count as f32).floor() as u32` clamped to `[2, 4]`; (3) compute `qr_canvas_px = module_count * module_px`; (4) compute `origin_x = canvas_w - qr_canvas_px - 8` and `origin_y = 8`; (5) if `origin_x` would overlap the rightmost edge of the header text area (i.e. less than 8 px separation), instead place the QR at the bottom-right of the full canvas: `origin_x = canvas_w - qr_canvas_px - 8`, `origin_y = canvas_h - qr_canvas_px - 8`; (6) call `qr::render_qr(&mut canvas, QR_URL, origin_x, origin_y, module_px)` in `src/poster-gen/src/image_stitcher.rs` (depends on T105)
+
+- [X] T107 [P] Wire the same QR watermark into `preview.rs` using the identical `QR_URL` constant and sizing logic as T106: place in the top-right of the preview canvas header area using the same fallback rule; the preview canvas is smaller so expect `module_px = 2` in most cases in `src/poster-gen/src/preview.rs` (depends on T105)
+
+---
+
+## Phase 15: Skip Segments, Global Skips, Canvas BG Fix, Rename (FR-056–FR-061)
+
+**Purpose**: Allow users to skip intro/outro segments when extracting frames; add global skip presets in settings; fix non-theme-aware canvas background; rename "海报/Poster" to "截图墙/Thumbnail Grid" across the UI.
+
+**⚠️ ORDERING**: T108–T111 are independent and can run in parallel. T112 depends on T111 (global skip functions). T113 depends on T108 and T111. T114 and T115 are independent.
+
+### Skip Segments Modal (FR-056)
+
+- [X] T108 [P] Create `src/frontend/src/components/SkipSegmentsModal.tsx`: tab strip with "按章节跳过" and "按时间段跳过" tabs (chapters tab shown only when `itemId` is provided and chapters loaded); export `TimeInput` sub-component (HH:MM:SS.mmm inputs as four `<input type="number">` fields); chapter tab renders clickable `<button>` rows toggling skip state; segment tab renders per-row `TimeInput` pair with remove button; footer has "清除全部" + "取消" + "生成" actions; modal renders via `createPortal(…, document.body)`; `onConfirm?: (segments: SkipSegment[], ignoreGlobal: boolean) => void` callback in `src/frontend/src/components/SkipSegmentsModal.tsx`
+
+- [X] T109 [P] Implement Jellyfin chapter fetching in `SkipSegmentsModal.tsx`: `fetchChapters(itemId, chapterWord)` calls `window.ApiClient.ajax({ type: 'GET', url: apiClient.getUrl('Items/{itemId}', { Fields: 'Chapters', userId }) })` and maps `Chapters[]` to `ChapterInfo[]`; chapter display shows name, start time (`HH:MM:SS.mmm`), and duration; on load, auto-switches to chapters tab if chapters exist in `src/frontend/src/components/SkipSegmentsModal.tsx`
+
+- [X] T110 [P] Implement OP/ED heuristic `guessOpEd(chapters, videoDurationMs)` in `SkipSegmentsModal.tsx`: skip if fewer than 3 chapters or if any chapter name already matches `/\b(op|ed|opening|ending)\b/i`; OP detection: scan first 3 chapters for a short chapter (≤90 s) in the first third of video, skip consecutive-short-first heuristic for recap; ED detection: scan last 3 chapters for a short chapter in the last third, skip last-of-two-consecutive-shorts (next-ep preview); render guess badge `(猜测为 OP)` / `(猜测为 ED)` next to chapter name; add `guessOp`/`guessEd`/`chapterFallback` i18n keys to all 3 locale files and `Translations` type in `src/frontend/src/components/SkipSegmentsModal.tsx` + `src/frontend/src/i18n/`
+
+### Global Skip API (FR-057)
+
+- [X] T111 [P] Add global skip segment persistence to `src/frontend/src/api/posterSheetApi.ts`: `loadGlobalSkipSegments(): SkipSegment[]` reads from `localStorage('jr-poster-global-skip')`; `saveGlobalSkipSegments(segs): void` writes JSON; `mergeSegments(a, b): SkipSegment[]` sorts and de-overlaps two arrays (union merge: accumulate overlapping intervals into last entry via `last.endMs = Math.max(last.endMs, all[i].endMs)`) in `src/frontend/src/api/posterSheetApi.ts`
+
+### Global Skip Settings Panel (FR-058)
+
+- [X] T112 Add global skip interval editor to `PosterSheetSettingsPanel.tsx`: state `globalSkips: SkipSegment[]` initialised from `loadGlobalSkipSegments()`; renders a section between Mode and Overlay with up to 2 `<TimeInput>` pairs plus remove buttons; "添加跳过区间" button hidden when 2 entries exist; `addGlobalSkip`, `removeGlobalSkip`, `updateGlobalSkip` handlers call `saveGlobalSkipSegments` immediately; when valid global skips exist, they are included in `startJob()` request via `mergeSegments`; imports `TimeInput` from `SkipSegmentsModal`; add `posterGlobalSkip` / `posterGlobalSkipAdd` i18n keys to all 3 locales in `src/frontend/src/components/PosterSheetSettingsPanel.tsx` + `src/frontend/src/i18n/`
+
+### Ignore-Global Checkbox + Add-to-Global Button (FR-059)
+
+- [X] T113 Extend `SkipSegmentsModal.tsx` with cross-global controls (FR-059): (1) `globalSkipsLocal` state (mutable mirror of localStorage) + `hasGlobalSkips` computed from it; (2) `ignoreGlobal: boolean` state with checkbox in footer, disabled when `!hasGlobalSkips`; (3) per-segment "add to global" button (`MdLanguage` icon) in segment tab rows, enabled only when segment is valid (`endMs > startMs`); clicking when global has 2 entries shows fixed-position tooltip (`jr-skip-full-tooltip`, auto-dismiss after 2500 ms) via `getBoundingClientRect`; otherwise calls `saveGlobalSkipSegments` and updates `globalSkipsLocal`; footer restructured as column: ignore-global label row + actions row; tooltip portal rendered alongside modal portal; add `skipIgnoreGlobal` / `skipAddToGlobal` / `skipGlobalFull` i18n keys to all 3 locales in `src/frontend/src/components/SkipSegmentsModal.tsx` + `src/frontend/src/i18n/`; update `PlayRecordCard.tsx` to pass `ignoreGlobal` to `handleSkipAndGenerate` and merge with `loadGlobalSkipSegments()` accordingly
+
+### Canvas Background Color per Theme (FR-060)
+
+- [X] T114 [P] Fix non-theme-aware canvas background in Rust: add `canvas_bg: [u8; 3]` field to `ThemeColors` struct in `src/poster-gen/src/text_renderer.rs` with per-theme values (dark=[12,12,12], light=[245,245,245], cinematic=[0,0,0], minimal=[10,10,10], transparent=[0,0,0], classic=[25,25,30]); in `src/poster-gen/src/image_stitcher.rs`, replace hardcoded `[0u8, 0, 0, 255]` fill with `renderer.theme.canvas_bg` (skip fill entirely for transparent theme, which uses alpha channel) in `src/poster-gen/src/text_renderer.rs` + `src/poster-gen/src/image_stitcher.rs`
+
+### UI Rename: "海报/Poster Sheet" → "截图墙/Thumbnail Grid" (FR-061)
+
+- [X] T115 [P] Rename all "海报" / "poster sheet" / "ポスター" strings to "截图墙" / "Thumbnail Grid" / "サムネイルグリッド" across all three locale files (`zh.ts`, `en.ts`, `ja.ts`): `posterSettingsTitle`, `posterDisable`, `posterQueue`, `posterQueueRemove`, `posterQueueSettings`, `posterGenerate2`; leave single-word action labels (`posterGenerate` = "生成" / "Generate" / "生成") unchanged; no TypeScript type changes needed in `src/frontend/src/i18n/locales/`

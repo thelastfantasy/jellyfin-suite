@@ -1,17 +1,36 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
 import { MdGridView } from 'react-icons/md'
 import { Popover } from './Popover'
-import { getJobs, removeJob, JobEntry } from '../state/posterJobStore'
-import { cancelJob, getImageUrl } from '../api/posterSheetApi'
+import { getJobs, addJob, updateJob, removeJob, JobEntry } from '../state/posterJobStore'
+import { cancelJob, getImageUrl, listJobs } from '../api/posterSheetApi'
 import { useLocale } from '../i18n/context'
 import { PosterJobRunner } from './PosterJobRunner'
 import { Lightbox } from './Lightbox'
+import { downloadBlob } from '../utils/download'
 
 export function PosterQueueWidget() {
   const { t } = useLocale()
   const [jobs, setJobs] = useState<JobEntry[]>(getJobs)
   const [open, setOpen] = useState(false)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+  const [lightboxJobId, setLightboxJobId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Restore jobs from backend on mount (iframe re-enter after navigation)
+    listJobs().then(serverJobs => {
+      const localIds = new Set(getJobs().map(j => j.jobId))
+      for (const sj of serverJobs) {
+        if (localIds.has(sj.jobId)) continue
+        addJob(sj.jobId, sj.itemId, sj.itemTitle)
+        updateJob(sj.jobId, {
+          status: sj.status === 'queued' ? 'running' : sj.status,
+          progress: sj.progress,
+          total: sj.total,
+          error: sj.error ?? undefined,
+        })
+      }
+    })
+  }, [])
 
   useEffect(() => {
     function handler() { setJobs(getJobs()) }
@@ -20,7 +39,7 @@ export function PosterQueueWidget() {
   }, [])
 
   const handleDelete = useCallback(async (job: JobEntry) => {
-    if (job.status === 'running') await cancelJob(job.jobId).catch(() => {})
+    await cancelJob(job.jobId).catch(() => {})
     removeJob(job.jobId)
   }, [])
 
@@ -53,14 +72,14 @@ export function PosterQueueWidget() {
             <button class="jr-queue-popover__header-close" onClick={() => setOpen(false)}>✕</button>
           </div>
           <div class="jr-queue-popover__list">
-            {jobs.map(job => (
+            {[...jobs].reverse().map(job => (
               <div key={job.jobId} class={`jr-queue-popover__item jr-queue-popover__item--${job.status}`}>
                 <div class="jr-queue-popover__item-header">
                   <span class="jr-queue-popover__title" title={job.itemTitle}>{job.itemTitle}</span>
                   <button
                     class="jr-queue-popover__delete"
                     onClick={() => handleDelete(job)}
-                    title="Remove"
+                    title={t.posterQueueRemove}
                   >✕</button>
                 </div>
 
@@ -71,7 +90,7 @@ export function PosterQueueWidget() {
                       style={{ width: `${Math.round((job.progress / job.total) * 100)}%` }}
                     />
                     <span class="jr-queue-popover__bar-text">
-                      {job.progress}/{job.total}
+                      {Math.round((job.progress / job.total) * 100)}%
                     </span>
                   </div>
                 )}
@@ -91,7 +110,7 @@ export function PosterQueueWidget() {
                     src={getImageUrl(job.jobId)}
                     alt={job.itemTitle}
                     class="jr-queue-popover__thumb"
-                    onClick={() => setLightboxSrc(getImageUrl(job.jobId))}
+                    onClick={() => { setLightboxSrc(getImageUrl(job.jobId)); setLightboxJobId(job.jobId) }}
                   />
                 )}
               </div>
@@ -104,7 +123,14 @@ export function PosterQueueWidget() {
         <Lightbox
           src={lightboxSrc}
           alt="Poster sheet"
-          onClose={() => setLightboxSrc(null)}
+          onClose={() => { setLightboxSrc(null); setLightboxJobId(null) }}
+          onDownload={() => lightboxSrc && downloadBlob(lightboxSrc, `poster-sheet-${lightboxJobId}.jpg`)}
+          onDelete={lightboxJobId ? () => {
+            const job = jobs.find(j => j.jobId === lightboxJobId)
+            if (job) handleDelete(job)
+            setLightboxSrc(null)
+            setLightboxJobId(null)
+          } : undefined}
         />
       )}
     </>
