@@ -410,7 +410,7 @@ Start with the Rust binary in complete isolation. Build it, run `cargo test`, in
 - [X] T097 Expand `FontAcquisitionService.cs` with Latin font downloads + system font path probing (FR-050): acquire 5 fonts — **Roboto Regular**, **RobotoMono Regular**, **Oswald Regular**, **Playfair Display Regular**, **Cinzel Regular** + **NotoEmoji Regular** — from Google Fonts GitHub raw / jsDelivr CDN, verified with SHA-256, cached under `{dataDir}/fonts/`; expose as nullable properties `RobotoPath`, `RobotoMonoPath`, `OswaldPath`, `PlayfairPath`, `CinzelPath`, `NotoEmojiPath`; for each font, probe OS system paths before downloading (Debian/Ubuntu standard locations for Noto CJK OTF, Roboto, etc. — OTF listed before TTC to avoid `ab_glyph` index-0 TTC issue); acquisition priority: 1=custom file, 2=system probe, 3=cached+checksum, 4=download; log actionable error if all sources fail in `src/JellyfinRecents.Plugin/Services/FontAcquisitionService.cs`
 - [X] T101 Update `OverlaySettingsDto` TypeScript type: replaced `brandingFontFamily` with `brandingLatinFont` + `brandingCjkFont`; updated `defaultOverlay()` in both `posterSheetApi.ts` and `PosterSheetSettingsPanel.tsx`; C# model + job service CLI args remain TODO (see T103) in `src/frontend/src/api/posterSheetApi.ts`
 - [X] T102 Implement conditional branding font picker UI in `PosterSheetSettingsPanel.tsx` (FR-050): `hasCJK`/`hasLatin` detection on live branding text; pure Latin → 6-option western picker (Noto Sans/Serif/Roboto/Oswald/Playfair/Cinzel) with per-font style hints; pure CJK → 2-option CJK picker (Noto Sans JP/Serif JP); mixed → both pickers with labelled headings; `posterBrandingLatinFont`/`posterBrandingCjkFont` i18n keys added to all 3 locales and `types.ts`; overlay font selector (labels/timestamps) now uses `OVERLAY_FONTS` (CJK-capable only)
-- [ ] T103 Implement per-character-run branding font rendering in Rust (FR-054): add `--branding-latin-font` and `--branding-cjk-font` CLI flags to `main.rs`; in `text_renderer.rs`, implement `segment_by_script(text: &str) -> Vec<(ScriptClass, &str)>` where `ScriptClass` is Latin or CJK (detect by Unicode codepoint range); implement `render_mixed_text(img, segments, latin_font, cjk_font, x, y, scale, color)` that renders each segment with its font and accumulates x-advance; use this for the branding label; fall back to single-font rendering if only one font is loaded in `src/poster-gen/src/main.rs` + `src/poster-gen/src/text_renderer.rs`
+- [X] T103 Implement per-character-run branding font rendering in Rust (FR-054): add `--branding-latin-font` and `--branding-cjk-font` CLI flags to `main.rs`; in `text_renderer.rs`, implement `segment_by_script(text: &str) -> Vec<(ScriptClass, &str)>` where `ScriptClass` is Latin or CJK (detect by Unicode codepoint range); implement `render_mixed_text(img, segments, latin_font, cjk_font, x, y, scale, color)` that renders each segment with its font and accumulates x-advance; use this for the branding label; fall back to single-font rendering if only one font is loaded in `src/poster-gen/src/main.rs` + `src/poster-gen/src/text_renderer.rs`
 
 ### UI polish (FR-051–FR-053)
 
@@ -521,6 +521,28 @@ Start with the Rust binary in complete isolation. Build it, run `cargo test`, in
 - [X] T127 Add `[assembly: InternalsVisibleTo("JellyfinRecents.Tests")]` to plugin .csproj; write `PosterSheetFontValidationTests.cs` covering `HasValidFontMagic` (3 valid magic bytes, TTC/PDF/ZIP rejection, too-short data), `SanitizeFontName` (space→hyphen collapse, leading/trailing trim, all-special→empty, 64-char truncation), `ReadFontFamilyName` (nameId 1/16/4 each returned, priority 16>1>4, non-Windows platform ignored, corrupt/empty data returns null, non-ASCII round-trip) in `tests/JellyfinRecents.Tests/PosterSheetFontValidationTests.cs`
 
 - [X] T128 Wire uploaded custom fonts into `PosterSheetJobService.cs` `ResolveFontPath`: `custom-*` key → probe `{dataDir}/fonts/{key}.ttf` then `.otf`; return `null` if neither exists (job will log warning and use fallback) in `src/JellyfinRecents.Plugin/Services/PosterSheetJobService.cs`
+
+---
+
+## Phase 19: Bug Fixes & Polish (本次会话补充)
+
+**Purpose**: 补充记录本次会话中已完成但未在任务列表中登记的工作。
+
+- [X] T130 [P] 字体跨脚本回退链：`draw_text_mixed_branding` / `measure_text_mixed_branding` 实现 primary → cross-script → emoji → Twemoji 四级回退（使用 Rust 标记循环 `'chars:` + 标记块 `'resolve:`），同一字符优先用同脚本字体，无字形时自动切换对侧字体，仍无字形时走 emoji/Twemoji 通道 in `src/poster-gen/src/text_renderer.rs`
+
+- [X] T131 [P] QR 颜色重构：`ThemeColors` struct 新增 5 个 QR 字段（`qr_bubble [u8;4]`、`qr_module_a/b [u8;3]`、`qr_finder_dark/light [u8;3]`）；所有 6 个主题在 `get_theme()` 中完整填写 QR 值；`qr.rs` `render_qr_in_strip` 签名改为接受 `&ThemeColors`，移除全部运行时亮度启发式计算 in `src/poster-gen/src/text_renderer.rs` + `src/poster-gen/src/qr.rs` + `src/poster-gen/src/image_stitcher.rs` + `src/poster-gen/src/preview.rs`
+
+- [X] T132 [P] QR 可见性 Bug 修复：transparent 主题不再抑制 QR 条（`has_qr` 判断移除 `!is_transparent`）；light 主题 QR 改为近白色气泡 + 近黑色模块确保可扫描性；classic/dark/cinematic/minimal/transparent 各自配置合理的 QR 调色板 in `src/poster-gen/src/text_renderer.rs` + `src/poster-gen/src/image_stitcher.rs` + `src/poster-gen/src/preview.rs`
+
+- [X] T133 [P] 自定义字体 CJK/Latin 自动分类：C# `PosterSheetController` 新增 TTF cmap format-4 解析器（`FontCoversCjk`），扫描段表判断字体是否覆盖 U+4E00–U+9FFF；`ListUserFonts` / `UploadFont` 返回 `{ key, script }` 结构；前端 `listUserFonts` / `uploadFont` 类型同步更新；自定义字体仅出现在对应 Latin/CJK picker in `src/JellyfinRecents.Plugin/Controllers/PosterSheetController.cs` + `src/frontend/src/api/posterSheetApi.ts` + `src/frontend/src/components/PosterSheetSettingsPanel.tsx`
+
+- [X] T134 [P] Lightbox 触控支持：单指拖拽（`touchstart`/`touchmove`/`touchend`）复用 `dragRef` 平移逻辑；双指捏合缩放（`touchmove` 检测两触点距离变化）以两指中点为锚点缩放并同步平移；`touchmove` 使用 `passive: false` 阻止页面滚动；同时监听 `touchcancel` 防止状态残留 in `src/frontend/src/components/Lightbox.tsx`
+
+- [X] T135 [P] 弹窗滚动隔离：所有可滚动的 modal/popover 内容区（`jr-poster-settings-modal__body`、`jr-poster-overlay__panel`、`jr-queue-popover__list`、`jr-skip-body`）添加 `overscroll-behavior: contain`，防止滚动到边界时事件穿透到背景页面 in `src/frontend/src/styles.css`
+
+- [X] T136 [P] 修正自定义字体说明文字：`posterCustomFontHint` 三语言（en/zh/ja）移除"时间戳"措辞，改为仅说明适用于品牌标签和视频信息块（时间戳使用固定内置字体）in `src/frontend/src/i18n/locales/`
+
+- [X] T137 [P] 修复 `preview.rs` 主题感知画布背景：画布填充从硬编码 `[0,0,0,255]` 改为 `renderer.theme.canvas_bg`；占位格条纹颜色根据 `canvas_bg` 亮度自动推导（亮色主题向下偏移，暗色主题向上偏移），使各主题 preview 视觉差异明显 in `src/poster-gen/src/preview.rs`
 
 ### Two-Plugin Manifest (FR-067) — Pending
 

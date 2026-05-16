@@ -10,6 +10,9 @@ build/
 .env
 .env.local
 .env.*.local
+# 根目录误生成的 npm lockfile（前端 lockfile 在 src/frontend/）
+/package-lock.json
+/package.json
 
 # C# / .NET
 bin/
