@@ -472,13 +472,28 @@ fn blend(bg: u8, fg: f32, alpha: f32) -> u8 {
     ((bg as f32) * (1.0 - alpha) + fg * alpha).round().clamp(0.0, 255.0) as u8
 }
 
+/// Decode WOFF2 data to raw TTF bytes if the magic bytes match.
+/// WOFF1 (`wOFF`) is already handled by ttf-parser (ab_glyph's internal parser).
+fn decode_if_woff2(data: Vec<u8>) -> Vec<u8> {
+    if data.starts_with(b"wOF2") {
+        match woff2_patched::decode::convert_woff2_to_ttf(&mut std::io::Cursor::new(&data)) {
+            Ok(ttf) => return ttf,
+            Err(e) => eprintln!("WARNING: WOFF2 decode failed, using raw bytes: {e}"),
+        }
+    }
+    data
+}
+
 fn load_font(path: &str) -> Option<FontArc> {
     match std::fs::read(path) {
-        Ok(data) => match FontArc::try_from_vec(data) {
-            Ok(font) => Some(font),
-            Err(e) => {
-                eprintln!("WARNING: failed to parse font {path}: {e}");
-                None
+        Ok(data) => {
+            let data = decode_if_woff2(data);
+            match FontArc::try_from_vec(data) {
+                Ok(font) => Some(font),
+                Err(e) => {
+                    eprintln!("WARNING: failed to parse font {path}: {e}");
+                    None
+                }
             }
         },
         Err(e) => {

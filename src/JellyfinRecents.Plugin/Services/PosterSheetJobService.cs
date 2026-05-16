@@ -249,10 +249,14 @@ public class PosterSheetJobService : IDisposable
         if (fontKey.StartsWith("custom-", StringComparison.Ordinal))
         {
             var fontsDir = Path.Combine(_appPaths.DataPath, "fonts");
-            var ttf = Path.Combine(fontsDir, fontKey + ".ttf");
-            var otf = Path.Combine(fontsDir, fontKey + ".otf");
-            if (File.Exists(ttf)) return ttf;
-            if (File.Exists(otf)) return otf;
+            var ttf   = Path.Combine(fontsDir, fontKey + ".ttf");
+            var otf   = Path.Combine(fontsDir, fontKey + ".otf");
+            var woff  = Path.Combine(fontsDir, fontKey + ".woff");
+            var woff2 = Path.Combine(fontsDir, fontKey + ".woff2");
+            if (File.Exists(ttf))   return ttf;
+            if (File.Exists(otf))   return otf;
+            if (File.Exists(woff))  return woff;
+            if (File.Exists(woff2)) return woff2;
             return null;
         }
         return fontKey switch

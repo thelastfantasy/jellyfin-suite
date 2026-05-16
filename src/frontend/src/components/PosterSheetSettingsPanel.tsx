@@ -526,7 +526,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
         <input
           ref={fileInputRef}
           type="file"
-          accept=".ttf,.otf"
+          accept=".ttf,.otf,.woff,.woff2"
           style="display:none"
           onChange={e => setUploadFile((e.target as HTMLInputElement).files?.[0] ?? null)}
         />
