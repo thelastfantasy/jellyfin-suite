@@ -1,6 +1,6 @@
 # Jellyfin Recents
 
-A Jellyfin plugin that provides a customizable recently-played view with flexible grouping and sorting.
+A Jellyfin plugin that provides a customizable recently-played view with flexible grouping, sorting, and a thumbnail grid generator.
 
 [中文文档](README.zh-CN.md)
 
@@ -8,18 +8,34 @@ A Jellyfin plugin that provides a customizable recently-played view with flexibl
 
 ## Features
 
+### Recently Played View
+
 - **Grouping**: Browse play history grouped by day / week / month / quarter / year
-- **Sorting**: Play time, title, release date, favorites-first
+- **Sorting**: Play time, title, release date, add date, favorites-first
 - **Media filter**: All / video / audio
 - **Dedup mode**: Hide repeated plays; optionally dedup within each group independently
 - **Episode info**: Series name and episode code (S×E× / SP× for specials) shown on every card
 - **Smart links**: Series name links to the series page; episode title links to the episode page
-- **Folder view**: Click the folder icon on any thumbnail to open a popover showing the item's parent folder hierarchy with direct links — supports thumbnail, poster, and list view modes
-- **View modes**: Thumbnail / poster / list
-- **Full pagination**: First / prev / jump / next / last
+- **Folder view**: Click the folder icon on any card to open a popover showing the item's parent folder hierarchy with direct links — supports thumbnail, poster, and list view modes
+- **View modes**: Thumbnail (16:9) / Poster (2:3) / List
+- **Full pagination**: First / prev / jump / next / last with configurable items per page
 - **Internationalization**: English, 简体中文, 日本語
 
-> **Note:** This plugin records play activity from the point of installation onward. Pre-existing play history is not imported.
+### Thumbnail Grid Generator
+
+Unlock by clicking the **Thumbnail** view button 7 times within 5 seconds. Once unlocked, a grid icon appears on each video card.
+
+- **Grid configuration**: Freely adjust rows (1–10) and columns (1–12); short videos automatically show only valid presets to maintain ≥2 s/frame spacing
+- **Modes**: Deterministic (same video always produces the same sheet, cache-eligible) or Random (fresh frame selection each time)
+- **Skip segments**: Skip intro/outro by chapter or custom time range; supports global skip presets shared across all videos; OP/ED auto-detection heuristic
+- **Overlay**: Configurable branding label, video metadata block (filename, file size, resolution & FPS, codec, audio, duration), per-frame timestamp badges at 6 configurable positions
+- **Themes**: Classic / Dark / Light / Cinematic / Minimal / Transparent — each with a distinct color palette
+- **Fonts**: Automatic download of Noto Sans, Noto Serif, Roboto, Oswald, Playfair Display, Cinzel; custom font upload (TTF/OTF, auto-detected as Latin or CJK); mixed-script branding label renders Latin and CJK characters with their respective fonts
+- **QR watermark**: GitHub repo QR code embedded in the header with a gradient color scheme
+- **Jellyfin logo**: Semi-transparent logo composited in the header area
+- **Output**: Lossless WebP with alpha channel (transparent theme)
+- **Task queue widget**: Bottom-right overlay showing all in-progress and completed jobs; per-job progress bar, thumbnail preview, download, and delete actions
+- **Lightbox**: Full-screen viewer with wheel zoom (cursor-anchored), mouse drag pan, touch pan, and pinch-to-zoom; download and delete buttons
 
 ---
 
@@ -35,6 +51,8 @@ A Jellyfin plugin that provides a customizable recently-played view with flexibl
 3. Find **Jellyfin Recents** in the **Catalog** and install
 4. Restart Jellyfin
 
+> **Jellyfin Recents + Fonts** is a separate catalog entry that bundles Latin fonts (Roboto, Oswald, Playfair Display, Cinzel) so no internet access is required for font acquisition. Use this variant for air-gapped servers.
+
 ### Manual
 
 1. Download the latest `.zip` from [Releases](https://github.com/thelastfantasy/jellyfin-recents/releases)
@@ -45,6 +63,21 @@ A Jellyfin plugin that provides a customizable recently-played view with flexibl
 3. Restart Jellyfin
 
 After installation, a **Recently Played** entry will appear in the sidebar.
+
+---
+
+## Custom Fonts
+
+The plugin downloads Noto Sans JP and Noto Serif JP automatically on first use (requires internet access). Latin fonts (Roboto, Oswald, Playfair Display, Cinzel) are also downloaded automatically.
+
+To use your own fonts, upload them from the Thumbnail Grid settings panel, or place them manually:
+
+```
+<jellyfin data dir>/plugins/JellyfinRecents/fonts/
+  custom-MyFont.ttf     ← uploaded via settings panel
+```
+
+Supported formats: TTF, OTF (TTC collections are not supported). The plugin reads the internal font family name from the file, so the filename is generated automatically on upload.
 
 ---
 
@@ -59,20 +92,29 @@ After installation, a **Recently Played** entry will appear in the sidebar.
 ## Development
 
 ```bash
+# Run all tests
+make test
+
+# Build and deploy to local Jellyfin dev container
+make update
+
 # Start frontend dev server (requires a local Jellyfin instance)
 cd src/frontend
 npm install
 npm run dev
-
-# Build plugin
-npm run build   # compile frontend
-dotnet build    # compile C#
 ```
 
 Copy `.env.example` to `.env` and set your Jellyfin URL:
 
 ```
 VITE_JELLYFIN_URL=http://localhost:8096
+```
+
+The Rust thumbnail generator binary (`poster-gen`) is built separately via Docker:
+
+```bash
+make build-poster-gen      # Linux binary (via Docker)
+make build-poster-gen-win  # Windows binary (native)
 ```
 
 ---

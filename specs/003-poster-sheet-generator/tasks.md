@@ -496,13 +496,13 @@ Start with the Rust binary in complete isolation. Build it, run `cargo test`, in
 
 **⚠️ PREREQUISITE**: All Phases 1–16 must be complete before starting this phase.
 
-- [ ] T120 Update `README.md`: document all features (thumbnail grid generator, skip segments, global skips, theme system, QR watermark, Lightbox, queue widget); add screenshots; update installation and usage instructions; add branding font setup guide (how to place custom fonts in the data directory)
+- [X] T120 Update `README.md`: document all features (thumbnail grid generator, skip segments, global skips, theme system, QR watermark, Lightbox, queue widget); add screenshots; update installation and usage instructions; add branding font setup guide (how to place custom fonts in the data directory)
 
-- [ ] T121 [P] Update `.github/workflows/build.yml` and `.github/workflows/release.yml`: verify Rust cross-compilation steps include all new dependencies (`twemoji-assets`, `resvg`, `qrcode`, `ab_glyph`); ensure CI passes with updated Cargo.toml; add Rust `cargo test` step before build if not present
+- [X] T121 [P] Update `.github/workflows/build.yml` and `.github/workflows/release.yml`: verify Rust cross-compilation steps include all new dependencies (`twemoji-assets`, `resvg`, `qrcode`, `ab_glyph`); ensure CI passes with updated Cargo.toml; add Rust `cargo test` step before build if not present
 
-- [ ] T122 [P] Run `make act` to test GitHub Actions workflows locally via `act`: verify Rust cross-compilation, TypeScript build, C# xUnit tests, and release zip packaging all pass in the simulated CI environment; fix any workflow YAML issues exposed by act in `.github/workflows/`
+- [X] T122 [P] Run `make act` to test GitHub Actions workflows locally via `act`: verify Rust cross-compilation, TypeScript build, C# xUnit tests, and release zip packaging all pass in the simulated CI environment; fix any workflow YAML issues exposed by act in `.github/workflows/`
 
-- [ ] T123 **手动集成验证**（需部署后执行）: (1) `make test` 全绿; (2) `make update` 部署到 Jellyfin dev 容器; (3) 验证混合脚本品牌标签 "映像図書館🎬 Library" 渲染正确; (4) 验证文件名行显示 emoji 和 CJK; (5) 验证 QR 码在页眉可见; (6) 验证跳过区间配合章节标签; (7) 验证全局跳过与单视频跳过合并
+- [X] T123 **手动集成验证**（需部署后执行）: (1) `make test` 全绿; (2) `make update` 部署到 Jellyfin dev 容器; (3) 验证混合脚本品牌标签 "映像図書館🎬 Library" 渲染正确; (4) 验证文件名行显示 emoji 和 CJK; (5) 验证 QR 码在页眉可见; (6) 验证跳过区间配合章节标签; (7) 验证全局跳过与单视频跳过合并
 
 ---
 
