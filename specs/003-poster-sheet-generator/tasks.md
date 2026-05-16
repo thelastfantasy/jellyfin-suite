@@ -471,3 +471,33 @@ Start with the Rust binary in complete isolation. Build it, run `cargo test`, in
 ### UI Rename: "海报/Poster Sheet" → "截图墙/Thumbnail Grid" (FR-061)
 
 - [X] T115 [P] Rename all "海报" / "poster sheet" / "ポスター" strings to "截图墙" / "Thumbnail Grid" / "サムネイルグリッド" across all three locale files (`zh.ts`, `en.ts`, `ja.ts`): `posterSettingsTitle`, `posterDisable`, `posterQueue`, `posterQueueRemove`, `posterQueueSettings`, `posterGenerate2`; leave single-word action labels (`posterGenerate` = "生成" / "Generate" / "生成") unchanged; no TypeScript type changes needed in `src/frontend/src/i18n/locales/`
+
+---
+
+## Phase 16: Per-Character Mixed-Script Font Rendering (T103 — FR-054)
+
+**Purpose**: Implement Rust-side per-character Latin/CJK/Emoji font selection for the branding label, enabling correct rendering of mixed-script titles (e.g., "映像図書館🎬 Library").
+
+**⚠️ ORDERING**: T116–T118 must be sequential. T119 (emoji preview test) is independent and can run in parallel with T116.
+
+- [X] T116 Add `classify_char(ch: char) -> CharClass` and per-font em-fraction baseline shift to `src/poster-gen/src/text_renderer.rs`: `CharClass` enum `{ Latin, Cjk, Other }`; CJK ranges cover Hiragana/Katakana/Hangul/CJK Unified/Extension A–G/Compatibility; `fn font_baseline_shift_em(path: &str) -> f32` lookup table (all default 0.0; comment explains how to tune empirically); store `branding_latin_font: Option<FontArc>`, `branding_cjk_font: Option<FontArc>`, plus precomputed `branding_latin_shift_em: f32` and `branding_cjk_shift_em: f32` in `Renderer` struct; update `Renderer::new()` to accept `branding_latin_font_path` and `branding_cjk_font_path` (keep `branding_font_path` removed) in `src/poster-gen/src/text_renderer.rs`
+
+- [X] T117 Implement `draw_text_mixed_branding()` and `measure_text_mixed_branding()` in `src/poster-gen/src/text_renderer.rs`: per-character loop classifies each char, selects `latin_font` or `cjk_font` (with cross-fallback when the preferred font has no glyph), applies per-font baseline shift (`y_baseline + scale_px * shift_em`), renders via `ab_glyph` outline (same as `draw_text_ttf`), falls back to Twemoji SVG for emoji; replace `draw_text_scaled(branding_text, …, brand_font_ref, emoji_font_ref)` call in `render()` with `draw_text_mixed_branding(…, latin_font_ref, cjk_font_ref, emoji_font_ref, …)` in `src/poster-gen/src/text_renderer.rs`
+
+- [X] T118 Wire `--branding-latin-font` and `--branding-cjk-font` CLI args through the full stack: (1) add both `Option<String>` flags to `GenerateArgs` and `PreviewArgs` in `src/poster-gen/src/main.rs`; (2) pass to `Renderer::new()` in `run_generate` and `run_preview`; (3) update `image_stitcher.rs` `dummy_renderer()` and test helper to use 6-arg signature; (4) update `PosterSheetJobService.cs` `BuildArgs`/`BuildPreviewArgs`: remove `hasCjk` detection, resolve `BrandingLatinFont` and `BrandingCjkFont` separately, pass as `--branding-latin-font` and `--branding-cjk-font`; remove old `--branding-font-path` line in `src/poster-gen/src/main.rs` + `src/poster-gen/src/image_stitcher.rs` + `src/JellyfinRecents.Plugin/Services/PosterSheetJobService.cs`
+
+- [X] T119 [P] Test emoji rendering in preview: change `sample_media_info().filename` in `src/poster-gen/src/preview.rs` to `"My Anime 🎬 S01E01 【字幕付き】.mkv"` (contains emoji + CJK), update default `branding_text` in `PreviewArgs` to `"映像図書館🎬 Library"` (mixed CJK + Latin + emoji) to exercise all three char classes in a single preview render; run `cargo build` to verify compilation in `src/poster-gen/src/preview.rs`
+
+---
+
+## Phase 17: Documentation and CI Update (deferred — implement after all other phases complete)
+
+**Purpose**: Update README and CI workflow to reflect the full feature set, then run a final end-to-end test.
+
+**⚠️ PREREQUISITE**: All Phases 1–16 must be complete before starting this phase.
+
+- [ ] T120 Update `README.md`: document all features (thumbnail grid generator, skip segments, global skips, theme system, QR watermark, Lightbox, queue widget); add screenshots; update installation and usage instructions; add branding font setup guide (how to place custom fonts in the data directory)
+
+- [ ] T121 [P] Update `.github/workflows/build.yml` and `.github/workflows/release.yml`: verify Rust cross-compilation steps include all new dependencies (`twemoji-assets`, `resvg`, `qrcode`, `ab_glyph`); ensure CI passes with updated Cargo.toml; add Rust `cargo test` step before build if not present
+
+- [ ] T122 End-to-end integration test (**手动，需部署后执行**): (1) `make test` green; (2) deploy to Jellyfin dev container; (3) test mixed-script branding label ("映像図書館🎬 Library") renders correctly; (4) test emoji in filename row; (5) test QR code visible in header; (6) test skip segments with chapter tab; (7) test global skip merging with per-video skip

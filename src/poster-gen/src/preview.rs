@@ -11,7 +11,8 @@ pub struct PreviewArgs {
     pub output: String,
     pub color_theme: String,
     pub font_path: Option<String>,
-    pub branding_font_path: Option<String>,
+    pub branding_latin_font_path: Option<String>,
+    pub branding_cjk_font_path: Option<String>,
     pub timestamp_font_path: Option<String>,
     pub emoji_font_path: Option<String>,
     pub branding_enabled: bool,
@@ -32,7 +33,7 @@ pub struct PreviewArgs {
 /// Sample hardcoded MediaInfo for preview mode.
 fn sample_media_info() -> MediaInfo {
     MediaInfo {
-        filename: "sample-video.mkv".to_string(),
+        filename: "My Anime 🎬 S01E01 【字幕付き】.mkv".to_string(),
         file_size: "4.2 GB".to_string(),
         file_size_bytes: 4_509_715_660,
         resolution: "1920\u{d7}1080".to_string(),
@@ -67,7 +68,8 @@ pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
 
     let renderer = Renderer::new(
         args.font_path.as_deref(),
-        args.branding_font_path.as_deref(),
+        args.branding_latin_font_path.as_deref(),
+        args.branding_cjk_font_path.as_deref(),
         args.timestamp_font_path.as_deref(),
         args.emoji_font_path.as_deref(),
         &args.color_theme,
@@ -211,7 +213,8 @@ mod tests {
             output,
             color_theme: "classic".to_string(),
             font_path: None,
-            branding_font_path: None,
+            branding_latin_font_path: None,
+            branding_cjk_font_path: None,
             timestamp_font_path: None,
             emoji_font_path: None,
             branding_enabled: true,
@@ -266,7 +269,8 @@ mod tests {
     fn preview_no_overlay_omits_header() {
         let out = tmp_path("jr_test_preview_nooverlay.webp");
         run_preview(PreviewArgs {
-            branding_font_path: None,
+            branding_latin_font_path: None,
+            branding_cjk_font_path: None,
             timestamp_font_path: None,
             emoji_font_path: None,
             output: out.clone(),

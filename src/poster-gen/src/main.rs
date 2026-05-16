@@ -64,9 +64,13 @@ struct GenerateArgs {
     #[arg(long)]
     font_path: Option<String>,
 
-    /// Optional separate TTF font for branding label
+    /// Optional TTF font for branding label Latin characters
     #[arg(long)]
-    branding_font_path: Option<String>,
+    branding_latin_font_path: Option<String>,
+
+    /// Optional TTF font for branding label CJK characters (falls back to branding_latin_font_path)
+    #[arg(long)]
+    branding_cjk_font_path: Option<String>,
 
     /// Optional monospace TTF font for timestamp badges (falls back to font_path)
     #[arg(long)]
@@ -147,9 +151,13 @@ struct PreviewArgs {
     #[arg(long)]
     font_path: Option<String>,
 
-    /// Optional separate TTF font for branding label
+    /// Optional TTF font for branding label Latin characters
     #[arg(long)]
-    branding_font_path: Option<String>,
+    branding_latin_font_path: Option<String>,
+
+    /// Optional TTF font for branding label CJK characters (falls back to branding_latin_font_path)
+    #[arg(long)]
+    branding_cjk_font_path: Option<String>,
 
     /// Optional monospace TTF font for timestamp badges (falls back to font_path)
     #[arg(long)]
@@ -413,7 +421,8 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
 
     let renderer = text_renderer::Renderer::new(
         args.font_path.as_deref(),
-        args.branding_font_path.as_deref(),
+        args.branding_latin_font_path.as_deref(),
+        args.branding_cjk_font_path.as_deref(),
         args.timestamp_font_path.as_deref(),
         args.emoji_font_path.as_deref(),
         &args.color_theme,
@@ -447,7 +456,8 @@ fn run_preview_cmd(args: PreviewArgs) -> Result<(), String> {
         output: args.output,
         color_theme: args.color_theme,
         font_path: args.font_path,
-        branding_font_path: args.branding_font_path,
+        branding_latin_font_path: args.branding_latin_font_path,
+        branding_cjk_font_path: args.branding_cjk_font_path,
         timestamp_font_path: args.timestamp_font_path,
         emoji_font_path: args.emoji_font_path,
         branding_enabled: !args.no_branding,

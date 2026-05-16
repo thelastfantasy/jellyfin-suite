@@ -276,7 +276,7 @@ mod tests {
     }
 
     fn dummy_renderer() -> crate::text_renderer::Renderer {
-        crate::text_renderer::Renderer::new(None, None, None, None, "classic")
+        crate::text_renderer::Renderer::new(None, None, None, None, None, "classic")
     }
 
     #[test]
@@ -424,7 +424,7 @@ mod tests {
             lang: "en".to_string(),
             timestamp_position: crate::image_stitcher::TimestampPosition::InsideBottomLeft,
         };
-        let renderer = crate::text_renderer::Renderer::new(None, None, None, None, "transparent");
+        let renderer = crate::text_renderer::Renderer::new(None, None, None, None, None, "transparent");
 
         stitch_grid(
             frames,

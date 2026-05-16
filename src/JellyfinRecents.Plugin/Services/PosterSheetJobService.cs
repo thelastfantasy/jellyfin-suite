@@ -260,9 +260,8 @@ public class PosterSheetJobService : IDisposable
     {
         var fontPath = ResolveFontPath(job.Overlay.FontFamily);
 
-        bool hasCjk = job.Overlay.BrandingText.Any(c => c >= '一' && c <= '鿿');
-        var brandingFontKey = hasCjk ? job.Overlay.BrandingCjkFont : job.Overlay.BrandingLatinFont;
-        var brandingFontPath = ResolveFontPath(brandingFontKey);
+        var brandingLatinPath = ResolveFontPath(job.Overlay.BrandingLatinFont);
+        var brandingCjkPath = ResolveFontPath(job.Overlay.BrandingCjkFont);
 
         var sb = new StringBuilder();
         sb.Append($"--ffmpeg-path \"{GetFfmpegPath()}\"");
@@ -273,8 +272,8 @@ public class PosterSheetJobService : IDisposable
         sb.Append($" --thumb-width 320");
         sb.Append($" --color-theme {job.Overlay.ColorTheme}");
         if (fontPath != null) sb.Append($" --font-path \"{fontPath}\"");
-        if (brandingFontPath != null && brandingFontPath != fontPath)
-            sb.Append($" --branding-font-path \"{brandingFontPath}\"");
+        if (brandingLatinPath != null) sb.Append($" --branding-latin-font-path \"{brandingLatinPath}\"");
+        if (brandingCjkPath != null) sb.Append($" --branding-cjk-font-path \"{brandingCjkPath}\"");
         if (_fontService.RobotoMonoPath != null)
             sb.Append($" --timestamp-font-path \"{_fontService.RobotoMonoPath}\"");
         if (_fontService.NotoEmojiPath != null)
@@ -304,17 +303,16 @@ public class PosterSheetJobService : IDisposable
     {
         var fontPath = ResolveFontPath(req.Overlay.FontFamily);
 
-        bool hasCjk = req.Overlay.BrandingText.Any(c => c >= '一' && c <= '鿿');
-        var brandingFontKey = hasCjk ? req.Overlay.BrandingCjkFont : req.Overlay.BrandingLatinFont;
-        var brandingFontPath = ResolveFontPath(brandingFontKey);
+        var brandingLatinPath = ResolveFontPath(req.Overlay.BrandingLatinFont);
+        var brandingCjkPath = ResolveFontPath(req.Overlay.BrandingCjkFont);
 
         var sb = new StringBuilder();
         sb.Append("preview");
         sb.Append($" --output \"{outputPath}\"");
         sb.Append($" --color-theme {req.Overlay.ColorTheme}");
         if (fontPath != null) sb.Append($" --font-path \"{fontPath}\"");
-        if (brandingFontPath != null && brandingFontPath != fontPath)
-            sb.Append($" --branding-font-path \"{brandingFontPath}\"");
+        if (brandingLatinPath != null) sb.Append($" --branding-latin-font-path \"{brandingLatinPath}\"");
+        if (brandingCjkPath != null) sb.Append($" --branding-cjk-font-path \"{brandingCjkPath}\"");
         if (_fontService.RobotoMonoPath != null)
             sb.Append($" --timestamp-font-path \"{_fontService.RobotoMonoPath}\"");
         if (_fontService.NotoEmojiPath != null)
