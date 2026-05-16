@@ -1,6 +1,7 @@
 # Claude Code local settings (machine-specific, auto-generated)
 .claude/settings.json
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Node.js / TypeScript
 node_modules/

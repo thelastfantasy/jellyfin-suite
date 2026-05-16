@@ -118,16 +118,17 @@ jobs:
       - name: Download bundled fonts
         run: |
           mkdir -p publish/fonts
+          BASE="https://cdn.jsdelivr.net/npm/@fontsource"
           curl -fL -o publish/fonts/Roboto-Regular.ttf \
-            "https://github.com/googlefonts/roboto/raw/main/fonts/ttf/Roboto-Regular.ttf"
+            "${BASE}/roboto@4.5/files/roboto-latin-400-normal.ttf"
           curl -fL -o publish/fonts/RobotoMono-Regular.ttf \
-            "https://github.com/googlefonts/RobotoMono/raw/main/fonts/ttf/RobotoMono-Regular.ttf"
+            "${BASE}/roboto-mono@4.5/files/roboto-mono-latin-400-normal.ttf"
           curl -fL -o publish/fonts/Oswald-Regular.ttf \
-            "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Regular.ttf"
+            "${BASE}/oswald@4.5/files/oswald-latin-400-normal.ttf"
           curl -fL -o publish/fonts/PlayfairDisplay-Regular.ttf \
-            "https://github.com/googlefonts/Playfair/raw/main/fonts/ttf/PlayfairDisplay-Regular.ttf"
+            "${BASE}/playfair-display@4.5/files/playfair-display-latin-400-normal.ttf"
           curl -fL -o publish/fonts/Cinzel-Regular.ttf \
-            "https://github.com/googlefonts/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf"
+            "${BASE}/cinzel@4.5/files/cinzel-latin-400-normal.ttf"
 
       - name: Create release zips
         id: zip
