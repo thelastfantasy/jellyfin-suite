@@ -343,7 +343,9 @@ public class PosterSheetController : ControllerBase
             .Select(path => new { path, name = Path.GetFileName(path) })
             .Where(x => x.name != null && x.name.StartsWith("custom-", StringComparison.Ordinal) &&
                 (x.name.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
-                 x.name.EndsWith(".otf", StringComparison.OrdinalIgnoreCase)))
+                 x.name.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
+                 x.name.EndsWith(".woff", StringComparison.OrdinalIgnoreCase) ||
+                 x.name.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase)))
             .Select(x =>
             {
                 var key = Path.GetFileNameWithoutExtension(x.name)!;
@@ -363,13 +365,14 @@ public class PosterSheetController : ControllerBase
 
     private const long FontMaxBytes = 30L * 1024 * 1024;
 
-    // Valid sfnt magic bytes for TTF/OTF — anything else is rejected even if extension matches.
-    // TTC (ttcf) is intentionally excluded: ab_glyph only reads index 0 of a collection.
+    // Valid font magic bytes — TTC excluded: ab_glyph reads only index 0 of a collection.
     private static readonly byte[][] FontMagics =
     [
         [0x00, 0x01, 0x00, 0x00], // TrueType 1.0
         [0x74, 0x72, 0x75, 0x65], // 'true'  Mac TrueType
         [0x4F, 0x54, 0x54, 0x4F], // 'OTTO'  OpenType / CFF
+        [0x77, 0x4F, 0x46, 0x46], // 'wOFF'  WOFF1 — ttf-parser handles natively
+        [0x77, 0x4F, 0x46, 0x32], // 'wOF2'  WOFF2 — decoded by poster-gen at render time
     ];
 
     [HttpPost("fonts")]
@@ -380,8 +383,8 @@ public class PosterSheetController : ControllerBase
     {
         // 1. Extension whitelist
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (ext != ".ttf" && ext != ".otf")
-            return BadRequest("Only .ttf and .otf font files are accepted.");
+        if (ext != ".ttf" && ext != ".otf" && ext != ".woff" && ext != ".woff2")
+            return BadRequest("Only .ttf, .otf, .woff, and .woff2 font files are accepted.");
 
         // 2. Declared size limit (guards against unbuffered streams)
         if (file.Length > FontMaxBytes)
@@ -397,12 +400,26 @@ public class PosterSheetController : ControllerBase
 
         // 4. Magic-byte validation — rejects renamed zips, executables, PDFs, etc.
         if (!HasValidFontMagic(fontBytes))
-            return BadRequest("File header is not a valid TTF or OTF font.");
+            return BadRequest("File header is not a valid TTF, OTF, WOFF, or WOFF2 font.");
 
-        // 5. Read internal font family name from name table
-        var internalName = ReadFontFamilyName(fontBytes);
-        if (string.IsNullOrWhiteSpace(internalName))
-            return BadRequest("Could not read font family name from file.");
+        // 5. Read font family name. WOFF/WOFF2 tables are compressed so the sfnt parser
+        //    cannot read them directly — fall back to the uploaded filename in that case.
+        string internalName;
+        string script;
+        bool isWoff = ext == ".woff" || ext == ".woff2";
+        if (isWoff)
+        {
+            internalName = Path.GetFileNameWithoutExtension(file.FileName);
+            script = "latin";
+        }
+        else
+        {
+            var parsedName = ReadFontFamilyName(fontBytes);
+            if (string.IsNullOrWhiteSpace(parsedName))
+                return BadRequest("Could not read font family name from file.");
+            internalName = parsedName;
+            script = FontCoversCjk(fontBytes) ? "cjk" : "latin";
+        }
 
         var sanitized = SanitizeFontName(internalName);
         if (string.IsNullOrEmpty(sanitized))
@@ -412,7 +429,6 @@ public class PosterSheetController : ControllerBase
         var dest = Path.Combine(FontsDir, $"custom-{sanitized}{ext}");
         await System.IO.File.WriteAllBytesAsync(dest, fontBytes);
 
-        var script = FontCoversCjk(fontBytes) ? "cjk" : "latin";
         return Ok(new { key = $"custom-{sanitized}", displayName = internalName, script });
     }
 
@@ -592,11 +608,15 @@ public class PosterSheetController : ControllerBase
             return BadRequest("Only user-uploaded fonts (prefixed with 'custom-') can be deleted.");
 
         Directory.CreateDirectory(FontsDir);
-        var ttf = Path.Combine(FontsDir, key + ".ttf");
-        var otf = Path.Combine(FontsDir, key + ".otf");
+        var ttf   = Path.Combine(FontsDir, key + ".ttf");
+        var otf   = Path.Combine(FontsDir, key + ".otf");
+        var woff  = Path.Combine(FontsDir, key + ".woff");
+        var woff2 = Path.Combine(FontsDir, key + ".woff2");
 
-        if (System.IO.File.Exists(ttf)) { System.IO.File.Delete(ttf); return NoContent(); }
-        if (System.IO.File.Exists(otf)) { System.IO.File.Delete(otf); return NoContent(); }
+        if (System.IO.File.Exists(ttf))   { System.IO.File.Delete(ttf);   return NoContent(); }
+        if (System.IO.File.Exists(otf))   { System.IO.File.Delete(otf);   return NoContent(); }
+        if (System.IO.File.Exists(woff))  { System.IO.File.Delete(woff);  return NoContent(); }
+        if (System.IO.File.Exists(woff2)) { System.IO.File.Delete(woff2); return NoContent(); }
 
         return NotFound($"Font '{key}' not found.");
     }

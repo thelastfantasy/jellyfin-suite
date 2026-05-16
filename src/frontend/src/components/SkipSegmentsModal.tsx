@@ -89,6 +89,78 @@ function formatDuration(ms: number): string {
   return `${m}分${s}秒`
 }
 
+function formatHMS(ms: number): string {
+  const h = Math.floor(ms / 3_600_000)
+  const m = Math.floor((ms % 3_600_000) / 60_000)
+  const s = Math.floor((ms % 60_000) / 1_000)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+// ── SegmentScrubber ──────────────────────────────────────────────────────────
+
+interface ScrubberProps {
+  startMs: number
+  endMs: number
+  maxMs: number
+  onStartChange: (ms: number) => void
+  onEndChange: (ms: number) => void
+}
+
+function SegmentScrubber({ startMs, endMs, maxMs, onStartChange, onEndChange }: ScrubberProps) {
+  const barRef = useRef<HTMLDivElement>(null)
+
+  function clampMs(v: number, lo: number, hi: number) {
+    return Math.max(lo, Math.min(hi, Math.round(v)))
+  }
+
+  function handleThumbDown(which: 'start' | 'end', e: any) {
+    e.preventDefault()
+    e.stopPropagation()
+    const target = e.currentTarget as HTMLElement
+    target.setPointerCapture(e.pointerId)
+
+    function msFromX(clientX: number): number {
+      const bar = barRef.current
+      if (!bar || maxMs <= 0) return which === 'start' ? startMs : endMs
+      const rect = bar.getBoundingClientRect()
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      return Math.round(ratio * maxMs)
+    }
+
+    function onMove(me: PointerEvent) {
+      const t = msFromX(me.clientX)
+      if (which === 'start') onStartChange(clampMs(t, 0, endMs))
+      else onEndChange(clampMs(t, startMs, maxMs))
+    }
+
+    target.addEventListener('pointermove', onMove as EventListener)
+    target.addEventListener('pointerup', () => {
+      target.removeEventListener('pointermove', onMove as EventListener)
+    }, { once: true })
+  }
+
+  const startPct = maxMs > 0 ? (startMs / maxMs) * 100 : 0
+  const endPct   = maxMs > 0 ? (endMs   / maxMs) * 100 : 100
+
+  return (
+    <div ref={barRef} class="jr-segment-scrubber">
+      <div class="jr-segment-scrubber__track" />
+      <div class="jr-segment-scrubber__range"
+        style={{ left: `${startPct}%`, width: `${Math.max(0, endPct - startPct)}%` }} />
+      <div class="jr-segment-scrubber__thumb"
+        style={{ left: `${startPct}%` }}
+        onPointerDown={(e: any) => handleThumbDown('start', e)} />
+      <div class="jr-segment-scrubber__thumb jr-segment-scrubber__thumb--end"
+        style={{ left: `${endPct}%` }}
+        onPointerDown={(e: any) => handleThumbDown('end', e)} />
+      <div class="jr-segment-scrubber__labels">
+        <span>{formatHMS(startMs)}</span>
+        <span>{formatHMS(endMs)}</span>
+      </div>
+    </div>
+  )
+}
+
 // ── TimeInput ────────────────────────────────────────────────────────────────
 
 interface TimeInputProps {
@@ -108,24 +180,25 @@ export function TimeInput({ valueMs, onChange }: TimeInputProps) {
   }
 
   const n = (e: Event) => +(e.target as HTMLInputElement).value
+  const selectAll = (e: Event) => (e.target as HTMLInputElement).select()
 
   return (
     <span class="jr-time-input">
       <input class="jr-time-input__field jr-time-input__field--2"
         type="number" min={0} max={99} value={h} title="小时 (0–99)"
-        onInput={e => build(n(e), m, s, ms)} />
+        onFocus={selectAll} onInput={e => build(n(e), m, s, ms)} />
       <span class="jr-time-input__sep">:</span>
       <input class="jr-time-input__field jr-time-input__field--2"
         type="number" min={0} max={59} value={m} title="分钟 (0–59)"
-        onInput={e => build(h, n(e), s, ms)} />
+        onFocus={selectAll} onInput={e => build(h, n(e), s, ms)} />
       <span class="jr-time-input__sep">:</span>
       <input class="jr-time-input__field jr-time-input__field--2"
         type="number" min={0} max={59} value={s} title="秒 (0–59)"
-        onInput={e => build(h, m, n(e), ms)} />
+        onFocus={selectAll} onInput={e => build(h, m, n(e), ms)} />
       <span class="jr-time-input__sep">.</span>
       <input class="jr-time-input__field jr-time-input__field--3"
         type="number" min={0} max={999} value={ms} title="毫秒 (0–999)"
-        onInput={e => build(h, m, s, n(e))} />
+        onFocus={selectAll} onInput={e => build(h, m, s, n(e))} />
     </span>
   )
 }
@@ -226,7 +299,12 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
 
         {/* Header */}
         <div class="jr-poster-settings-modal__header">
-          <span>跳过片段设置</span>
+          <span>
+            跳过片段设置
+            {videoDurationMs != null && (
+              <span class="jr-skip-header-duration">时长 {formatHMS(videoDurationMs)}</span>
+            )}
+          </span>
           <button class="jr-poster-settings-modal__close" onClick={onClose}>✕</button>
         </div>
 
@@ -293,20 +371,31 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                 const segValid = seg.endMs > seg.startMs
                 return (
                   <div key={idx} class="jr-skip-segment-row">
-                    <TimeInput valueMs={seg.startMs} onChange={v => updateSegment(idx, { startMs: v })} />
-                    <span class="jr-skip-segment-dash">—</span>
-                    <TimeInput valueMs={seg.endMs} onChange={v => updateSegment(idx, { endMs: v })} />
-                    <button class="jr-skip-segment-remove" onClick={() => removeSegment(idx)} title="删除">
-                      <MdRemove size={15} />
-                    </button>
-                    <button
-                      class="jr-skip-segment-add-global"
-                      disabled={!segValid}
-                      title={t.skipAddToGlobal}
-                      onClick={e => handleAddToGlobal(seg, e.currentTarget as HTMLButtonElement)}
-                    >
-                      <MdLanguage size={15} />
-                    </button>
+                    <div class="jr-skip-segment-row__controls">
+                      <TimeInput valueMs={seg.startMs} onChange={v => updateSegment(idx, { startMs: v })} />
+                      <span class="jr-skip-segment-dash">—</span>
+                      <TimeInput valueMs={seg.endMs} onChange={v => updateSegment(idx, { endMs: v })} />
+                      <button class="jr-skip-segment-remove" onClick={() => removeSegment(idx)} title="删除">
+                        <MdRemove size={15} />
+                      </button>
+                      <button
+                        class="jr-skip-segment-add-global"
+                        disabled={!segValid}
+                        title={t.skipAddToGlobal}
+                        onClick={e => handleAddToGlobal(seg, e.currentTarget as HTMLButtonElement)}
+                      >
+                        <MdLanguage size={15} />
+                      </button>
+                    </div>
+                    {videoDurationMs != null && videoDurationMs > 0 && (
+                      <SegmentScrubber
+                        startMs={seg.startMs}
+                        endMs={seg.endMs}
+                        maxMs={videoDurationMs}
+                        onStartChange={v => updateSegment(idx, { startMs: v })}
+                        onEndChange={v => updateSegment(idx, { endMs: v })}
+                      />
+                    )}
                   </div>
                 )
               })}

@@ -1246,6 +1246,78 @@ a.jr-card__series-name:hover {
   left: 39px;
 }
 
+/* ── Touch combined poster button (coarse pointer only) ── */
+.jr-card__poster-touch-btn {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 6;
+  display: none; /* hidden on fine-pointer (desktop) */
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.55);
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.jr-card__poster-touch-btn--offset {
+  left: 39px;
+}
+
+.jr-card__poster-touch-sheet {
+  position: absolute;
+  top: 38px;
+  left: 3px;
+  z-index: 20;
+  background: rgba(18,20,26,0.97);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 136px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+.jr-card__poster-touch-sheet button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  color: rgba(255,255,255,0.88);
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  width: 100%;
+  text-align: left;
+}
+
+.jr-card__poster-touch-sheet button:hover,
+.jr-card__poster-touch-sheet button:active {
+  background: rgba(255,255,255,0.1);
+}
+
+/* On coarse pointer (touch/stylus): show touch btn, hide desktop hover btns */
+@media (pointer: coarse) {
+  .jr-card__poster-touch-btn {
+    display: flex;
+  }
+  .jr-card__poster-btn,
+  .jr-card__poster-skip-btn {
+    display: none !important;
+  }
+}
+
 /* ── 工具栏海报设置按钮 ── */
 .jr-toolbar__poster-toggle {
   display: flex;
@@ -2103,6 +2175,14 @@ a.jr-card__series-name:hover {
   justify-content: center;
 }
 
+.jr-skip-header-duration {
+  margin-left: 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.6;
+  letter-spacing: 0.01em;
+}
+
 .jr-skip-modal {
   background: var(--header-material-background, #1c1c1c);
   border: 1px solid rgba(255,255,255,0.12);
@@ -2215,9 +2295,79 @@ a.jr-card__series-name:hover {
 
 .jr-skip-segment-row {
   display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.jr-skip-segment-row__controls {
+  display: flex;
   align-items: center;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+/* ── Segment scrubber ── */
+.jr-segment-scrubber {
+  position: relative;
+  height: 28px;
+  margin: 0 0 4px;
+  touch-action: none;
+}
+
+.jr-segment-scrubber__track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+
+.jr-segment-scrubber__range {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  background: rgba(0,164,220,0.55);
+  border-radius: 2px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.jr-segment-scrubber__thumb {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  background: #00a4dc;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  touch-action: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  z-index: 1;
+}
+
+.jr-segment-scrubber__thumb--end {
+  background: #6a3ea1;
+}
+
+.jr-segment-scrubber__thumb:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.jr-segment-scrubber__labels {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.4);
+  pointer-events: none;
 }
 
 .jr-skip-segment-dash {

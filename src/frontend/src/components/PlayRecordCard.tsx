@@ -88,7 +88,22 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   const canResume = record.playbackPositionTicks != null && record.playbackPositionTicks > 0
   const resumeTicks = record.playbackPositionTicks ?? 0
   const [skipOpen, setSkipOpen] = useState(false)
+  const [touchSheetOpen, setTouchSheetOpen] = useState(false)
   const thumbRef = useRef<HTMLDivElement>(null)
+  const touchSheetRef = useRef<HTMLDivElement>(null)
+  const touchBtnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!touchSheetOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (
+        touchSheetRef.current && !touchSheetRef.current.contains(e.target as Node) &&
+        touchBtnRef.current && !touchBtnRef.current.contains(e.target as Node)
+      ) setTouchSheetOpen(false)
+    }
+    document.addEventListener('click', handleOutside)
+    return () => document.removeEventListener('click', handleOutside)
+  }, [touchSheetOpen])
 
   useEffect(() => {
     function handler(e: CustomEvent<{ itemId: string; favoritedAt: string | null }>) {
@@ -320,6 +335,28 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
             <MdKeyboardArrowDown size={14} />
             <span class="jr-card__poster-skip-label">跳过片段</span>
           </button>
+        )}
+        {/* Touch-device combined button — always visible, opens action sheet */}
+        {posterUnlocked && record.videoDuration !== null && (
+          <button
+            ref={touchBtnRef}
+            class={`jr-card__poster-touch-btn${enableFolderView && record.hasAncestors ? ' jr-card__poster-touch-btn--offset' : ''}`}
+            onClick={e => { e.preventDefault(); e.stopPropagation(); setTouchSheetOpen(o => !o) }}
+          >
+            <MdGridView size={16} />
+          </button>
+        )}
+        {touchSheetOpen && posterUnlocked && record.videoDuration !== null && (
+          <div ref={touchSheetRef} class="jr-card__poster-touch-sheet">
+            <button onClick={e => { e.stopPropagation(); handlePosterClick(e as any); setTouchSheetOpen(false) }}>
+              <MdGridView size={14} />
+              立即生成
+            </button>
+            <button onClick={e => { e.stopPropagation(); handleSkipClick(e as any); setTouchSheetOpen(false) }}>
+              <MdKeyboardArrowDown size={14} />
+              跳过片段设置
+            </button>
+          </div>
         )}
         {skipOpen && (
           <SkipSegmentsModal

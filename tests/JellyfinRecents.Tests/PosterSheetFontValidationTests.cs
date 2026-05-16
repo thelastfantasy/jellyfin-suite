@@ -14,6 +14,8 @@ public class PosterSheetFontValidationTests
     [InlineData(new byte[] { 0x00, 0x01, 0x00, 0x00 })]  // TrueType 1.0
     [InlineData(new byte[] { 0x74, 0x72, 0x75, 0x65 })]  // 'true' Mac TrueType
     [InlineData(new byte[] { 0x4F, 0x54, 0x54, 0x4F })]  // 'OTTO' OpenType/CFF
+    [InlineData(new byte[] { 0x77, 0x4F, 0x46, 0x46 })]  // 'wOFF' WOFF1
+    [InlineData(new byte[] { 0x77, 0x4F, 0x46, 0x32 })]  // 'wOF2' WOFF2
     public void HasValidFontMagic_ValidHeaders_ReturnsTrue(byte[] magic)
     {
         var data = new byte[64];
