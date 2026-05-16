@@ -102,31 +102,35 @@ public class FontAcquisitionService : IHostedService
 
     private static readonly FontSource[] RobotoMonoSources =
     [
-        new("https://github.com/googlefonts/RobotoMono/raw/main/fonts/ttf/RobotoMono-Regular.ttf"),
         new("https://cdn.jsdelivr.net/gh/googlefonts/RobotoMono@main/fonts/ttf/RobotoMono-Regular.ttf"),
+        new("https://github.com/googlefonts/RobotoMono/raw/main/fonts/ttf/RobotoMono-Regular.ttf"),
     ];
 
     private static readonly FontSource[] RobotoSources =
     [
-        new("https://github.com/googlefonts/roboto/raw/main/fonts/ttf/Roboto-Regular.ttf"),
-        new("https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/fonts/ttf/Roboto-Regular.ttf"),
+        // v2.138 tag — main branch was restructured to variable fonts
+        new("https://cdn.jsdelivr.net/gh/googlefonts/roboto@v2.138/src/hinted/Roboto-Regular.ttf"),
+        new("https://www.1001fonts.com/download/font/roboto.regular.ttf"),
     ];
 
     private static readonly FontSource[] OswaldSources =
     [
-        new("https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Regular.ttf"),
         new("https://cdn.jsdelivr.net/gh/googlefonts/OswaldFont@main/fonts/ttf/Oswald-Regular.ttf"),
+        new("https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Regular.ttf"),
     ];
 
     private static readonly FontSource[] PlayfairSources =
     [
-        new("https://github.com/googlefonts/Playfair/raw/main/fonts/ttf/PlayfairDisplay-Regular.ttf"),
-        new("https://cdn.jsdelivr.net/gh/googlefonts/Playfair@main/fonts/ttf/PlayfairDisplay-Regular.ttf"),
+        // googlefonts/Playfair main branch was restructured; use 1001fonts as primary
+        new("https://www.1001fonts.com/download/font/playfair-display.regular.ttf"),
+        new("https://www.fontsquirrel.com/fonts/download/playfair-display",
+            "PlayfairDisplay-Regular.ttf"),
     ];
 
     private static readonly FontSource[] CinzelSources =
     [
-        new("https://github.com/googlefonts/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf"),
+        // googlefonts/cinzel main branch was restructured; use 1001fonts as primary
+        new("https://www.1001fonts.com/download/font/cinzel.regular.ttf"),
         new("https://cdn.jsdelivr.net/gh/googlefonts/cinzel@main/fonts/ttf/Cinzel-Regular.ttf"),
     ];
 
