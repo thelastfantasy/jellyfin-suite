@@ -118,17 +118,29 @@ jobs:
       - name: Download bundled fonts
         run: |
           mkdir -p publish/fonts
-          BASE="https://cdn.jsdelivr.net/npm/@fontsource"
+          # Roboto: pin to v2.138 tag — main branch was restructured to variable fonts
           curl -fL -o publish/fonts/Roboto-Regular.ttf \
-            "${BASE}/roboto@4.5/files/roboto-latin-400-normal.ttf"
+            "https://cdn.jsdelivr.net/gh/googlefonts/roboto@v2.138/src/hinted/Roboto-Regular.ttf"
+          # RobotoMono: main branch still has static TTFs
           curl -fL -o publish/fonts/RobotoMono-Regular.ttf \
-            "${BASE}/roboto-mono@4.5/files/roboto-mono-latin-400-normal.ttf"
+            "https://cdn.jsdelivr.net/gh/googlefonts/RobotoMono@main/fonts/ttf/RobotoMono-Regular.ttf"
+          # Oswald: main branch has static TTFs
           curl -fL -o publish/fonts/Oswald-Regular.ttf \
-            "${BASE}/oswald@4.5/files/oswald-latin-400-normal.ttf"
+            "https://cdn.jsdelivr.net/gh/googlefonts/OswaldFont@main/fonts/ttf/Oswald-Regular.ttf"
+          # Playfair Display and Cinzel: source repos restructured; use 1001fonts (OFL-licensed)
           curl -fL -o publish/fonts/PlayfairDisplay-Regular.ttf \
-            "${BASE}/playfair-display@4.5/files/playfair-display-latin-400-normal.ttf"
+            "https://www.1001fonts.com/download/font/playfair-display.regular.ttf"
           curl -fL -o publish/fonts/Cinzel-Regular.ttf \
-            "${BASE}/cinzel@4.5/files/cinzel-latin-400-normal.ttf"
+            "https://www.1001fonts.com/download/font/cinzel.regular.ttf"
+          # Validate all fonts are real TTF/OTF (magic bytes: 00 01 00 00 or 4F 54 54 4F)
+          for f in publish/fonts/*.ttf; do
+            bytes=$(xxd -l 4 "$f" | awk '{print $2$3}')
+            echo "$f: $bytes"
+            if [[ "$bytes" != "00010000" && "$bytes" != "4f54544f" && "$bytes" != "74727565" ]]; then
+              echo "ERROR: $f does not appear to be a valid TTF/OTF file"
+              exit 1
+            fi
+          done
 
       - name: Create release zips
         id: zip
