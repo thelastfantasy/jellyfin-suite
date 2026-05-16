@@ -53,4 +53,76 @@ export interface Translations {
   // Settings popover
   settingsTitle: string
   groupPerPage: Record<string, string>
+  // Poster sheet settings panel
+  posterSettingsTitle: string
+  posterGrid: string
+  posterRows: string
+  posterCols: string
+  posterFrames: string
+  posterTooMany: string
+  posterMode: string
+  posterDeterministic: string
+  posterDeterministicTip: string
+  posterRandom: string
+  posterRandomTip: string
+  posterOverlay: string
+  posterBrandingLabel: string
+  posterVideoInfo: string
+  posterFileSize: string
+  posterResolutionFps: string
+  posterVideoEncoding: string
+  posterAudioEncoding: string
+  posterDuration: string
+  posterTimestamp: string
+  posterTimestampPos: string
+  posterTimestampPosInsideBottomLeft: string
+  posterTimestampPosOutsideBottomLeft: string
+  posterTimestampPosInsideBottomCenter: string
+  posterTimestampPosOutsideBottomCenter: string
+  posterTimestampPosInsideBottomRight: string
+  posterTimestampPosOutsideBottomRight: string
+  posterTheme: string
+  posterFont: string
+  posterBrandingFont: string
+  posterBrandingLatinFont: string
+  posterBrandingCjkFont: string
+  posterLang: string
+  posterLangEn: string
+  posterLangZh: string
+  posterLangJa: string
+  posterHeadless: string
+  posterHeadlessTip: string
+  posterPreview: string
+  posterPreviewLoading: string
+  posterGenerate: string
+  posterDisable: string
+  // Poster queue widget
+  posterQueue: string
+  posterQueueRemove: string
+  posterQueueSettings: string
+  posterGenerate2: string
+  // Lightbox actions
+  lightboxZoomIn: string
+  lightboxZoomOut: string
+  lightboxFit: string
+  lightboxDownload: string
+  lightboxDelete: string
+  lightboxClose: string
+  // Group navigation
+  groupPrev: string
+  groupNext: string
+  chapterFallback: string
+  guessOp: string
+  guessEd: string
+  posterGlobalSkip: string
+  posterGlobalSkipAdd: string
+  skipIgnoreGlobal: string
+  skipAddToGlobal: string
+  skipGlobalFull: string
+  posterCustomFonts: string
+  posterCustomFontHint: string
+  posterCustomFontChoose: string
+  posterCustomFontUpload: string
+  posterCustomFontDelete: string
+  posterCustomFontSuffix: string
 }

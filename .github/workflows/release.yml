@@ -30,6 +30,14 @@ jobs:
           echo "ver4=$VER4" >> $GITHUB_OUTPUT
           echo "Tag: $TAG  =>  ver4: $VER4"
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/poster-gen
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -42,11 +50,36 @@ jobs:
           cache: "npm"
           cache-dependency-path: src/frontend/package-lock.json
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Test Rust
+        run: make test-rust
+
+      - name: Test frontend
+        run: make test-frontend
+
+      - name: Test C#
+        run: make test-csharp
+
       - name: Build frontend
         working-directory: src/frontend
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
+
+      - name: Install cross
+        run: cargo install cross --locked
+
+      - name: Build Rust binary (Linux x64)
+        working-directory: src/poster-gen
+        run: cross build --release --target x86_64-unknown-linux-gnu -j 2
+
+      - name: Build Rust binary (Windows x64)
+        working-directory: src/poster-gen
+        run: cross build --release --target x86_64-pc-windows-gnu -j 2
 
       - name: Publish plugin
         run: |
@@ -55,10 +88,18 @@ jobs:
             -p:Version=${{ steps.version.outputs.ver4 }} \
             -o publish/
 
-      - name: Prepare meta.json
+      - name: Copy poster-gen binaries to publish dir
+        run: |
+          cp src/poster-gen/target/x86_64-unknown-linux-gnu/release/poster-gen publish/poster-gen-linux-x64
+          chmod +x publish/poster-gen-linux-x64
+          cp src/poster-gen/target/x86_64-pc-windows-gnu/release/poster-gen.exe publish/poster-gen-win-x64.exe
+
+      - name: Prepare meta.json files
         run: |
           VER4="${{ steps.version.outputs.ver4 }}"
           TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%S.0000000Z)"
+
+          # Base variant — uses the original GUID and name
           jq \
             --arg ver "$VER4" \
             --arg ts "$TIMESTAMP" \
@@ -66,24 +107,66 @@ jobs:
             src/JellyfinRecents.Plugin/meta.json \
             > publish/meta.json
 
-      - name: Create release zip
+          # Bundled variant — different GUID and name so Jellyfin treats it as a separate plugin
+          jq \
+            --arg ver "$VER4" \
+            --arg ts "$TIMESTAMP" \
+            '.guid = "9f4b2e0a-c736-4d58-b9e1-0a2f3c4d5e6b" | .name = "Jellyfin Recents + Fonts" | .version = $ver | .timestamp = $ts' \
+            src/JellyfinRecents.Plugin/meta.json \
+            > publish/meta-bundled.json
+
+      - name: Download bundled fonts
+        run: |
+          mkdir -p publish/fonts
+          curl -fL -o publish/fonts/Roboto-Regular.ttf \
+            "https://github.com/googlefonts/roboto/raw/main/fonts/ttf/Roboto-Regular.ttf"
+          curl -fL -o publish/fonts/RobotoMono-Regular.ttf \
+            "https://github.com/googlefonts/RobotoMono/raw/main/fonts/ttf/RobotoMono-Regular.ttf"
+          curl -fL -o publish/fonts/Oswald-Regular.ttf \
+            "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Regular.ttf"
+          curl -fL -o publish/fonts/PlayfairDisplay-Regular.ttf \
+            "https://github.com/googlefonts/Playfair/raw/main/fonts/ttf/PlayfairDisplay-Regular.ttf"
+          curl -fL -o publish/fonts/Cinzel-Regular.ttf \
+            "https://github.com/googlefonts/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf"
+
+      - name: Create release zips
         id: zip
         run: |
           VER4="${{ steps.version.outputs.ver4 }}"
+
+          # Base zip — download-on-demand variant
           ZIPNAME="jellyfin-recents_${VER4}.zip"
           cd publish
-          zip "../${ZIPNAME}" JellyfinRecents.Plugin.dll meta.json
+          zip "../${ZIPNAME}" JellyfinRecents.Plugin.dll meta.json poster-gen-linux-x64 poster-gen-win-x64.exe
           cd ..
           CHECKSUM="$(md5sum "${ZIPNAME}" | awk '{print $1}')"
           echo "zipname=$ZIPNAME" >> $GITHUB_OUTPUT
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
           echo "Zip: $ZIPNAME  MD5: $CHECKSUM"
 
+          # Bundled zip — separate staging dir so meta.json has the bundled GUID/name
+          BUNDLED_ZIPNAME="jellyfin-recents-fonts_${VER4}.zip"
+          mkdir -p publish-bundled/fonts
+          cp publish/JellyfinRecents.Plugin.dll publish-bundled/
+          cp publish/poster-gen-linux-x64 publish-bundled/
+          cp publish/poster-gen-win-x64.exe publish-bundled/
+          cp publish/fonts/* publish-bundled/fonts/
+          cp publish/meta-bundled.json publish-bundled/meta.json
+          cd publish-bundled
+          zip -r "../${BUNDLED_ZIPNAME}" .
+          cd ..
+          BUNDLED_CHECKSUM="$(md5sum "${BUNDLED_ZIPNAME}" | awk '{print $1}')"
+          echo "bundled_zipname=$BUNDLED_ZIPNAME" >> $GITHUB_OUTPUT
+          echo "bundled_checksum=$BUNDLED_CHECKSUM" >> $GITHUB_OUTPUT
+          echo "Bundled zip: $BUNDLED_ZIPNAME  MD5: $BUNDLED_CHECKSUM"
+
       - name: Create GitHub Release
         id: gh_release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.zip.outputs.zipname }}
+          files: |
+            ${{ steps.zip.outputs.zipname }}
+            ${{ steps.zip.outputs.bundled_zipname }}
           generate_release_notes: true
 
       - name: Update manifest.json for GitHub Pages
@@ -92,27 +175,43 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           CHECKSUM="${{ steps.zip.outputs.checksum }}"
           ZIPNAME="${{ steps.zip.outputs.zipname }}"
+          BUNDLED_CHECKSUM="${{ steps.zip.outputs.bundled_checksum }}"
+          BUNDLED_ZIPNAME="${{ steps.zip.outputs.bundled_zipname }}"
           TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%S.0000000Z)"
           SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/v${TAG}/${ZIPNAME}"
+          BUNDLED_SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/v${TAG}/${BUNDLED_ZIPNAME}"
 
-          # Read current manifest and prepend new version entry
-          jq --argjson entry "{
-            \"version\": \"$VER4\",
-            \"changelog\": \"https://github.com/${{ github.repository }}/releases/tag/v${TAG}\",
-            \"targetAbi\": \"10.8.0.0\",
-            \"sourceUrl\": \"$SOURCE_URL\",
-            \"checksum\": \"$CHECKSUM\",
-            \"timestamp\": \"$TIMESTAMP\"
-          }" \
-          '.[0].versions = [$entry] + .[0].versions' \
-          manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
+          # Prepend new version entry to both plugin entries in the manifest
+          jq \
+            --argjson base "{
+              \"version\": \"$VER4\",
+              \"changelog\": \"https://github.com/${{ github.repository }}/releases/tag/v${TAG}\",
+              \"targetAbi\": \"10.8.0.0\",
+              \"sourceUrl\": \"$SOURCE_URL\",
+              \"checksum\": \"$CHECKSUM\",
+              \"timestamp\": \"$TIMESTAMP\"
+            }" \
+            --argjson bundled "{
+              \"version\": \"$VER4\",
+              \"changelog\": \"https://github.com/${{ github.repository }}/releases/tag/v${TAG}\",
+              \"targetAbi\": \"10.8.0.0\",
+              \"sourceUrl\": \"$BUNDLED_SOURCE_URL\",
+              \"checksum\": \"$BUNDLED_CHECKSUM\",
+              \"timestamp\": \"$TIMESTAMP\"
+            }" \
+            '.[0].versions = [$base] + .[0].versions | .[1].versions = [$bundled] + .[1].versions' \
+            manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
+
+      - name: Stage manifest for GitHub Pages
+        run: |
+          mkdir -p /tmp/gh-pages
+          cp manifest.json /tmp/gh-pages/
 
       - name: Deploy manifest to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: .
-          include_files: manifest.json
+          publish_dir: /tmp/gh-pages
           keep_files: true
           commit_message: "chore: update manifest for v${{ steps.version.outputs.tag }}"

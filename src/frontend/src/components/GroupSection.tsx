@@ -3,12 +3,14 @@ import { useRef, useLayoutEffect } from 'preact/hooks'
 import { RiArrowDropUpFill, RiArrowDropDownFill } from 'react-icons/ri'
 import type { TimeGroup, ViewMode, PlayRecord } from '../types'
 import { PlayRecordCard } from './PlayRecordCard'
+import { useLocale } from '../i18n/context'
 
 interface Props {
   group: TimeGroup
   showTypeLabel?: boolean
   viewMode?: ViewMode
   enableFolderView?: boolean
+  posterUnlocked?: boolean
   groupIndex: number
   totalGroups: number
   hasPrevPage: boolean
@@ -37,11 +39,12 @@ function scrollToGroupHeader(index: number) {
 
 export function GroupSection({
   group, showTypeLabel = false, viewMode = 'thumbnail',
-  enableFolderView = false,
+  enableFolderView = false, posterUnlocked = false,
   groupIndex, totalGroups, hasPrevPage, hasNextPage, onPageNav,
 }: Props) {
   if (group.records.length === 0) return null
 
+  const { t } = useLocale()
   const cardsRef = useRef<HTMLDivElement>(null)
   const prevRectsRef = useRef<Map<string, DOMRect>>(new Map())
   const prevRecordsRef = useRef<PlayRecord[]>([])
@@ -148,7 +151,7 @@ export function GroupSection({
             class="jr-group__nav-btn"
             onClick={handleUp}
             disabled={!canUp}
-            title="Previous group"
+            title={t.groupPrev}
           >
             <RiArrowDropUpFill />
           </button>
@@ -156,7 +159,7 @@ export function GroupSection({
             class="jr-group__nav-btn"
             onClick={handleDown}
             disabled={!canDown}
-            title="Next group"
+            title={t.groupNext}
           >
             <RiArrowDropDownFill />
           </button>
@@ -170,6 +173,7 @@ export function GroupSection({
             showTypeLabel={showTypeLabel}
             viewMode={viewMode}
             enableFolderView={enableFolderView}
+            posterUnlocked={posterUnlocked}
           />
         ))}
       </div>

@@ -10,6 +10,9 @@ build/
 .env
 .env.local
 .env.*.local
+# 根目录误生成的 npm lockfile（前端 lockfile 在 src/frontend/）
+/package-lock.json
+/package.json
 
 # C# / .NET
 bin/
@@ -52,3 +55,21 @@ tests/JellyfinRecents.Tests/obj/
 *.db-shm
 *.db.bak
 .opencode/tmp/
+
+# Rust
+src/poster-gen/target/
+
+# poster-gen 编译产物（运行时从 Docker 构建，不入仓库）
+src/poster-gen/poster-gen-linux-x64
+src/poster-gen/poster-gen-win-x64.exe
+src/JellyfinRecents.Plugin/poster-gen-linux-x64
+src/JellyfinRecents.Plugin/poster-gen-win-x64.exe
+
+# Vite 构建缓存
+src/frontend/.vite/
+
+# speckit 当前功能指针（每次切换功能分支自动更新，属临时状态）
+.specify/feature.json
+
+# 日志文件
+*.log

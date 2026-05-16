@@ -1,0 +1,8 @@
+{
+  "ref": "refs/tags/v0.0.0-test",
+  "ref_type": "tag",
+  "repository": {
+    "full_name": "local/jellyfin-recents",
+    "name": "jellyfin-recents"
+  }
+}

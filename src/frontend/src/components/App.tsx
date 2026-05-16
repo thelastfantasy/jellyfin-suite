@@ -8,10 +8,12 @@ import { getFolderViewEnabled } from '../api/foldersApi'
 import { groupByMode } from '../grouping/groupBy'
 import { sortRecords } from '../sorting/sortBy'
 import { loadSettings, saveSettings } from '../state/viewSettings'
+import { isPosterUnlocked } from '../state/posterSheetUnlock'
 import { Toolbar } from './Toolbar'
 import { GroupSection } from './GroupSection'
 import { Pagination } from './Pagination'
 import { DEFAULTS } from './SettingsPopover'
+import { PosterQueueWidget } from './PosterQueueWidget'
 
 // 注入 scrollbar-gutter: stable 到 html
 if (typeof document !== 'undefined' && !document.getElementById('jr-scrollbar-gutter')) {
@@ -40,6 +42,8 @@ export function App({ locale }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [enableFolderView, setEnableFolderView] = useState(false)
+  const [posterUnlocked, setPosterUnlocked] = useState(isPosterUnlocked)
+  const [showPosterSettings, setShowPosterSettings] = useState(false)
   const skipSpinnerRef = useRef(false)
 
   useEffect(() => {
@@ -114,10 +118,24 @@ export function App({ locale }: Props) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  function handleDisablePoster() {
+    localStorage.removeItem('jr-poster-unlocked')
+    setPosterUnlocked(false)
+    setShowPosterSettings(false)
+  }
+
   return (
     <LocaleContext.Provider value={{ locale, t }}>
       <div class="jr-app">
-        <Toolbar settings={settings} onSettingsChange={handleSettingsChange} />
+        <Toolbar
+          settings={settings}
+          onSettingsChange={handleSettingsChange}
+          onPosterUnlocked={() => setPosterUnlocked(true)}
+          onDisablePoster={handleDisablePoster}
+          posterUnlocked={posterUnlocked}
+          showPosterSettings={showPosterSettings}
+          onTogglePosterSettings={() => setShowPosterSettings(v => !v)}
+        />
 
         {loading && (
           <div class="jr-status jr-status--loading">
@@ -146,6 +164,7 @@ export function App({ locale }: Props) {
             showTypeLabel={settings.mediaFilter === 'all'}
             viewMode={settings.viewMode}
             enableFolderView={enableFolderView}
+            posterUnlocked={posterUnlocked}
             groupIndex={i}
             totalGroups={groups.length}
             hasPrevPage={pageIndex > 0}
@@ -163,6 +182,7 @@ export function App({ locale }: Props) {
           />
         )}
       </div>
+      {posterUnlocked && <PosterQueueWidget />}
     </LocaleContext.Provider>
   )
 }

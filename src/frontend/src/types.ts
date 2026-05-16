@@ -20,6 +20,7 @@ export interface PlayRecord {
   parentId: string | null
   hasAncestors: boolean
   playbackPositionTicks: number | null
+  videoDuration: number | null
 }
 
 export interface TimeGroup {

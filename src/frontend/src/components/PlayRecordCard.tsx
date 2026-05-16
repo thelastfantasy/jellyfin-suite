@@ -1,16 +1,22 @@
-import { useState, useEffect } from 'preact/hooks'
-import { MdPlayArrow, MdReplay, MdFavorite, MdFavoriteBorder } from 'react-icons/md'
+import { useState, useEffect, useRef } from 'preact/hooks'
+import { MdPlayArrow, MdReplay, MdFavorite, MdFavoriteBorder, MdGridView, MdKeyboardArrowDown } from 'react-icons/md'
 import type { PlayRecord, ViewMode } from '../types'
 import { getCurrentUserId } from '../api/jellyfinClient'
 import { formatPlayedDate } from '../i18n'
 import { useLocale } from '../i18n/context'
 import { FolderViewPopover } from './FolderViewPopover'
+import { startJob, loadStartJobRequest, loadGlobalSkipSegments, mergeSegments } from '../api/posterSheetApi'
+import type { SkipSegment } from '../api/posterSheetApi'
+import { addJob, getJobs } from '../state/posterJobStore'
+import { flyToQueue } from '../utils/flyToQueue'
+import { SkipSegmentsModal } from './SkipSegmentsModal'
 
 interface Props {
   record: PlayRecord
   showTypeLabel?: boolean
   viewMode?: ViewMode
   enableFolderView?: boolean
+  posterUnlocked?: boolean
 }
 
 // Jellyfin 10.10.x 用 webpack 5 打包，playbackManager 不再全局暴露。
@@ -75,12 +81,14 @@ async function apiToggleFavorite(itemId: string, nowFavorite: boolean): Promise<
   await window.ApiClient.ajax({ url, type: nowFavorite ? 'POST' : 'DELETE' })
 }
 
-export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thumbnail', enableFolderView = false }: Props) {
+export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thumbnail', enableFolderView = false, posterUnlocked = false }: Props) {
   const { locale, t } = useLocale()
   const [isFav, setIsFav] = useState(record.favoritedAt !== null)
   const [favLoading, setFavLoading] = useState(false)
   const canResume = record.playbackPositionTicks != null && record.playbackPositionTicks > 0
   const resumeTicks = record.playbackPositionTicks ?? 0
+  const [skipOpen, setSkipOpen] = useState(false)
+  const thumbRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handler(e: CustomEvent<{ itemId: string; favoritedAt: string | null }>) {
@@ -127,6 +135,37 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
     } finally {
       setFavLoading(false)
     }
+  }
+
+  function handlePosterClick(e: MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (thumbRef.current) flyToQueue(thumbRef.current)
+    const title = record.seriesName ? `${record.seriesName} — ${record.title}` : record.title
+    const req = loadStartJobRequest()
+    const globalSkips = loadGlobalSkipSegments().filter(s => s.endMs > s.startMs)
+    if (globalSkips.length > 0) req.skipSegments = globalSkips
+    startJob(record.itemId, req).then(id => {
+      if (!getJobs().find(j => j.jobId === id)) addJob(id, record.itemId, title)
+    }).catch(() => {})
+  }
+
+  function handleSkipClick(e: MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setSkipOpen(true)
+  }
+
+  function handleSkipAndGenerate(segments: SkipSegment[], ignoreGlobal: boolean) {
+    if (thumbRef.current) flyToQueue(thumbRef.current)
+    const title = record.seriesName ? `${record.seriesName} — ${record.title}` : record.title
+    const req = loadStartJobRequest()
+    const globalSkips = ignoreGlobal ? [] : loadGlobalSkipSegments()
+    const merged = mergeSegments(globalSkips, segments)
+    if (merged.length > 0) req.skipSegments = merged
+    startJob(record.itemId, req).then(id => {
+      if (!getJobs().find(j => j.jobId === id)) addJob(id, record.itemId, title)
+    }).catch(() => {})
   }
 
   const episodeCode = record.episodeNumber != null
@@ -200,7 +239,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
     <div class="jr-card" data-jr-id={`${record.itemId}-${record.playedDate.getTime()}`}>
       <div class="jr-card__thumb-link-wrap">
         <a class="jr-card__thumb-link" href={detailUrl}>
-          <div class="jr-card__thumb">
+          <div class="jr-card__thumb" ref={thumbRef}>
             <img
               src={imageUrl}
               alt={record.title}
@@ -262,6 +301,33 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
         </a>
         {enableFolderView && record.hasAncestors && (
           <FolderViewPopover itemId={record.itemId} showTypeLabel={showTypeLabel} />
+        )}
+        {posterUnlocked && record.videoDuration !== null && (
+          <button
+            class={`jr-card__poster-btn${enableFolderView && record.hasAncestors ? ' jr-card__poster-btn--offset' : ''}`}
+            title={t.posterGenerate2}
+            onClick={handlePosterClick}
+          >
+            <MdGridView size={16} />
+          </button>
+        )}
+        {posterUnlocked && record.videoDuration !== null && (
+          <button
+            class={`jr-card__poster-skip-btn${enableFolderView && record.hasAncestors ? ' jr-card__poster-skip-btn--offset' : ''}`}
+            title="跳过片段生成截图墙"
+            onClick={handleSkipClick}
+          >
+            <MdKeyboardArrowDown size={14} />
+            <span class="jr-card__poster-skip-label">跳过片段</span>
+          </button>
+        )}
+        {skipOpen && (
+          <SkipSegmentsModal
+            onClose={() => setSkipOpen(false)}
+            onConfirm={handleSkipAndGenerate}
+            itemId={record.itemId}
+            videoDurationMs={record.videoDuration !== null ? Math.round(record.videoDuration * 1000) : undefined}
+          />
         )}
       </div>
       <div class="jr-card__info">

@@ -40,6 +40,25 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // 必须用 IHostedService 手动订阅
         serviceCollection.AddHostedService<FavoriteEntryPoint>();
 
+        // FontAcquisitionService: 先注册为 Singleton（供 Controller/JobService 注入），
+        // 再用同一实例注册为 IHostedService（触发 StartAsync/StopAsync 生命周期）
+        serviceCollection.AddSingleton<FontAcquisitionService>(sp =>
+        {
+            var appPaths = applicationHost.Resolve<MediaBrowser.Common.Configuration.IApplicationPaths>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<FontAcquisitionService>>();
+            return new FontAcquisitionService(appPaths, logger);
+        });
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<FontAcquisitionService>());
+
+        // PosterSheetJobService: 同上模式
+        serviceCollection.AddSingleton<PosterSheetJobService>(sp =>
+        {
+            var appPaths = applicationHost.Resolve<MediaBrowser.Common.Configuration.IApplicationPaths>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<PosterSheetJobService>>();
+            var fontSvc = sp.GetRequiredService<FontAcquisitionService>();
+            return new PosterSheetJobService(appPaths, logger, fontSvc);
+        });
+
         // 注入 IHttpContextAccessor 供 i18n 读取浏览器语言
         serviceCollection.AddHttpContextAccessor();
         serviceCollection.AddSingleton<IStartupFilter, TaskStringsInitializer>();
