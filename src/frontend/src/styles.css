@@ -2211,9 +2211,11 @@ a.jr-card__series-name:hover {
   text-align: center;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.jr-tspicker__btn:hover {
-  background: rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.85);
+@media (hover: hover) {
+  .jr-tspicker__btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.85);
+  }
 }
 .jr-tspicker__btn--active {
   background: var(--theme-highlight-foreground-color, #00a4dc);
@@ -2371,7 +2373,9 @@ a.jr-card__series-name:hover {
   text-align: left;
 }
 
-.jr-skip-chapter-item:hover { background: rgba(255,255,255,0.12); color: #fff; }
+@media (hover: hover) {
+  .jr-skip-chapter-item:hover { background: rgba(255,255,255,0.12); color: #fff; }
+}
 
 .jr-skip-chapter-item--active {
   background: var(--theme-highlight-foreground-color, #00a4dc);

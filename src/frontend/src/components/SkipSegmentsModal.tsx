@@ -339,7 +339,6 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                     <button
                       key={idx}
                       class={`jr-skip-chapter-item${isChapterSkipped(idx) ? ' jr-skip-chapter-item--active' : ''}`}
-                      onTouchStart={(e: TouchEvent) => { e.preventDefault(); toggleChapter(idx) }}
                       onClick={() => toggleChapter(idx)}
                     >
                       <span class="jr-skip-chapter-name">

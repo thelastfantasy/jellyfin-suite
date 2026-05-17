@@ -97,7 +97,6 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
             key={p.v}
             class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
             style={p.style}
-            onTouchStart={(e: TouchEvent) => { e.preventDefault(); onChange(p.v) }}
             onClick={() => onChange(p.v)}
             title={p.v}
           >00:00</button>
@@ -109,7 +108,7 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
           key={p.v}
           class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
           style={{...p.style, position: 'absolute'}}
-          onPointerDown={(e: PointerEvent) => { e.preventDefault(); onChange(p.v) }}
+          onClick={() => onChange(p.v)}
           title={p.v}
         >00:00</button>
       ))}

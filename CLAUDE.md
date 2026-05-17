@@ -10,8 +10,7 @@ at specs/004-rust-layout-engine/plan.md
 
 ```
 1. make test          ← 运行全套测试（Rust + TypeScript + C#）
-2. [告知用户测试结果] ← 等待用户确认
-3. make update        ← 部署（仅在用户明确确认后执行）
+2. make update        ← 部署到 jellyfin-dev 容器（会重启容器）
 ```
 
 - 运行测试时**必须**用 `make test`（或 `mise run test`），`make` 是唯一正确的测试入口，不得直接调用 cargo/vitest/dotnet 替代
