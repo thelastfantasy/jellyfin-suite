@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { MdPlayArrow, MdReplay, MdFavorite, MdFavoriteBorder, MdGridView, MdKeyboardArrowDown } from 'react-icons/md'
+import { MdPlayArrow, MdReplay, MdFavorite, MdFavoriteBorder, MdGridView, MdKeyboardArrowDown, MdContentCut } from 'react-icons/md'
 import type { PlayRecord, ViewMode } from '../types'
 import { getCurrentUserId } from '../api/jellyfinClient'
 import { formatPlayedDate } from '../i18n'
 import { useLocale } from '../i18n/context'
 import { FolderViewPopover } from './FolderViewPopover'
+import { Popover } from './Popover'
 import { startJob, loadStartJobRequest, loadGlobalSkipSegments, mergeSegments } from '../api/posterSheetApi'
 import type { SkipSegment } from '../api/posterSheetApi'
 import { addJob, getJobs } from '../state/posterJobStore'
@@ -89,21 +90,19 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   const resumeTicks = record.playbackPositionTicks ?? 0
   const [skipOpen, setSkipOpen] = useState(false)
   const [touchSheetOpen, setTouchSheetOpen] = useState(false)
+  const [sheetPos, setSheetPos] = useState<{ top: number; left: number } | null>(null)
   const thumbRef = useRef<HTMLDivElement>(null)
-  const touchSheetRef = useRef<HTMLDivElement>(null)
-  const touchBtnRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    if (!touchSheetOpen) return
-    function handleOutside(e: MouseEvent) {
-      if (
-        touchSheetRef.current && !touchSheetRef.current.contains(e.target as Node) &&
-        touchBtnRef.current && !touchBtnRef.current.contains(e.target as Node)
-      ) setTouchSheetOpen(false)
-    }
-    document.addEventListener('click', handleOutside)
-    return () => document.removeEventListener('click', handleOutside)
-  }, [touchSheetOpen])
+  function openTouchSheet(e: MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    const btn = e.currentTarget as HTMLButtonElement
+    const rect = btn.getBoundingClientRect()
+    const SHEET_W = 148
+    const left = Math.max(4, Math.min(rect.left, window.innerWidth - SHEET_W - 4))
+    setSheetPos({ top: rect.bottom + 4, left })
+    setTouchSheetOpen(o => !o)
+  }
 
   useEffect(() => {
     function handler(e: CustomEvent<{ itemId: string; favoritedAt: string | null }>) {
@@ -192,7 +191,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
   if (viewMode === 'list') {
     return (
       <div class="jr-card jr-card--list" data-jr-id={`${record.itemId}-${record.playedDate.getTime()}`}>
-        <a class="jr-card__thumb jr-card__thumb--list" href={detailUrl}>
+        <a class="jr-card__thumb jr-card__thumb--list" href={detailUrl} ref={thumbRef as any}>
           <img
             src={imageUrl}
             alt={record.title}
@@ -216,36 +215,67 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
               {episodeCode && <span class="jr-card__ep-code">{episodeCode}</span>}
               {record.title}
             </a>
-          </div>
-          <div class="jr-card__meta">
-            {showTypeLabel && (
-              <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
-                {record.mediaType === 'video' ? t.video : t.audio}
-              </span>
-            )}
             <span class="jr-card__played-date">{formatPlayedDate(record.playedDate, locale)}</span>
-            {canResume && (
-              <>
-                <button class="jr-card__resume-btn jr-card__resume-btn--sm" onClick={handleResumeClick} title={t.resume}>
-                  <MdPlayArrow size={16} />
-                </button>
-                <button class="jr-card__fromstart-btn" onClick={handlePlayClick} title={t.play}>
-                  <MdReplay size={18} />
-                </button>
-              </>
-            )}
-            <button
-              class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
-              onClick={handleFavClick}
-              title={isFav ? t.unfavorite : t.favorite}
-            >
-              {isFav ? <MdFavorite size={22} /> : <MdFavoriteBorder size={22} />}
-            </button>
-            {enableFolderView && record.hasAncestors && (
-              <FolderViewPopover itemId={record.itemId} viewMode="list" />
-            )}
           </div>
         </div>
+        <div class="jr-card__meta jr-card__meta--list">
+          {showTypeLabel && (
+            <span class={`jr-card__type-badge jr-card__type-badge--${record.mediaType}`}>
+              {record.mediaType === 'video' ? t.video : t.audio}
+            </span>
+          )}
+          {canResume && (
+            <>
+              <button class="jr-card__resume-btn jr-card__resume-btn--sm" onClick={handleResumeClick} title={t.resume}>
+                <MdPlayArrow size={16} />
+              </button>
+              <button class="jr-card__fromstart-btn" onClick={handlePlayClick} title={t.play}>
+                <MdReplay size={18} />
+              </button>
+            </>
+          )}
+          {posterUnlocked && record.videoDuration !== null && (
+            <button
+              class="jr-card__list-poster-btn"
+              title={t.posterGenerate2}
+              onClick={openTouchSheet}
+            >
+              <MdGridView size={16} />
+            </button>
+          )}
+          <button
+            class={`jr-card__fav-btn${isFav ? ' jr-card__fav-btn--active' : ''}`}
+            onClick={handleFavClick}
+            title={isFav ? t.unfavorite : t.favorite}
+          >
+            {isFav ? <MdFavorite size={22} /> : <MdFavoriteBorder size={22} />}
+          </button>
+          {enableFolderView && record.hasAncestors && (
+            <FolderViewPopover itemId={record.itemId} viewMode="list" />
+          )}
+        </div>
+        {touchSheetOpen && sheetPos && posterUnlocked && record.videoDuration !== null && (
+          <Popover open={true} onClose={() => setTouchSheetOpen(false)}>
+            <div class="jr-card__touch-sheet" style={{ position: 'fixed', top: `${sheetPos.top}px`, left: `${sheetPos.left}px` }}>
+              <button onClick={e => { e.stopPropagation(); handlePosterClick(e as any); setTouchSheetOpen(false) }}>
+                <MdGridView size={14} />
+                立即生成
+              </button>
+              <button onClick={e => { e.stopPropagation(); handleSkipClick(e as any); setTouchSheetOpen(false) }}>
+                <MdContentCut size={14} />
+                跳过片段设置
+              </button>
+            </div>
+          </Popover>
+        )}
+        {skipOpen && (
+          <SkipSegmentsModal
+            onClose={() => setSkipOpen(false)}
+            onConfirm={handleSkipAndGenerate}
+            itemId={record.itemId}
+            videoDurationMs={record.videoDuration !== null ? Math.round(record.videoDuration * 1000) : undefined}
+          />
+        )}
       </div>
     )
   }
@@ -321,7 +351,7 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
           <button
             class={`jr-card__poster-btn${enableFolderView && record.hasAncestors ? ' jr-card__poster-btn--offset' : ''}`}
             title={t.posterGenerate2}
-            onClick={handlePosterClick}
+            onClick={openTouchSheet}
           >
             <MdGridView size={16} />
           </button>
@@ -339,24 +369,25 @@ export function PlayRecordCard({ record, showTypeLabel = false, viewMode = 'thum
         {/* Touch-device combined button — always visible, opens action sheet */}
         {posterUnlocked && record.videoDuration !== null && (
           <button
-            ref={touchBtnRef}
             class={`jr-card__poster-touch-btn${enableFolderView && record.hasAncestors ? ' jr-card__poster-touch-btn--offset' : ''}`}
-            onClick={e => { e.preventDefault(); e.stopPropagation(); setTouchSheetOpen(o => !o) }}
+            onClick={openTouchSheet}
           >
             <MdGridView size={16} />
           </button>
         )}
-        {touchSheetOpen && posterUnlocked && record.videoDuration !== null && (
-          <div ref={touchSheetRef} class="jr-card__poster-touch-sheet">
-            <button onClick={e => { e.stopPropagation(); handlePosterClick(e as any); setTouchSheetOpen(false) }}>
-              <MdGridView size={14} />
-              立即生成
-            </button>
-            <button onClick={e => { e.stopPropagation(); handleSkipClick(e as any); setTouchSheetOpen(false) }}>
-              <MdKeyboardArrowDown size={14} />
-              跳过片段设置
-            </button>
-          </div>
+        {touchSheetOpen && sheetPos && posterUnlocked && record.videoDuration !== null && (
+          <Popover open={true} onClose={() => setTouchSheetOpen(false)}>
+            <div class="jr-card__touch-sheet" style={{ position: 'fixed', top: `${sheetPos.top}px`, left: `${sheetPos.left}px` }}>
+              <button onClick={e => { e.stopPropagation(); handlePosterClick(e as any); setTouchSheetOpen(false) }}>
+                <MdGridView size={14} />
+                立即生成
+              </button>
+              <button onClick={e => { e.stopPropagation(); handleSkipClick(e as any); setTouchSheetOpen(false) }}>
+                <MdContentCut size={14} />
+                跳过片段设置
+              </button>
+            </div>
+          </Popover>
         )}
         {skipOpen && (
           <SkipSegmentsModal
