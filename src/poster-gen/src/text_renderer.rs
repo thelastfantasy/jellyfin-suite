@@ -102,6 +102,7 @@ pub struct RenderOptions {
     pub show_video_encoding: bool,
     pub show_audio_encoding: bool,
     pub show_duration: bool,
+    pub show_subtitles: bool,
     pub show_frame_timestamp: bool,
     pub lang: String,
     pub timestamp_position: crate::image_stitcher::TimestampPosition,
@@ -119,7 +120,6 @@ pub struct Renderer {
     /// so this is typically ≈ 0.81 when the reference font is Noto Sans.
     branding_cjk_scale: f32,
     timestamp_font: Option<FontArc>,
-    emoji_font: Option<FontArc>,
     pub theme: ThemeColors,
 }
 
@@ -131,14 +131,12 @@ impl Renderer {
         branding_latin_font_path: Option<&str>,
         branding_cjk_font_path: Option<&str>,
         timestamp_font_path: Option<&str>,
-        emoji_font_path: Option<&str>,
         color_theme: &str,
     ) -> Self {
         let font = font_path.and_then(load_font);
         let branding_latin_font = branding_latin_font_path.and_then(load_font).or_else(|| font.clone());
         let branding_cjk_font = branding_cjk_font_path.and_then(load_font).or_else(|| font.clone());
         let timestamp_font = timestamp_font_path.and_then(load_font).or_else(|| font.clone());
-        let emoji_font = emoji_font_path.and_then(load_font);
 
         // Compute cap-height scale factors at font-load time by probing representative glyphs.
         // Reference: Noto Sans Latin cap height ≈ 0.714 em. We measure the actual reference
@@ -159,7 +157,6 @@ impl Renderer {
             branding_cjk_font,
             branding_cjk_scale,
             timestamp_font,
-            emoji_font,
             theme: get_theme(color_theme),
         }
     }
@@ -180,8 +177,6 @@ impl Renderer {
         let brand_latin_scale = self.branding_latin_scale;
         let brand_cjk_scale = self.branding_cjk_scale;
         let ts_font_ref: Option<&FontArc> = self.timestamp_font.as_ref();
-        let emoji_font_ref: Option<&FontArc> = self.emoji_font.as_ref();
-
         let theme = &self.theme;
         let img_width = img.width();
         let img_height = img.height();
@@ -201,7 +196,7 @@ impl Renderer {
                         if idx >= timestamps.len() { break; }
                         let ts = timestamps[idx];
                         let ts_str = secs_to_hhmmss(ts);
-                        let text_w = measure_text_width(ts_font_ref, None, &ts_str, b_scale);
+                        let text_w = measure_text_width(ts_font_ref, &ts_str, b_scale);
                         let badge_w = text_w + badge_pad * 2;
 
                         let (cell_x, cell_y) = layout.cell_origin(col, row);
@@ -215,7 +210,7 @@ impl Renderer {
                         } else {
                             by + (badge_h - b_scale * 7) / 2
                         };
-                        draw_text_scaled(img, &ts_str, bx + badge_pad, ty, b_scale, theme.badge_text, ts_font_ref, None);
+                        draw_text_scaled(img, &ts_str, bx + badge_pad, ty, b_scale, theme.badge_text, ts_font_ref);
                     }
                 }
             }
@@ -235,7 +230,7 @@ impl Renderer {
             let icon_size = layout.header_h - MARGIN * 2;  // ~124px square
             let gap = MARGIN;
 
-            let text_w = measure_text_mixed_branding(brand_latin_ref, brand_cjk_ref, brand_latin_scale, brand_cjk_scale, emoji_font_ref, &options.branding_text, brand_scale * 6);
+            let text_w = measure_text_mixed_branding(brand_latin_ref, brand_cjk_ref, brand_latin_scale, brand_cjk_scale, &options.branding_text, brand_scale * 6);
             // Layout right-to-left within icon_area_w: [margin][icon][gap][text][gap from left info]
             let icon_x = layout.icon_area_w.saturating_sub(MARGIN + icon_size);
             let icon_y = MARGIN;
@@ -249,7 +244,7 @@ impl Renderer {
             };
             let _ = brand_ttf_px;
             // Mixed-script branding: select font per character (Latin vs CJK), with cap-height normalisation
-            draw_text_mixed_branding(img, brand_latin_ref, brand_cjk_ref, brand_latin_scale, brand_cjk_scale, emoji_font_ref, &options.branding_text, text_x, text_y, brand_scale * 6, theme.accent_color);
+            draw_text_mixed_branding(img, brand_latin_ref, brand_cjk_ref, brand_latin_scale, brand_cjk_scale, &options.branding_text, text_x, text_y, brand_scale * 6, theme.accent_color);
             crate::logo::render_logo_at(img, icon_x, icon_y, icon_size, 0.88);
         }
 
@@ -266,17 +261,21 @@ impl Renderer {
         if options.video_info_enabled {
             let prefix = lbl_file;
             let row_text = format!("{prefix}{}", info.filename);
-            draw_text_scaled(img, &row_text, MARGIN, y, scale, theme.accent_color, font_ref, None);
+            draw_text_scaled(img, &row_text, MARGIN, y, scale, theme.accent_color, font_ref);
         }
         y += line_h;
 
-        // Row 1: Size + Duration
+        // Row 1: Size + Duration + Subtitle count
         if options.video_info_enabled && y + line_h <= layout.header_h {
             let mut parts: Vec<String> = Vec::new();
             if options.show_file_size { parts.push(format!("{}{}", lbl_size, info.file_size)); }
             if options.show_duration { parts.push(format!("{}{}", lbl_dur, info.duration)); }
+            if options.show_subtitles && info.subtitle_count > 0 {
+                let lbl_subs = match options.lang.as_str() { "zh" => "字幕：", "ja" => "字幕：", _ => "Subs: " };
+                parts.push(format!("{}{}", lbl_subs, info.subtitle_count));
+            }
             if !parts.is_empty() {
-                draw_text_scaled(img, &parts.join("   "), MARGIN, y, scale, theme.text_color, font_ref, None);
+                draw_text_scaled(img, &parts.join("   "), MARGIN, y, scale, theme.text_color, font_ref);
                 y += line_h;
             }
         }
@@ -295,7 +294,7 @@ impl Renderer {
                 parts.push(enc);
             }
             if !parts.is_empty() {
-                draw_text_scaled(img, &parts.join("   "), MARGIN, y, scale, theme.text_color, font_ref, None);
+                draw_text_scaled(img, &parts.join("   "), MARGIN, y, scale, theme.text_color, font_ref);
                 y += line_h;
             }
         }
@@ -316,7 +315,7 @@ impl Renderer {
                 let lbl_tracks = match options.lang.as_str() { "zh" => "音轨", "ja" => "トラック", _ => "tracks" };
                 if info.audio_tracks > 0 { audio.push_str(&format!(" / ×{}{}", info.audio_tracks, lbl_tracks)); }
                 if y + line_h <= layout.header_h + (img_height - layout.header_h) {
-                    draw_text_scaled(img, &audio, MARGIN, y, scale, theme.text_color, font_ref, None);
+                    draw_text_scaled(img, &audio, MARGIN, y, scale, theme.text_color, font_ref);
                 }
             }
         }
@@ -334,7 +333,7 @@ impl Renderer {
                     if idx >= timestamps.len() { break; }
                     let ts = timestamps[idx];
                     let ts_str = secs_to_hhmmss(ts);
-                    let text_w = measure_text_width(ts_font_ref, None, &ts_str, b_scale);
+                    let text_w = measure_text_width(ts_font_ref, &ts_str, b_scale);
                     let badge_w = text_w + badge_pad * 2;
 
                     let (cell_x, cell_y) = layout.cell_origin(col, row);
@@ -348,7 +347,7 @@ impl Renderer {
                     } else {
                         by + (badge_h - b_scale * 7) / 2
                     };
-                    draw_text_scaled(img, &ts_str, bx + badge_pad, ty, b_scale, theme.badge_text, ts_font_ref, None);
+                    draw_text_scaled(img, &ts_str, bx + badge_pad, ty, b_scale, theme.badge_text, ts_font_ref);
                 }
             }
         }
@@ -568,7 +567,6 @@ fn probe_glyph_top(font: &FontArc, scale: PxScale, baseline: f32, ascent: f32) -
 
 fn draw_text_ttf(img: &mut RgbaImage,
     font: &FontArc,
-    emoji_font: Option<&FontArc>,
     text: &str,
     x: u32,
     y: u32,
@@ -590,26 +588,8 @@ fn draw_text_ttf(img: &mut RgbaImage,
             None
         };
 
-        // Use emoji font when primary has no renderable outline (glyph_id=0 OR no outline data).
-        // This handles fonts that return a non-zero placeholder glyph_id for emoji without
-        // actually having the outline (common in CJK fonts like Noto Sans JP).
-        let (active_font, active_id, active_outline): (&FontArc, _, Option<_>) =
-            if primary_outline.is_some() {
-                (font, primary_id, primary_outline)
-            } else if let Some(ef) = emoji_font {
-                let eid = ef.glyph_id(ch);
-                if eid.0 != 0 {
-                    let eo = ef.outline_glyph(eid.with_scale(scale));
-                    (ef, eid, eo)
-                } else {
-                    (font, primary_id, None)
-                }
-            } else {
-                (font, primary_id, None)
-            };
-
         let h_advance;
-        if let Some(outlined) = active_outline {
+        if let Some(outlined) = primary_outline {
             let bounds = outlined.px_bounds();
             let offset_x = cx + bounds.min.x;
             let offset_y = baseline + bounds.min.y;
@@ -627,7 +607,7 @@ fn draw_text_ttf(img: &mut RgbaImage,
                     ch_arr[3] = ((1.0 - a) * ch_arr[3] as f32 + a * 255.0) as u8;
                 }
             });
-            h_advance = active_font.as_scaled(scale).h_advance(active_id);
+            h_advance = font.as_scaled(scale).h_advance(primary_id);
         } else {
             // Tertiary fallback: colored Twemoji SVG (no TTF outline available).
             // Use the actual rendered top of a representative glyph to position emoji,
@@ -643,7 +623,7 @@ fn draw_text_ttf(img: &mut RgbaImage,
             h_advance = if rendered {
                 emoji_size as f32
             } else {
-                active_font.as_scaled(scale).h_advance(active_id)
+                font.as_scaled(scale).h_advance(primary_id)
             };
         }
 
@@ -655,14 +635,13 @@ fn draw_text_ttf(img: &mut RgbaImage,
 /// Render branding text with per-character font and cap-height normalisation.
 /// `latin_scale` and `cjk_scale` are computed by `Renderer::new()` by probing actual glyph heights;
 /// they shrink/grow the effective render size so caps appear the same height as the reference font.
-/// Fallback chain per character: primary font → cross font (other script) → emoji font → Twemoji SVG.
+/// Fallback chain per character: primary font → cross font (other script) → Twemoji SVG.
 fn draw_text_mixed_branding(
     img: &mut RgbaImage,
     latin_font: Option<&FontArc>,
     cjk_font: Option<&FontArc>,
     latin_scale: f32,
     cjk_scale: f32,
-    emoji_font: Option<&FontArc>,
     text: &str,
     x: u32,
     y: u32,
@@ -675,6 +654,20 @@ fn draw_text_mixed_branding(
     let baseline = y as f32 + scale_px as f32;
 
     'chars: for ch in text.chars() {
+        // ASCII space: use Latin font advance directly, capped at 0.45 em.
+        // CJK fonts store Latin space as half-width or full-width which is too wide for Latin text.
+        if ch == ' ' {
+            let adv = latin_font.or(cjk_font)
+                .map(|f| {
+                    let px = (scale_px as f32 * latin_scale).round().max(1.0);
+                    f.as_scaled(PxScale::from(px)).h_advance(f.glyph_id(' '))
+                        .min(px * 0.45)
+                })
+                .unwrap_or(scale_px as f32 * 0.25);
+            cx += adv;
+            continue 'chars;
+        }
+
         let class = classify_char(ch);
         // Primary font is chosen by character class; cross-font is the other family.
         // If primary font lacks the glyph, cross-font is tried before emoji/Twemoji.
@@ -685,7 +678,7 @@ fn draw_text_mixed_branding(
         let primary_px = ((scale_px as f32 * primary_factor).round() as u32).max(1);
         let cross_px   = ((scale_px as f32 * cross_factor).round()   as u32).max(1);
 
-        // Resolve: primary → cross → emoji → Twemoji/none
+        // Resolve: primary → cross → Twemoji/none
         let (active_font, active_id, active_outline, active_scale) = 'resolve: {
             if let Some(font) = primary_opt {
                 let sc = PxScale::from(primary_px as f32);
@@ -705,15 +698,8 @@ fn draw_text_mixed_branding(
                     }
                 }
             }
-            if let Some(ef) = emoji_font {
-                let sc = PxScale::from(primary_px as f32);
-                let eid = ef.glyph_id(ch);
-                if eid.0 != 0 {
-                    break 'resolve (ef, eid, ef.outline_glyph(eid.with_scale(sc)), sc);
-                }
-            }
             // Nothing has this glyph — use any available font for h_advance, try Twemoji below
-            let Some(font) = primary_opt.or(cross_opt).or(emoji_font) else { continue 'chars };
+            let Some(font) = primary_opt.or(cross_opt) else { continue 'chars };
             let sc = PxScale::from(primary_px as f32);
             (font, font.glyph_id(ch), None, sc)
         };
@@ -760,12 +746,11 @@ fn measure_text_mixed_branding(
     cjk_font: Option<&FontArc>,
     latin_scale: f32,
     cjk_scale: f32,
-    emoji_font: Option<&FontArc>,
     text: &str,
     scale_px: u32,
 ) -> u32 {
     use twemoji_assets::svg::SvgTwemojiAsset;
-    let any_font = latin_font.or(cjk_font).or(emoji_font);
+    let any_font = latin_font.or(cjk_font);
     let Some(fallback) = any_font else {
         return text.len() as u32 * scale_px / 6;
     };
@@ -775,6 +760,17 @@ fn measure_text_mixed_branding(
     let emoji_advance = (baseline - probe_glyph_top(fallback, ref_scale, baseline, ascent)).max(1.0);
 
     text.chars().map(|ch| {
+        // ASCII space: same cap logic as draw_text_mixed_branding for consistency.
+        if ch == ' ' {
+            return latin_font.or(cjk_font)
+                .map(|f| {
+                    let px = (scale_px as f32 * latin_scale).round().max(1.0);
+                    f.as_scaled(PxScale::from(px)).h_advance(f.glyph_id(' '))
+                        .min(px * 0.45)
+                })
+                .unwrap_or(scale_px as f32 * 0.25);
+        }
+
         let class = classify_char(ch);
         let (primary_opt, primary_factor, cross_opt, cross_factor) = match class {
             CharClass::Cjk => (cjk_font, cjk_scale, latin_font, latin_scale),
@@ -799,19 +795,11 @@ fn measure_text_mixed_branding(
                 return f.as_scaled(sc).h_advance(id);
             }
         }
-        // Emoji font
-        if let Some(ef) = emoji_font {
-            let sc = PxScale::from(primary_px as f32);
-            let eid = ef.glyph_id(ch);
-            if eid.0 != 0 && ef.outline_glyph(eid.with_scale(sc)).is_some() {
-                return ef.as_scaled(sc).h_advance(eid);
-            }
-        }
         // Twemoji SVG
         if SvgTwemojiAsset::from_emoji(&ch.to_string()).is_some() { return emoji_advance; }
         // Fallback advance
         let sc = PxScale::from(primary_px as f32);
-        primary_opt.or(cross_opt).or(emoji_font)
+        primary_opt.or(cross_opt)
             .map(|f| f.as_scaled(sc).h_advance(f.glyph_id(ch)))
             .unwrap_or(scale_px as f32 / 6.0)
     }).sum::<f32>() as u32
@@ -819,26 +807,18 @@ fn measure_text_mixed_branding(
 
 /// Measure the pixel width of a string, mirroring draw_text_ttf's advance logic.
 /// Emoji chars with no TTF outline are counted as `ascender` pixels wide (same as draw_text_ttf).
-fn measure_text_width_ttf(font: &FontArc, emoji_font: Option<&FontArc>, text: &str, scale_px: u32) -> u32 {
+fn measure_text_width_ttf(font: &FontArc, text: &str, scale_px: u32) -> u32 {
     use twemoji_assets::svg::SvgTwemojiAsset;
     let scale = PxScale::from(scale_px as f32);
     let scaled = font.as_scaled(scale);
     let ascent = scaled.ascent();
-    // Use actual glyph height as emoji advance (matches draw_text_ttf's emoji_size)
     let baseline = scale_px as f32;
     let emoji_advance = (baseline - probe_glyph_top(font, scale, baseline, ascent)).max(1.0);
     text.chars()
         .map(|ch| {
             let id = font.glyph_id(ch);
-            let has_outline = id.0 != 0 && font.outline_glyph(id.with_scale(scale)).is_some();
-            if has_outline {
+            if id.0 != 0 && font.outline_glyph(id.with_scale(scale)).is_some() {
                 return scaled.h_advance(id);
-            }
-            if let Some(ef) = emoji_font {
-                let eid = ef.glyph_id(ch);
-                if eid.0 != 0 && ef.outline_glyph(eid.with_scale(scale)).is_some() {
-                    return ef.as_scaled(scale).h_advance(eid);
-                }
             }
             if SvgTwemojiAsset::from_emoji(&ch.to_string()).is_some() {
                 return emoji_advance;
@@ -849,16 +829,15 @@ fn measure_text_width_ttf(font: &FontArc, emoji_font: Option<&FontArc>, text: &s
 }
 
 /// Measure text width for either TTF or pixel font.
-fn measure_text_width(font: Option<&FontArc>, emoji_font: Option<&FontArc>, text: &str, scale: u32) -> u32 {
+fn measure_text_width(font: Option<&FontArc>, text: &str, scale: u32) -> u32 {
     if let Some(f) = font {
-        measure_text_width_ttf(f, emoji_font, text, scale * 6)
+        measure_text_width_ttf(f, text, scale * 6)
     } else {
         text.len() as u32 * (5 + 1) * scale
     }
 }
 
 /// Draw an ASCII string using TTF (if font is Some) or built-in 5×7 pixel font.
-/// `emoji_font` is an optional fallback for characters not found in `font`.
 fn draw_text_scaled(img: &mut RgbaImage,
     text: &str,
     x: u32,
@@ -866,11 +845,10 @@ fn draw_text_scaled(img: &mut RgbaImage,
     scale: u32,
     color: [u8; 3],
     font: Option<&FontArc>,
-    emoji_font: Option<&FontArc>,
 ) {
     if let Some(f) = font {
         let ttf_scale = (scale * 6) as u32; // scale pixel bitmap px → TTF px (approximately)
-        draw_text_ttf(img, f, emoji_font, text, x, y, ttf_scale, color);
+        draw_text_ttf(img, f, text, x, y, ttf_scale, color);
         return;
     }
 
@@ -1150,5 +1128,44 @@ mod tests {
         let with_ts = overlay_fingerprint("Jellyfin Recents", "classic", true, true, true);
         let without_ts = overlay_fingerprint("Jellyfin Recents", "classic", true, true, false);
         assert_ne!(with_ts, without_ts, "toggling timestamp flag must change fingerprint");
+    }
+
+    fn make_subtitle_row1_parts(show_subtitles: bool, subtitle_count: i32, lang: &str) -> Vec<String> {
+        let mut parts: Vec<String> = Vec::new();
+        if show_subtitles && subtitle_count > 0 {
+            let lbl = match lang { "zh" => "字幕：", "ja" => "字幕：", _ => "Subs: " };
+            parts.push(format!("{}{}", lbl, subtitle_count));
+        }
+        parts
+    }
+
+    #[test]
+    fn subtitle_count_included_in_row1_when_enabled_and_nonzero() {
+        let parts = make_subtitle_row1_parts(true, 3, "en");
+        assert_eq!(parts, vec!["Subs: 3"]);
+    }
+
+    #[test]
+    fn subtitle_count_omitted_from_row1_when_count_is_zero() {
+        let parts = make_subtitle_row1_parts(true, 0, "en");
+        assert!(parts.is_empty(), "zero subtitle count must not add any part");
+    }
+
+    #[test]
+    fn subtitle_count_omitted_from_row1_when_disabled() {
+        let parts = make_subtitle_row1_parts(false, 5, "en");
+        assert!(parts.is_empty(), "disabled show_subtitles must not add any part");
+    }
+
+    #[test]
+    fn subtitle_label_localized_for_zh() {
+        let parts = make_subtitle_row1_parts(true, 2, "zh");
+        assert_eq!(parts, vec!["字幕：2"]);
+    }
+
+    #[test]
+    fn subtitle_label_localized_for_ja() {
+        let parts = make_subtitle_row1_parts(true, 1, "ja");
+        assert_eq!(parts, vec!["字幕：1"]);
     }
 }

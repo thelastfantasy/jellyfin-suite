@@ -66,6 +66,7 @@ function defaultOverlay(): OverlaySettingsDto {
     showVideoEncoding: true,
     showAudioEncoding: true,
     showDuration: true,
+    showSubtitles: true,
     showFrameTimestamp: false,
     colorTheme: 'classic',
     fontFamily: 'noto-sans-jp',
@@ -96,6 +97,7 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
             key={p.v}
             class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
             style={p.style}
+            onTouchStart={(e: TouchEvent) => { e.preventDefault(); onChange(p.v) }}
             onClick={() => onChange(p.v)}
             title={p.v}
           >00:00</button>
@@ -107,7 +109,7 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
           key={p.v}
           class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
           style={{...p.style, position: 'absolute'}}
-          onClick={() => onChange(p.v)}
+          onPointerDown={(e: PointerEvent) => { e.preventDefault(); onChange(p.v) }}
           title={p.v}
         >00:00</button>
       ))}
@@ -144,8 +146,8 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
     setUploading(true)
     setUploadError(null)
     try {
-      const { key, script } = await uploadFont(uploadFile)
-      setUserFonts(prev => prev.some(f => f.key === key) ? prev : [...prev, { key, script }])
+      const font = await uploadFont(uploadFile)
+      setUserFonts(prev => prev.some(f => f.key === font.key) ? prev : [...prev, font])
       setUploadFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (e: unknown) {
@@ -243,9 +245,9 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const showLatin   = brandLatin || !brandCJK
   const showCJK     = brandCJK || !brandLatin
 
-  const toFontOption = ({ key }: UserFontInfo) => ({
+  const toFontOption = ({ key, displayName }: UserFontInfo) => ({
     value: key,
-    label: `${key.slice('custom-'.length)} ${t.posterCustomFontSuffix}`,
+    label: `${displayName} ${t.posterCustomFontSuffix}`,
     custom: true,
   })
   // Custom fonts are only added to the branding pickers (Latin/CJK), filtered by detected script.
@@ -323,12 +325,14 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
         <div class="jr-poster-settings__global-skips">
           {globalSkips.map((seg, idx) => (
             <div key={idx} class="jr-skip-segment-row">
-              <TimeInput valueMs={seg.startMs} onChange={v => updateGlobalSkip(idx, { startMs: v })} />
-              <span class="jr-skip-segment-dash">—</span>
-              <TimeInput valueMs={seg.endMs} onChange={v => updateGlobalSkip(idx, { endMs: v })} />
-              <button class="jr-skip-segment-remove" onClick={() => removeGlobalSkip(idx)} title="删除">
-                <MdRemove size={15} />
-              </button>
+              <div class="jr-skip-segment-row__controls">
+                <TimeInput valueMs={seg.startMs} onChange={v => updateGlobalSkip(idx, { startMs: v })} />
+                <span class="jr-skip-segment-dash">—</span>
+                <TimeInput valueMs={seg.endMs} onChange={v => updateGlobalSkip(idx, { endMs: v })} />
+                <button class="jr-skip-segment-remove" onClick={() => removeGlobalSkip(idx)} title="删除">
+                  <MdRemove size={15} />
+                </button>
+              </div>
             </div>
           ))}
           {globalSkips.length < 2 && (
@@ -418,10 +422,11 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
           <div class={`jr-poster-settings__sub-checks${headless ? ' jr-poster-settings__sub-checks--muted' : ''}`}>
             {([
               ['showFileSize', 'posterFileSize'],
+              ['showDuration', 'posterDuration'],
               ['showResolutionFps', 'posterResolutionFps'],
               ['showVideoEncoding', 'posterVideoEncoding'],
               ['showAudioEncoding', 'posterAudioEncoding'],
-              ['showDuration', 'posterDuration'],
+              ['showSubtitles', 'posterSubtitles'],
             ] as [keyof OverlaySettingsDto, keyof typeof t][]).map(([key, labelKey]) => (
               <div key={key} class="jr-poster-settings__check-row">
                 <input type="checkbox" id={key} checked={overlay[key] as boolean}
@@ -506,13 +511,22 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
         <p class="jr-poster-settings__hint">{t.posterCustomFontHint}</p>
         {userFonts.length > 0 && (
           <div class="jr-poster-settings__custom-font-list">
-            {userFonts.map(({ key, script }) => (
-              <div key={key} class="jr-poster-settings__custom-font-row">
-                <span class="jr-poster-settings__custom-font-name">{key.slice('custom-'.length)}</span>
-                <span class="jr-poster-settings__custom-font-tag">{script}</span>
+            {userFonts.map((f) => (
+              <div key={f.key} class="jr-poster-settings__custom-font-row">
+                <span class="jr-poster-settings__custom-font-name">{f.displayName || f.key.slice('custom-'.length)}</span>
+                <span class="jr-poster-settings__custom-font-tags">
+                  <span class={`jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--${f.script}`}>{f.script.toUpperCase()}</span>
+                  <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--format">{f.format.toUpperCase()}</span>
+                  {f.isSerif === true && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Serif</span>}
+                  {f.isSerif === false && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Sans</span>}
+                  {f.isMonospace && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Mono</span>}
+                  {f.isBold && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Bold</span>}
+                  {f.isItalic && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Italic</span>}
+                  {f.hasLigatures && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Liga</span>}
+                </span>
                 <button
                   class="jr-poster-settings__custom-font-del"
-                  onClick={() => handleDeleteFont(key)}
+                  onClick={() => handleDeleteFont(f.key)}
                   title={t.posterCustomFontDelete}
                 >
                   <MdRemove size={14} />

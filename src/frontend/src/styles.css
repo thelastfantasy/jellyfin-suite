@@ -795,42 +795,6 @@ a.jr-card__series-name:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* List view action sheet */
-.jr-card__list-touch-sheet {
-  position: absolute;
-  right: 4px;
-  top: 100%;
-  z-index: 1000;
-  background: rgba(18,20,26,0.97);
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 8px;
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 136px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-}
-.jr-card__list-touch-sheet button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 12px;
-  background: none;
-  border: none;
-  border-radius: 5px;
-  color: rgba(255,255,255,0.88);
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-  width: 100%;
-  text-align: left;
-  touch-action: manipulation;
-}
-.jr-card__list-touch-sheet button:hover,
-.jr-card__list-touch-sheet button:active {
-  background: rgba(255,255,255,0.1);
-}
 
 .jr-card__meta {
   display: flex;
@@ -1425,42 +1389,6 @@ a.jr-card__series-name:hover {
   left: 39px;
 }
 
-.jr-card__poster-touch-sheet {
-  position: absolute;
-  top: 38px;
-  left: 3px;
-  z-index: 20;
-  background: rgba(18,20,26,0.97);
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 8px;
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 136px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-}
-
-.jr-card__poster-touch-sheet button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 12px;
-  background: none;
-  border: none;
-  border-radius: 5px;
-  color: rgba(255,255,255,0.88);
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
-  width: 100%;
-  text-align: left;
-}
-
-.jr-card__poster-touch-sheet button:hover,
-.jr-card__poster-touch-sheet button:active {
-  background: rgba(255,255,255,0.1);
-}
 
 /* On coarse pointer (touch/stylus): show touch btn, hide desktop hover btns */
 @media (pointer: coarse) {

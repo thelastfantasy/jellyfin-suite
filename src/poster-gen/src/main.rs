@@ -76,10 +76,6 @@ struct GenerateArgs {
     #[arg(long)]
     timestamp_font_path: Option<String>,
 
-    /// Optional monochrome emoji TTF font for branding label emoji fallback
-    #[arg(long)]
-    emoji_font_path: Option<String>,
-
     /// Thumbnail width in pixels
     #[arg(long, default_value_t = 320)]
     thumb_width: u32,
@@ -124,6 +120,10 @@ struct GenerateArgs {
     #[arg(long)]
     no_duration: bool,
 
+    /// Disable subtitle count display
+    #[arg(long)]
+    no_subtitles: bool,
+
     /// Overlay label language: en|zh|ja
     #[arg(long, default_value = "en")]
     lang: String,
@@ -163,10 +163,6 @@ struct PreviewArgs {
     #[arg(long)]
     timestamp_font_path: Option<String>,
 
-    /// Optional monochrome emoji TTF font for branding label emoji fallback
-    #[arg(long)]
-    emoji_font_path: Option<String>,
-
     /// Branding label
     #[arg(long, default_value = "Jellyfin Recents")]
     branding_text: String,
@@ -198,6 +194,10 @@ struct PreviewArgs {
     /// Disable duration display
     #[arg(long)]
     no_duration: bool,
+
+    /// Disable subtitle count display
+    #[arg(long)]
+    no_subtitles: bool,
 
     /// Show per-frame HH:MM:SS badge
     #[arg(long)]
@@ -424,7 +424,6 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
         args.branding_latin_font_path.as_deref(),
         args.branding_cjk_font_path.as_deref(),
         args.timestamp_font_path.as_deref(),
-        args.emoji_font_path.as_deref(),
         &args.color_theme,
     );
     let options = text_renderer::RenderOptions {
@@ -436,6 +435,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
         show_video_encoding: !args.no_video_encoding,
         show_audio_encoding: !args.no_audio_encoding,
         show_duration: !args.no_duration,
+        show_subtitles: !args.no_subtitles,
         show_frame_timestamp: args.show_timestamp,
         lang: args.lang.clone(),
         timestamp_position: args.timestamp_position.clone(),
@@ -459,7 +459,6 @@ fn run_preview_cmd(args: PreviewArgs) -> Result<(), String> {
         branding_latin_font_path: args.branding_latin_font_path,
         branding_cjk_font_path: args.branding_cjk_font_path,
         timestamp_font_path: args.timestamp_font_path,
-        emoji_font_path: args.emoji_font_path,
         branding_enabled: !args.no_branding,
         branding_text: args.branding_text,
         video_info_enabled: !args.no_video_info,
@@ -468,6 +467,7 @@ fn run_preview_cmd(args: PreviewArgs) -> Result<(), String> {
         show_video_encoding: !args.no_video_encoding,
         show_audio_encoding: !args.no_audio_encoding,
         show_duration: !args.no_duration,
+        show_subtitles: !args.no_subtitles,
         show_frame_timestamp: args.show_timestamp,
         rows: args.rows,
         cols: args.cols,

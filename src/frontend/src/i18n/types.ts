@@ -73,6 +73,7 @@ export interface Translations {
   posterVideoEncoding: string
   posterAudioEncoding: string
   posterDuration: string
+  posterSubtitles: string
   posterTimestamp: string
   posterTimestampPos: string
   posterTimestampPosInsideBottomLeft: string
@@ -119,6 +120,7 @@ export interface Translations {
   skipIgnoreGlobal: string
   skipAddToGlobal: string
   skipGlobalFull: string
+  skipSegmentSpan: string
   posterCustomFonts: string
   posterCustomFontHint: string
   posterCustomFontChoose: string

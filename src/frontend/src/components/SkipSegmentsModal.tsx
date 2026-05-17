@@ -339,6 +339,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                     <button
                       key={idx}
                       class={`jr-skip-chapter-item${isChapterSkipped(idx) ? ' jr-skip-chapter-item--active' : ''}`}
+                      onTouchStart={(e: TouchEvent) => { e.preventDefault(); toggleChapter(idx) }}
                       onClick={() => toggleChapter(idx)}
                     >
                       <span class="jr-skip-chapter-name">
@@ -386,6 +387,11 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                       >
                         <MdLanguage size={15} />
                       </button>
+                      {segValid && (
+                        <span class="jr-skip-segment-span">
+                          {t.skipSegmentSpan} {formatDuration(seg.endMs - seg.startMs)}
+                        </span>
+                      )}
                     </div>
                     {videoDurationMs != null && videoDurationMs > 0 && (
                       <SegmentScrubber

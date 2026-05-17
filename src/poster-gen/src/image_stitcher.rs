@@ -256,6 +256,7 @@ mod tests {
             audio_tracks: 1,
             duration: "00:30:00".to_string(),
             duration_secs: 1800.0,
+            subtitle_count: 0,
         }
     }
 
@@ -269,6 +270,7 @@ mod tests {
             show_video_encoding: false,
             show_audio_encoding: false,
             show_duration: false,
+            show_subtitles: false,
             show_frame_timestamp: false,
             lang: "en".to_string(),
             timestamp_position: crate::image_stitcher::TimestampPosition::InsideBottomLeft,
@@ -276,7 +278,7 @@ mod tests {
     }
 
     fn dummy_renderer() -> crate::text_renderer::Renderer {
-        crate::text_renderer::Renderer::new(None, None, None, None, None, "classic")
+        crate::text_renderer::Renderer::new(None, None, None, None, "classic")
     }
 
     #[test]
@@ -420,11 +422,12 @@ mod tests {
             show_video_encoding: false,
             show_audio_encoding: false,
             show_duration: false,
+            show_subtitles: false,
             show_frame_timestamp: false,
             lang: "en".to_string(),
             timestamp_position: crate::image_stitcher::TimestampPosition::InsideBottomLeft,
         };
-        let renderer = crate::text_renderer::Renderer::new(None, None, None, None, None, "transparent");
+        let renderer = crate::text_renderer::Renderer::new(None, None, None, None, "transparent");
 
         stitch_grid(
             frames,
