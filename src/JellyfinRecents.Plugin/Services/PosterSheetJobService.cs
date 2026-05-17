@@ -137,10 +137,10 @@ public class PosterSheetJobService : IDisposable
     public bool TryGetCachedPath(string itemId, int rows, int cols, string seed, string overlayHash,
         out string? path)
     {
-        var filePath = Path.Combine(TempDir, $"{TempPrefix}{itemId}_{rows}x{cols}_{seed}_{overlayHash}.webp");
-        if (File.Exists(filePath)) { path = filePath; return true; }
-        path = null;
-        return false;
+        // File includes a skipHash segment that CheckCache doesn't know — match any variant
+        var prefix = $"{TempPrefix}{itemId}_{rows}x{cols}_{seed}_{overlayHash}_";
+        path = Directory.EnumerateFiles(TempDir, prefix + "*.webp").FirstOrDefault();
+        return path != null;
     }
 
     private async Task RunJobAsync(PosterSheetJob job, string inputPath)
@@ -184,12 +184,12 @@ public class PosterSheetJobService : IDisposable
                 try { process.Kill(); } catch { }
             });
 
-            // Drain stderr in background so buffer never blocks; log at Debug level
+            // Drain stderr in background so buffer never blocks
             _ = Task.Run(async () =>
             {
                 string? errLine;
                 while ((errLine = await process.StandardError.ReadLineAsync()) != null)
-                    _logger.LogDebug("[poster-gen] {Line}", errLine);
+                    _logger.LogWarning("[poster-gen stderr] {Line}", errLine);
             });
 
             string? line;
@@ -292,8 +292,6 @@ public class PosterSheetJobService : IDisposable
         if (brandingCjkPath != null) sb.Append($" --branding-cjk-font-path \"{brandingCjkPath}\"");
         if (_fontService.RobotoMonoPath != null)
             sb.Append($" --timestamp-font-path \"{_fontService.RobotoMonoPath}\"");
-        if (_fontService.NotoEmojiPath != null)
-            sb.Append($" --emoji-font-path \"{_fontService.NotoEmojiPath}\"");
         if (job.Overlay.ShowFrameTimestamp) sb.Append(" --show-timestamp");
         if (!string.IsNullOrEmpty(job.Overlay.TimestampPosition))
             sb.Append($" --timestamp-position {job.Overlay.TimestampPosition}");
@@ -305,6 +303,7 @@ public class PosterSheetJobService : IDisposable
         if (!job.Overlay.ShowVideoEncoding) sb.Append(" --no-video-encoding");
         if (!job.Overlay.ShowAudioEncoding) sb.Append(" --no-audio-encoding");
         if (!job.Overlay.ShowDuration) sb.Append(" --no-duration");
+        if (!job.Overlay.ShowSubtitles) sb.Append(" --no-subtitles");
         sb.Append($" --lang {job.Overlay.Lang}");
         if (job.SkipSegments is { Count: > 0 })
             foreach (var seg in job.SkipSegments)
@@ -331,8 +330,6 @@ public class PosterSheetJobService : IDisposable
         if (brandingCjkPath != null) sb.Append($" --branding-cjk-font-path \"{brandingCjkPath}\"");
         if (_fontService.RobotoMonoPath != null)
             sb.Append($" --timestamp-font-path \"{_fontService.RobotoMonoPath}\"");
-        if (_fontService.NotoEmojiPath != null)
-            sb.Append($" --emoji-font-path \"{_fontService.NotoEmojiPath}\"");
         if (req.Overlay.ShowFrameTimestamp) sb.Append(" --show-timestamp");
         if (!string.IsNullOrEmpty(req.Overlay.TimestampPosition))
             sb.Append($" --timestamp-position {req.Overlay.TimestampPosition}");
@@ -344,6 +341,7 @@ public class PosterSheetJobService : IDisposable
         if (!req.Overlay.ShowVideoEncoding) sb.Append(" --no-video-encoding");
         if (!req.Overlay.ShowAudioEncoding) sb.Append(" --no-audio-encoding");
         if (!req.Overlay.ShowDuration) sb.Append(" --no-duration");
+        if (!req.Overlay.ShowSubtitles) sb.Append(" --no-subtitles");
         sb.Append($" --rows {req.Rows} --cols {req.Cols}");
         sb.Append($" --lang {req.Overlay.Lang}");
         return sb.ToString();

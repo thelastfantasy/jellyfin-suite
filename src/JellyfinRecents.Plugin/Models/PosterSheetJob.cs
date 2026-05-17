@@ -16,6 +16,7 @@ public class OverlaySettings
     public bool ShowVideoEncoding { get; set; } = true;
     public bool ShowAudioEncoding { get; set; } = true;
     public bool ShowDuration { get; set; } = true;
+    public bool ShowSubtitles { get; set; } = true;
     public bool ShowFrameTimestamp { get; set; } = false;
     public string ColorTheme { get; set; } = "classic";
     public string FontFamily { get; set; } = "noto-sans";
@@ -41,6 +42,7 @@ public class MediaInfoDto
     public string? AudioBitrate { get; set; }
     public int? AudioSampleRate { get; set; }
     public int AudioTracks { get; set; }
+    public int SubtitleCount { get; set; }
     public string Duration { get; set; } = string.Empty;
 }
 

@@ -339,6 +339,8 @@ public class PosterSheetController : ControllerBase
     public IActionResult ListUserFonts()
     {
         Directory.CreateDirectory(FontsDir);
+        var cache = ReadFontMetaCache();
+
         var result = Directory.GetFiles(FontsDir)
             .Select(path => new { path, name = Path.GetFileName(path) })
             .Where(x => x.name != null && x.name.StartsWith("custom-", StringComparison.Ordinal) &&
@@ -349,16 +351,23 @@ public class PosterSheetController : ControllerBase
             .Select(x =>
             {
                 var key = Path.GetFileNameWithoutExtension(x.name)!;
-                var script = "latin";
+                if (cache.TryGetValue(key, out var cached)) return cached;
+
+                // Cache miss — parse and persist (e.g. fonts uploaded before this feature)
+                var ext = Path.GetExtension(x.name).ToLowerInvariant();
                 try
                 {
                     var bytes = System.IO.File.ReadAllBytes(x.path);
-                    if (FontCoversCjk(bytes)) script = "cjk";
+                    var displayName = ext is ".woff" or ".woff2"
+                        ? key["custom-".Length..]
+                        : (ReadFontFamilyName(bytes) ?? key);
+                    var record = AnalyzeFontMeta(key, displayName, bytes, ext);
+                    SaveToFontMetaCache(record);
+                    return record;
                 }
-                catch { /* default to latin */ }
-                return new { key, script };
+                catch { return new FontMetaRecord { Key = key, DisplayName = key, Script = "latin", Format = ext.TrimStart('.') }; }
             })
-            .OrderBy(x => x.key)
+            .OrderBy(x => x.Key)
             .ToArray();
         return Ok(result);
     }
@@ -405,12 +414,10 @@ public class PosterSheetController : ControllerBase
         // 5. Read font family name. WOFF/WOFF2 tables are compressed so the sfnt parser
         //    cannot read them directly — fall back to the uploaded filename in that case.
         string internalName;
-        string script;
         bool isWoff = ext == ".woff" || ext == ".woff2";
         if (isWoff)
         {
             internalName = Path.GetFileNameWithoutExtension(file.FileName);
-            script = "latin";
         }
         else
         {
@@ -418,7 +425,6 @@ public class PosterSheetController : ControllerBase
             if (string.IsNullOrWhiteSpace(parsedName))
                 return BadRequest("Could not read font family name from file.");
             internalName = parsedName;
-            script = FontCoversCjk(fontBytes) ? "cjk" : "latin";
         }
 
         var sanitized = SanitizeFontName(internalName);
@@ -426,10 +432,23 @@ public class PosterSheetController : ControllerBase
             return BadRequest("Font family name contains no usable characters.");
 
         Directory.CreateDirectory(FontsDir);
+
+        // Remove any same-name file with a different extension to prevent duplicate keys.
+        foreach (var altExt in new[] { ".ttf", ".otf", ".woff", ".woff2" })
+        {
+            if (string.Equals(altExt, ext, StringComparison.OrdinalIgnoreCase)) continue;
+            var altPath = Path.Combine(FontsDir, $"custom-{sanitized}{altExt}");
+            if (System.IO.File.Exists(altPath)) System.IO.File.Delete(altPath);
+        }
+
         var dest = Path.Combine(FontsDir, $"custom-{sanitized}{ext}");
         await System.IO.File.WriteAllBytesAsync(dest, fontBytes);
 
-        return Ok(new { key = $"custom-{sanitized}", displayName = internalName, script });
+        // Analyze and cache font metadata
+        var meta = AnalyzeFontMeta($"custom-{sanitized}", internalName, fontBytes, ext);
+        SaveToFontMetaCache(meta);
+
+        return Ok(meta);
     }
 
     internal static bool HasValidFontMagic(byte[] data)
@@ -598,6 +617,214 @@ public class PosterSheetController : ControllerBase
         return ((uint)b[0] << 24) | ((uint)b[1] << 16) | ((uint)b[2] << 8) | b[3];
     }
 
+    // ── Font metadata cache ────────────────────────────────────────────────
+
+    private sealed class FontMetaRecord
+    {
+        public string Key { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string Script { get; set; } = "latin";
+        public string Format { get; set; } = "ttf";
+        public bool? IsSerif { get; set; }
+        public bool? IsMonospace { get; set; }
+        public bool? IsBold { get; set; }
+        public bool? IsItalic { get; set; }
+        public bool? HasLigatures { get; set; }
+    }
+
+    private string FontMetaCachePath => Path.Combine(FontsDir, "meta.json");
+
+    private static readonly JsonSerializerOptions _cacheJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+    };
+
+    private Dictionary<string, FontMetaRecord> ReadFontMetaCache()
+    {
+        try
+        {
+            if (!System.IO.File.Exists(FontMetaCachePath)) return new();
+            var json = System.IO.File.ReadAllText(FontMetaCachePath);
+            return JsonSerializer.Deserialize<Dictionary<string, FontMetaRecord>>(json, _cacheJsonOptions) ?? new();
+        }
+        catch { return new(); }
+    }
+
+    private void WriteFontMetaCache(Dictionary<string, FontMetaRecord> cache)
+    {
+        try
+        {
+            Directory.CreateDirectory(FontsDir);
+            System.IO.File.WriteAllText(FontMetaCachePath, JsonSerializer.Serialize(cache, _cacheJsonOptions));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to write font meta cache: {Message}", ex.Message);
+        }
+    }
+
+    private void SaveToFontMetaCache(FontMetaRecord record)
+    {
+        var cache = ReadFontMetaCache();
+        cache[record.Key] = record;
+        WriteFontMetaCache(cache);
+    }
+
+    private void RemoveFromFontMetaCache(string key)
+    {
+        var cache = ReadFontMetaCache();
+        if (cache.Remove(key))
+            WriteFontMetaCache(cache);
+    }
+
+    // ── Font metadata analysis ─────────────────────────────────────────────
+
+    private static (short familyClass, byte[] panose, ushort fsSelection)? ReadOs2Table(byte[] data)
+    {
+        try
+        {
+            using var ms = new MemoryStream(data);
+            using var br = new BinaryReader(ms);
+            R32(br); var numTables = R16(br); br.ReadBytes(6);
+            long os2Offset = -1;
+            for (int i = 0; i < numTables; i++)
+            {
+                var tag = new string(br.ReadChars(4)); br.ReadBytes(4);
+                var off = R32(br); br.ReadBytes(4);
+                if (tag == "OS/2") os2Offset = off;
+            }
+            if (os2Offset < 0) return null;
+            ms.Seek(os2Offset, SeekOrigin.Begin);
+            br.ReadBytes(30);                  // skip 15 × uint16 fields
+            var familyClass = (short)R16(br);  // offset 30
+            var panose = br.ReadBytes(10);      // offset 32
+            br.ReadBytes(20);                   // ulUnicodeRange1-4 + achVendID
+            var fsSelection = R16(br);          // offset 62
+            return (familyClass, panose, fsSelection);
+        }
+        catch { return null; }
+    }
+
+    private static bool ReadGsubHasLigatures(byte[] data)
+    {
+        try
+        {
+            using var ms = new MemoryStream(data);
+            using var br = new BinaryReader(ms);
+            R32(br); var numTables = R16(br); br.ReadBytes(6);
+            long gsubOffset = -1;
+            for (int i = 0; i < numTables; i++)
+            {
+                var tag = new string(br.ReadChars(4)); br.ReadBytes(4);
+                var off = R32(br); br.ReadBytes(4);
+                if (tag == "GSUB") gsubOffset = off;
+            }
+            if (gsubOffset < 0) return false;
+            ms.Seek(gsubOffset, SeekOrigin.Begin);
+            R16(br); R16(br); R16(br);               // MajorVersion + MinorVersion + ScriptListOffset
+            var featureListOff = R16(br);
+            ms.Seek(gsubOffset + featureListOff, SeekOrigin.Begin);
+            var featureCount = R16(br);
+            for (int i = 0; i < featureCount; i++)
+            {
+                var tag = new string(br.ReadChars(4));
+                R16(br); // FeatureOffset
+                if (tag is "liga" or "calt") return true;
+            }
+            return false;
+        }
+        catch { return false; }
+    }
+
+    private static bool FontIsMonospace(byte[] data)
+    {
+        try
+        {
+            using var ms = new MemoryStream(data);
+            using var br = new BinaryReader(ms);
+            R32(br); var numTables = R16(br); br.ReadBytes(6);
+            long hheaOffset = -1, hmtxOffset = -1; uint hmtxLength = 0;
+            for (int i = 0; i < numTables; i++)
+            {
+                var tag = new string(br.ReadChars(4)); br.ReadBytes(4);
+                var off = R32(br); var len = R32(br);
+                if (tag == "hhea") hheaOffset = off;
+                else if (tag == "hmtx") { hmtxOffset = off; hmtxLength = len; }
+            }
+            if (hheaOffset < 0 || hmtxOffset < 0) return false;
+
+            // numberOfHMetrics is at offset 34 within hhea
+            ms.Seek(hheaOffset + 34, SeekOrigin.Begin);
+            var numHMetrics = R16(br);
+            if (numHMetrics == 0) return false;
+            if (numHMetrics == 1) return true; // all glyphs share one advance width
+
+            ms.Seek(hmtxOffset, SeekOrigin.Begin);
+            var firstWidth = R16(br); R16(br); // first lsb
+            for (int i = 1; i < numHMetrics && ms.Position + 4 <= hmtxOffset + hmtxLength; i++)
+            {
+                if (R16(br) != firstWidth) return false;
+                R16(br); // lsb
+            }
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private static bool FontCoversEmoji(byte[] data)
+    {
+        try
+        {
+            using var ms = new MemoryStream(data);
+            using var br = new BinaryReader(ms);
+            R32(br); var numTables = R16(br); br.ReadBytes(6);
+            for (int i = 0; i < numTables; i++)
+            {
+                var tag = new string(br.ReadChars(4));
+                br.ReadBytes(12); // checksum + offset + length
+                if (tag is "CBDT" or "CBLC" or "COLR" or "CPAL" or "sbix") return true;
+            }
+            return false;
+        }
+        catch { return false; }
+    }
+
+    private static FontMetaRecord AnalyzeFontMeta(string key, string displayName, byte[] fontBytes, string ext)
+    {
+        var format = ext.TrimStart('.');
+        bool isWoff = ext is ".woff" or ".woff2";
+
+        if (isWoff)
+            return new FontMetaRecord { Key = key, DisplayName = displayName, Script = "latin", Format = format };
+
+        var script = "latin";
+        bool? isSerif = null, isBold = null, isItalic = null;
+
+        if (FontCoversEmoji(fontBytes))
+            return new FontMetaRecord { Key = key, DisplayName = displayName, Script = "emoji", Format = format };
+
+        if (FontCoversCjk(fontBytes)) script = "cjk";
+
+        var os2 = ReadOs2Table(fontBytes);
+        if (os2 != null)
+        {
+            var (familyClass, _, fsSelection) = os2.Value;
+            var classId = (familyClass >> 8) & 0xFF;
+            if (classId == 12) script = "symbol";
+            isSerif = classId switch { 1 or 2 or 3 or 4 or 5 or 7 => true, 8 => false, _ => null };
+            isBold   = (fsSelection & 0x0020) != 0;
+            isItalic = (fsSelection & 0x0001) != 0;
+        }
+
+        return new FontMetaRecord
+        {
+            Key = key, DisplayName = displayName, Script = script, Format = format,
+            IsSerif = isSerif, IsMonospace = FontIsMonospace(fontBytes),
+            IsBold = isBold, IsItalic = isItalic, HasLigatures = ReadGsubHasLigatures(fontBytes),
+        };
+    }
+
     [HttpDelete("fonts/{key}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -613,11 +840,15 @@ public class PosterSheetController : ControllerBase
         var woff  = Path.Combine(FontsDir, key + ".woff");
         var woff2 = Path.Combine(FontsDir, key + ".woff2");
 
-        if (System.IO.File.Exists(ttf))   { System.IO.File.Delete(ttf);   return NoContent(); }
-        if (System.IO.File.Exists(otf))   { System.IO.File.Delete(otf);   return NoContent(); }
-        if (System.IO.File.Exists(woff))  { System.IO.File.Delete(woff);  return NoContent(); }
-        if (System.IO.File.Exists(woff2)) { System.IO.File.Delete(woff2); return NoContent(); }
+        bool deleted = false;
+        if (System.IO.File.Exists(ttf))   { System.IO.File.Delete(ttf);   deleted = true; }
+        if (System.IO.File.Exists(otf))   { System.IO.File.Delete(otf);   deleted = true; }
+        if (System.IO.File.Exists(woff))  { System.IO.File.Delete(woff);  deleted = true; }
+        if (System.IO.File.Exists(woff2)) { System.IO.File.Delete(woff2); deleted = true; }
 
-        return NotFound($"Font '{key}' not found.");
+        if (!deleted) return NotFound($"Font '{key}' not found.");
+
+        RemoveFromFontMetaCache(key);
+        return NoContent();
     }
 }

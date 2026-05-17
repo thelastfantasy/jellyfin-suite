@@ -386,6 +386,11 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                       >
                         <MdLanguage size={15} />
                       </button>
+                      {segValid && (
+                        <span class="jr-skip-segment-span">
+                          {t.skipSegmentSpan} {formatDuration(seg.endMs - seg.startMs)}
+                        </span>
+                      )}
                     </div>
                     {videoDurationMs != null && videoDurationMs > 0 && (
                       <SegmentScrubber

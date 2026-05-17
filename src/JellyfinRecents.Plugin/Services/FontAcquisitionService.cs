@@ -43,12 +43,6 @@ public class FontAcquisitionService : IHostedService
         "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
     ];
 
-    private static readonly string[] NotoEmojiSystemPaths =
-    [
-        "/usr/share/fonts/truetype/noto/NotoEmoji-Regular.ttf",
-        "/usr/share/fonts/noto/NotoEmoji-Regular.ttf",
-        "/usr/share/fonts/truetype/noto-emoji/NotoEmoji-Regular.ttf",
-    ];
 
     // Roboto is available via fonts-roboto-hinted / fonts-roboto-unhinted on Debian/Ubuntu.
     private static readonly string[] RobotoSystemPaths =
@@ -102,43 +96,33 @@ public class FontAcquisitionService : IHostedService
 
     private static readonly FontSource[] RobotoMonoSources =
     [
-        new("https://cdn.jsdelivr.net/gh/googlefonts/RobotoMono@main/fonts/ttf/RobotoMono-Regular.ttf"),
-        new("https://github.com/googlefonts/RobotoMono/raw/main/fonts/ttf/RobotoMono-Regular.ttf"),
+        // fontsource npm → jsDelivr CDN (backed by npm registry, extremely stable)
+        new("https://cdn.jsdelivr.net/npm/@fontsource/roboto-mono@5/files/roboto-mono-latin-400-normal.woff2"),
+        new("https://unpkg.com/@fontsource/roboto-mono@5/files/roboto-mono-latin-400-normal.woff2"),
     ];
 
     private static readonly FontSource[] RobotoSources =
     [
-        // v2.138 tag — main branch was restructured to variable fonts
-        new("https://cdn.jsdelivr.net/gh/googlefonts/roboto@v2.138/src/hinted/Roboto-Regular.ttf"),
-        new("https://www.1001fonts.com/download/font/roboto.regular.ttf"),
+        new("https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/files/roboto-latin-400-normal.woff2"),
+        new("https://unpkg.com/@fontsource/roboto@5/files/roboto-latin-400-normal.woff2"),
     ];
 
     private static readonly FontSource[] OswaldSources =
     [
-        new("https://cdn.jsdelivr.net/gh/googlefonts/OswaldFont@main/fonts/ttf/Oswald-Regular.ttf"),
-        new("https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Regular.ttf"),
+        new("https://cdn.jsdelivr.net/npm/@fontsource/oswald@5/files/oswald-latin-400-normal.woff2"),
+        new("https://unpkg.com/@fontsource/oswald@5/files/oswald-latin-400-normal.woff2"),
     ];
 
     private static readonly FontSource[] PlayfairSources =
     [
-        // googlefonts/Playfair main branch was restructured; use 1001fonts as primary
-        new("https://www.1001fonts.com/download/font/playfair-display.regular.ttf"),
-        new("https://www.fontsquirrel.com/fonts/download/playfair-display",
-            "PlayfairDisplay-Regular.ttf"),
+        new("https://cdn.jsdelivr.net/npm/@fontsource/playfair-display@5/files/playfair-display-latin-400-normal.woff2"),
+        new("https://unpkg.com/@fontsource/playfair-display@5/files/playfair-display-latin-400-normal.woff2"),
     ];
 
     private static readonly FontSource[] CinzelSources =
     [
-        // googlefonts/cinzel main branch was restructured; use 1001fonts as primary
-        new("https://www.1001fonts.com/download/font/cinzel.regular.ttf"),
-        new("https://cdn.jsdelivr.net/gh/googlefonts/cinzel@main/fonts/ttf/Cinzel-Regular.ttf"),
-    ];
-
-    // Monochrome (outline) Noto Emoji — ab_glyph compatible, used as per-char emoji fallback
-    private static readonly FontSource[] NotoEmojiSources =
-    [
-        new("https://github.com/googlefonts/noto-emoji/raw/main/fonts/NotoEmoji-Regular.ttf"),
-        new("https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/fonts/NotoEmoji-Regular.ttf"),
+        new("https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5/files/cinzel-latin-400-normal.woff2"),
+        new("https://unpkg.com/@fontsource/cinzel@5/files/cinzel-latin-400-normal.woff2"),
     ];
 
     public string? NotoSansPath { get; private set; }
@@ -148,7 +132,6 @@ public class FontAcquisitionService : IHostedService
     public string? OswaldPath { get; private set; }
     public string? PlayfairPath { get; private set; }
     public string? CinzelPath { get; private set; }
-    public string? NotoEmojiPath { get; private set; }
 
     public FontAcquisitionService(
         IApplicationPaths appPaths,
@@ -176,17 +159,15 @@ public class FontAcquisitionService : IHostedService
         NotoSerifPath = await AcquireFontAsync(
             fontsDir, "NotoSerifJP.otf", "custom-font-serif.otf", NotoSerifSources, ct, NotoSerifSystemPaths);
         RobotoMonoPath = await AcquireFontAsync(
-            fontsDir, "RobotoMono-Regular.ttf", "custom-font-mono.ttf", RobotoMonoSources, ct, RobotoMonoSystemPaths);
+            fontsDir, "RobotoMono-Regular.woff2", "custom-font-mono.ttf", RobotoMonoSources, ct, RobotoMonoSystemPaths);
         RobotoPath = await AcquireFontAsync(
-            fontsDir, "Roboto-Regular.ttf", "custom-font-roboto.ttf", RobotoSources, ct, RobotoSystemPaths);
+            fontsDir, "Roboto-Regular.woff2", "custom-font-roboto.ttf", RobotoSources, ct, RobotoSystemPaths);
         OswaldPath = await AcquireFontAsync(
-            fontsDir, "Oswald-Regular.ttf", "custom-font-oswald.ttf", OswaldSources, ct, OswaldSystemPaths);
+            fontsDir, "Oswald-Regular.woff2", "custom-font-oswald.ttf", OswaldSources, ct, OswaldSystemPaths);
         PlayfairPath = await AcquireFontAsync(
-            fontsDir, "PlayfairDisplay-Regular.ttf", "custom-font-playfair.ttf", PlayfairSources, ct, PlayfairSystemPaths);
+            fontsDir, "PlayfairDisplay-Regular.woff2", "custom-font-playfair.ttf", PlayfairSources, ct, PlayfairSystemPaths);
         CinzelPath = await AcquireFontAsync(
-            fontsDir, "Cinzel-Regular.ttf", "custom-font-cinzel.ttf", CinzelSources, ct, CinzelSystemPaths);
-        NotoEmojiPath = await AcquireFontAsync(
-            fontsDir, "NotoEmoji-Regular.ttf", "custom-font-emoji.ttf", NotoEmojiSources, ct, NotoEmojiSystemPaths);
+            fontsDir, "Cinzel-Regular.woff2", "custom-font-cinzel.ttf", CinzelSources, ct, CinzelSystemPaths);
     }
 
     private async Task<string?> AcquireFontAsync(
@@ -242,7 +223,22 @@ public class FontAcquisitionService : IHostedService
             catch { /* checksum mismatch — fall through to re-download */ }
         }
 
-        // 5. Try each source in order; return on first success
+        // 5. Alternate-extension fallback: e.g., Roboto-Regular.ttf exists but we now look for .woff2.
+        //    Avoids re-downloading when the only change is the target extension.
+        var baseNoExt = Path.GetFileNameWithoutExtension(cacheFileName);
+        foreach (var altExt in new[] { ".woff2", ".ttf", ".otf", ".woff" })
+        {
+            if (string.Equals(altExt, Path.GetExtension(cacheFileName), StringComparison.OrdinalIgnoreCase))
+                continue;
+            var altPath = Path.Combine(fontsDir, baseNoExt + altExt);
+            if (File.Exists(altPath))
+            {
+                _logger.LogInformation("Using cached font (alternate format {Ext}): {Path}", altExt, altPath);
+                return altPath;
+            }
+        }
+
+        // 6. Try each source in order; return on first success
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         foreach (var source in sources)
         {

@@ -22,6 +22,7 @@ pub struct MediaInfo {
     pub audio_bitrate: Option<String>,
     pub audio_sample_rate: Option<u32>,
     pub audio_tracks: i32,
+    pub subtitle_count: i32,
     pub duration: String,
     pub duration_secs: f64,
 }
@@ -95,6 +96,11 @@ fn parse_ffprobe_json(json_str: &str, input: &str) -> Result<MediaInfo, String> 
         .collect();
 
     let audio_tracks = audio_streams.len() as i32;
+
+    let subtitle_count = streams
+        .iter()
+        .filter(|s| s["codec_type"].as_str() == Some("subtitle"))
+        .count() as i32;
 
     // Video codec
     let video_codec = friendly_video_codec(
@@ -188,6 +194,7 @@ fn parse_ffprobe_json(json_str: &str, input: &str) -> Result<MediaInfo, String> 
         audio_bitrate,
         audio_sample_rate,
         audio_tracks,
+        subtitle_count,
         duration,
         duration_secs,
     })

@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/003-poster-sheet-generator/plan.md
+at specs/004-rust-layout-engine/plan.md
 <!-- SPECKIT END -->
 
 ## 部署工作流程（必须遵守）
@@ -10,8 +10,7 @@ at specs/003-poster-sheet-generator/plan.md
 
 ```
 1. make test          ← 运行全套测试（Rust + TypeScript + C#）
-2. [告知用户测试结果] ← 等待用户确认
-3. make update        ← 部署（仅在用户明确确认后执行）
+2. make update        ← 部署到 jellyfin-dev 容器（会重启容器）
 ```
 
 - 运行测试时**必须**用 `make test`（或 `mise run test`），`make` 是唯一正确的测试入口，不得直接调用 cargo/vitest/dotnet 替代
@@ -19,6 +18,10 @@ at specs/003-poster-sheet-generator/plan.md
 - 绝不在用户未确认的情况下直接部署到 jellyfin-dev 容器
 - `make update` 会重启容器，是破坏性操作
 - 各命令详情见 agents.md 中的测试命令章节
+
+## Speckit 分支规范（强制覆盖）
+
+**speckit 要求的 `00x-xxx` 格式分支命名必须无视。** speckit 的 git-feature hook（`/speckit-git-feature`）绝对不执行，规格文档（spec/plan/tasks）只在当前工作分支上提交，不得为 spec 工作单独创建新分支。
 
 ## Shell 规范
 

@@ -7,6 +7,7 @@ export interface OverlaySettingsDto {
   showVideoEncoding: boolean
   showAudioEncoding: boolean
   showDuration: boolean
+  showSubtitles: boolean
   showFrameTimestamp: boolean
   colorTheme: string
   fontFamily: string
@@ -89,6 +90,7 @@ export interface MediaInfoDto {
   audioFormat: string | null
   audioBitrate: string | null
   audioTracks: number
+  subtitleCount: number | null
   duration: string
 }
 
@@ -200,6 +202,7 @@ function defaultOverlay(): OverlaySettingsDto {
     showVideoEncoding: true,
     showAudioEncoding: true,
     showDuration: true,
+    showSubtitles: true,
     showFrameTimestamp: false,
     colorTheme: 'classic',
     fontFamily: 'noto-sans-jp',
@@ -221,22 +224,45 @@ export function loadStartJobRequest(): StartJobRequest {
   return { rows, cols, mode, seed: mode === 'random' ? crypto.randomUUID() : undefined, overlay }
 }
 
+export type FontScript = 'latin' | 'cjk' | 'emoji' | 'symbol'
+
 export interface UserFontInfo {
   key: string
-  script: 'latin' | 'cjk'
+  displayName: string
+  script: FontScript
+  format: string
+  isSerif: boolean | null
+  isMonospace: boolean | null
+  isBold: boolean | null
+  isItalic: boolean | null
+  hasLigatures: boolean | null
+}
+
+function mapFontInfo(x: any): UserFontInfo | null {
+  const key = typeof x === 'string' ? x : (x.key ?? x.Key ?? '')
+  if (!key) return null
+  const script = x.script ?? x.Script ?? 'latin'
+  return {
+    key,
+    displayName: x.displayName ?? x.DisplayName ?? key,
+    script: (['latin', 'cjk', 'emoji', 'symbol'].includes(script) ? script : 'latin') as FontScript,
+    format: x.format ?? x.Format ?? 'ttf',
+    isSerif: x.isSerif ?? x.IsSerif ?? null,
+    isMonospace: x.isMonospace ?? x.IsMonospace ?? null,
+    isBold: x.isBold ?? x.IsBold ?? null,
+    isItalic: x.isItalic ?? x.IsItalic ?? null,
+    hasLigatures: x.hasLigatures ?? x.HasLigatures ?? null,
+  }
 }
 
 export async function listUserFonts(): Promise<UserFontInfo[]> {
   const res = await apiFetch(`${BASE}/fonts`)
   if (!res.ok) return []
   const raw: any[] = await res.json().catch(() => [])
-  return raw.map(x => ({
-    key: typeof x === 'string' ? x : (x.key ?? ''),
-    script: (x.script === 'cjk' ? 'cjk' : 'latin') as 'latin' | 'cjk',
-  })).filter(x => x.key)
+  return raw.map(mapFontInfo).filter((x): x is UserFontInfo => x !== null)
 }
 
-export async function uploadFont(file: File): Promise<{ key: string; displayName: string; script: 'latin' | 'cjk' }> {
+export async function uploadFont(file: File): Promise<UserFontInfo> {
   const token = window.ApiClient?.accessToken()
   const headers: Record<string, string> = token
     ? { 'Authorization': `MediaBrowser Token="${token}"` }
@@ -253,7 +279,8 @@ export async function uploadFont(file: File): Promise<{ key: string; displayName
     throw new Error(text || res.statusText)
   }
   const d = await res.json()
-  return { key: d.key ?? d.Key ?? '', displayName: d.displayName ?? d.DisplayName ?? '', script: d.script === 'cjk' ? 'cjk' : 'latin' }
+  return mapFontInfo(d) ?? { key: '', displayName: '', script: 'latin', format: 'ttf',
+    isSerif: null, isMonospace: null, isBold: null, isItalic: null, hasLigatures: null }
 }
 
 export async function deleteUserFont(key: string): Promise<void> {

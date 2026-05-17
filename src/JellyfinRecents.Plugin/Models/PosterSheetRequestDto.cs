@@ -11,7 +11,7 @@ public class SkipSegmentDto
 
 public class PosterSheetRequestDto
 {
-    [Range(1, 10)]
+    [Range(1, 20)]
     public int Rows { get; set; } = 6;
 
     [Range(1, 12)]
@@ -28,7 +28,7 @@ public class PosterSheetRequestDto
 
 public class PreviewRequestDto
 {
-    [Range(1, 10)]
+    [Range(1, 20)]
     public int Rows { get; set; } = 6;
 
     [Range(1, 12)]
