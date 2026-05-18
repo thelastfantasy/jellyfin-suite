@@ -1,39 +1,39 @@
 [
   {
     "guid": "a6dd5650-d124-42b6-806a-5426f266e8f2",
-    "name": "Jellyfin Recents",
-    "description": "A customizable recently-played view with flexible grouping and sorting. Downloads fonts on first use.",
-    "overview": "Browse your recently played media grouped by day/week/month/quarter/year, with multiple sort options (play time, title, release date, favorite) and thumbnail/poster/list view modes. Includes a thumbnail grid generator with overlay text and theming. Fonts are downloaded automatically on first use.",
+    "name": "Jellyfin Suite",
+    "description": "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer. Downloads fonts on first use.",
+    "overview": "Browse recently played media with flexible grouping and sorting (day/week/month/quarter/year), multiple sort options and view modes. Generate poster sheets for your library. Enhance the web player with frame stepping, screenshots, and mobile gesture controls. Fonts are downloaded automatically on first use.",
     "owner": "thelastfantasy",
     "category": "General",
     "imageUrl": "",
     "versions": [
       {
-        "version": "1.4.2.0",
-        "changelog": "https://github.com/thelastfantasy/jellyfin-recents/releases/tag/v1.4.2",
-        "targetAbi": "10.8.0.0",
-        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-recents/releases/download/v1.4.2/jellyfin-recents_1.4.2.0.zip",
-        "checksum": "384868b3016b7f453c2c6edb958433a9",
-        "timestamp": "2026-05-17T11:46:12.0000000Z"
+        "version": "1.5.0.0",
+        "changelog": "https://github.com/thelastfantasy/jellyfin-suite/releases/tag/v1.5.0",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-suite/releases/download/v1.5.0/jellyfin-suite_1.5.0.0.zip",
+        "checksum": "ca729e151ed48a17b403d6af15b662bd",
+        "timestamp": "2026-05-18T16:07:13.0000000Z"
       }
     ]
   },
   {
     "guid": "9f4b2e0a-c736-4d58-b9e1-0a2f3c4d5e6b",
-    "name": "Jellyfin Recents + Fonts",
-    "description": "A customizable recently-played view with flexible grouping and sorting. Includes bundled Latin fonts — no internet access needed.",
-    "overview": "Same as Jellyfin Recents, but ships with pre-bundled Latin fonts (Roboto, RobotoMono, Oswald, Playfair Display, Cinzel). Choose this variant if your server has restricted internet access or you prefer a self-contained install. CJK fonts (Noto CJK) are still sourced from the system or downloaded separately.",
+    "name": "Jellyfin Suite + Fonts",
+    "description": "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer. Includes bundled Latin fonts — no internet access needed.",
+    "overview": "Same as Jellyfin Suite, but ships with pre-bundled Latin fonts (Roboto, RobotoMono, Oswald, Playfair Display, Cinzel). Choose this variant if your server has restricted internet access or you prefer a self-contained install. CJK fonts (Noto CJK) are still sourced from the system or downloaded separately.",
     "owner": "thelastfantasy",
     "category": "General",
     "imageUrl": "",
     "versions": [
       {
-        "version": "1.4.2.0",
-        "changelog": "https://github.com/thelastfantasy/jellyfin-recents/releases/tag/v1.4.2",
-        "targetAbi": "10.8.0.0",
-        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-recents/releases/download/v1.4.2/jellyfin-recents-fonts_1.4.2.0.zip",
-        "checksum": "ecdc0dc7521d2cca415ded77311dd54b",
-        "timestamp": "2026-05-17T11:46:12.0000000Z"
+        "version": "1.5.0.0",
+        "changelog": "https://github.com/thelastfantasy/jellyfin-suite/releases/tag/v1.5.0",
+        "targetAbi": "10.10.7.0",
+        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-suite/releases/download/v1.5.0/jellyfin-suite-fonts_1.5.0.0.zip",
+        "checksum": "87d806dfb9fa9d451f99467c1c101fe1",
+        "timestamp": "2026-05-18T16:07:13.0000000Z"
       }
     ]
   }
