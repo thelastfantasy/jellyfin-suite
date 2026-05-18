@@ -43,7 +43,7 @@ Automatically injected into the Jellyfin web player. No configuration needed.
 
 - **Frame stepping**: Four buttons (|◁◁ |◁ ▷| ▷▷|) for −10f / −1f / +1f / +10f navigation; frame rate auto-detected from MediaInfo; steps pause playback automatically
 - **Screenshot**: One-click PNG download of the current video frame; optional subtitle overlay (ASS and SRT); client-side only, no server files created
-- **Mobile double-tap seek**: Double-tap left third to seek −10 s, right third to seek +10 s, center third to toggle play/pause (touch devices only)
+- **Mobile double-tap seek**: Double-tap left third to seek back, right third to seek forward, center third to toggle play/pause; seek duration configurable in the plugin management panel (default 10 s, touch devices only)
 - **Mobile swipe controls**: Swipe up/down on the left half to adjust brightness (0–200%), right half for volume (0–100%); OSD percentage indicator shown during gesture (touch devices only)
 
 ---
@@ -55,7 +55,7 @@ Automatically injected into the Jellyfin web player. No configuration needed.
 1. Open Jellyfin dashboard → **Plugins** → **Repositories**
 2. Add repository URL:
    ```
-   https://thelastfantasy.github.io/jellyfin-recents/manifest.json
+   https://thelastfantasy.github.io/jellyfin-suite/manifest.json
    ```
 3. Find **Jellyfin Suite** in the **Catalog** and install
 4. Restart Jellyfin
@@ -64,14 +64,33 @@ Automatically injected into the Jellyfin web player. No configuration needed.
 
 ### Manual
 
-1. Download the latest `.zip` from [Releases](https://github.com/thelastfantasy/jellyfin-recents/releases)
+1. Download the latest `.zip` from [Releases](https://github.com/thelastfantasy/jellyfin-suite/releases)
 2. Extract to your Jellyfin plugins directory:
-   - Linux: `/var/lib/jellyfin/plugins/JellyfinRecents/`
-   - Windows: `%APPDATA%\Jellyfin\plugins\JellyfinRecents\`
-   - Docker: `/config/plugins/JellyfinRecents/`
+   - Linux: `/var/lib/jellyfin/plugins/JellyfinSuite/`
+   - Windows: `%APPDATA%\Jellyfin\plugins\JellyfinSuite\`
+   - Docker: `/config/plugins/JellyfinSuite/`
 3. Restart Jellyfin
 
 After installation, a **Recently Played** entry will appear in the sidebar.
+
+---
+
+## Migrating from Jellyfin Recents
+
+If you previously installed the **Jellyfin Recents** plugin, follow these steps to migrate to Jellyfin Suite.
+
+> The two plugins share the same internal GUID. Having both installed simultaneously may cause conflicts — uninstall the old one before installing the new one.
+
+1. **Remove the old repository**: Jellyfin dashboard → **Plugins** → **Repositories** → delete the old entry:
+   ```
+   https://thelastfantasy.github.io/jellyfin-recents/manifest.json
+   ```
+2. **Uninstall Jellyfin Recents**: **Plugins** → **My Plugins** → find *Jellyfin Recents* (or *Jellyfin Recents + Fonts*) → Uninstall
+3. **Restart Jellyfin** to complete the uninstall
+4. **Add the new repository** (see Installation above) and install **Jellyfin Suite**
+5. **Restart Jellyfin** again
+
+Your play history and plugin configuration are stored in the Jellyfin database and data directory — they are not affected by the migration.
 
 ---
 
@@ -82,7 +101,7 @@ The plugin downloads Noto Sans JP and Noto Serif JP automatically on first use (
 To use your own fonts, upload them from the Thumbnail Grid settings panel, or place them manually:
 
 ```
-<jellyfin data dir>/plugins/JellyfinRecents/fonts/
+<jellyfin data dir>/plugins/JellyfinSuite/fonts/
   custom-MyFont.ttf     ← uploaded via settings panel
 ```
 
