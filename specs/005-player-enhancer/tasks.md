@@ -14,13 +14,13 @@
 
 ⚠️ **Phase 0 必须在 Phase 1 之前完成**
 
-- [x] R001 新建 `src/JellyfinRecents.Plugin/PluginConstants.cs`，定义五个常量：`PluginName = "Jellyfin Suite"`、`TaskCategory`、`TaskKeyPrefix = "JellyfinRecents"`、`DatabaseFileName = "jellyfin-recents.db"`、`PosterTempPrefix = "postersheet-"`
-- [x] R002 [P] 更新 `src/JellyfinRecents.Plugin/Plugin.cs`：`Name` 属性 → `PluginConstants.PluginName`，更新 `Description` 为 "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer."
+- [x] R001 新建 `src/JellyfinSuite.Plugin/PluginConstants.cs`，定义五个常量：`PluginName = "Jellyfin Suite"`、`TaskCategory`、`TaskKeyPrefix = "JellyfinRecents"`、`DatabaseFileName = "jellyfin-recents.db"`、`PosterTempPrefix = "postersheet-"`
+- [x] R002 [P] 更新 `src/JellyfinSuite.Plugin/Plugin.cs`：`Name` 属性 → `PluginConstants.PluginName`，更新 `Description` 为 "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer."
 - [x] R003 [P] 批量更新 6 个 Task 文件（`Clean*.cs`）中的 `Category = "Jellyfin Recents"` → `PluginConstants.TaskCategory`
 - [x] R004 [P] 修 bug：`CleanInvalidRecordsTask.cs` 将 `Type = "DailyTrigger"` 改为 `TaskTriggerInfo.TriggerDaily`
 - [x] R005 [P] 消除重复：`CleanPosterSheetsTask.cs` 删除 `private const string TempPrefix`，改为引用 `PluginConstants.PosterTempPrefix`；`PosterSheetJobService.cs` 同步替换
-- [x] R006 [P] 更新 `src/JellyfinRecents.Plugin/PluginServiceRegistrator.cs` 中的 DB 路径字符串 → `PluginConstants.DatabaseFileName`（引用常量，行为不变）
-- [x] R007 [P] 更新 `src/JellyfinRecents.Plugin/meta.json`：`name` → `"Jellyfin Suite"`，`description` → 新描述，`targetAbi` → `"10.10.7.0"`；同时修复 `Makefile` 的 `update` target，追加 `docker cp meta.json` 步骤
+- [x] R006 [P] 更新 `src/JellyfinSuite.Plugin/PluginServiceRegistrator.cs` 中的 DB 路径字符串 → `PluginConstants.DatabaseFileName`（引用常量，行为不变）
+- [x] R007 [P] 更新 `src/JellyfinSuite.Plugin/meta.json`：`name` → `"Jellyfin Suite"`，`description` → 新描述，`targetAbi` → `"10.10.7.0"`；同时修复 `Makefile` 的 `update` target，追加 `docker cp meta.json` 步骤
 - [x] R008 [P] 更新 `manifest.json`：两条 entry 的 `name`/`description`/`overview`（base 改为 "Jellyfin Suite"，bundled 改为 "Jellyfin Suite + Fonts"）；两条 `targetAbi` 均改为 `"10.10.7.0"`
 - [x] R009 [P] 更新 `.github/workflows/release.yml`：zip 文件名 `jellyfin-recents_*.zip` → `jellyfin-suite_*.zip`；bundled jq 中的 `"Jellyfin Recents + Fonts"` → `"Jellyfin Suite + Fonts"`；manifest 步骤中的 `targetAbi` → `"10.10.7.0"`（`JellyfinRecents.Plugin.dll` / `.csproj` 引用不变，AssemblyName 保持）；`build.yml` 无需改动；重命名 `jellyfin-recents.sln` → `jellyfin-suite.sln`（无其他文件引用，构建不受影响）
 - [x] R010 [P] 更新 `README.md` 和 `README.zh-CN.md`：标题改为 Jellyfin Suite，描述涵盖三大功能（最近播放、海报生成器、播放器增强）
@@ -38,7 +38,7 @@
   - `src/frontend/src/components/PlayRecordCard.tsx`：日志前缀 → `[JellyfinSuite]`
   - `src/frontend/src/styles.css`：文件头注释更新
   - `src/frontend/package.json`：`name` → `"jellyfin-suite-frontend"`（private 包，lock.json 自动同步）
-  - `src/JellyfinRecents.Plugin/Models/PosterSheetJob.cs`：`BrandingText` 默认值 → `"Jellyfin Suite"`（用户可见，出现在海报水印中）
+  - `src/JellyfinSuite.Plugin/Models/PosterSheetJob.cs`：`BrandingText` 默认值 → `"Jellyfin Suite"`（用户可见，出现在海报水印中）
 - [x] R013 [P] 前端 localStorage 迁移：`src/frontend/src/state/viewSettings.ts`，将 `STORAGE_KEY` 改为引用 `SETTINGS_KEY`，并在读取前加一次性迁移——若 `SETTINGS_KEY_LEGACY` 存在则将其值复制到 `SETTINGS_KEY` 后删除旧键（不迁移则用户已保存的视图设置丢失）
 - [x] R014 [P] 更新 Rust 端：
   - `src/poster-gen/src/main.rs`：在文件顶部提取 `const BRANDING_DEFAULT: &str = "Jellyfin Suite";`，两处 `default_value = "Jellyfin Recents"` → `default_value = BRANDING_DEFAULT`；更新 doc 注释
@@ -56,9 +56,9 @@
 
 - [ ] T001 新建 `src/player-enhancer/package.json`，添加 vite + typescript 依赖，配置 `build` 脚本
 - [ ] T002 新建 `src/player-enhancer/tsconfig.json`，target ESNext，moduleResolution bundler，严格模式
-- [ ] T003 新建 `src/player-enhancer/vite.config.ts`，ESM lib 格式，输出 `jellyfin-recents-enhancer.js` 至 `src/JellyfinRecents.Plugin/Web/`
+- [ ] T003 新建 `src/player-enhancer/vite.config.ts`，ESM lib 格式，输出 `jellyfin-suite-enhancer.js` 至 `src/JellyfinSuite.Plugin/Web/`
 - [ ] T004 [P] 更新 `Makefile` build target，追加 `cd src/player-enhancer && npm run build`
-- [ ] T005 [P] 更新 `src/JellyfinRecents.Plugin/Plugin.cs`，追加 `JellyfinRecentsPlayerEnhancer` 的 `PluginPageInfo`（`EmbeddedResourcePath` 指向 `jellyfin-recents-enhancer.js`，不含 `EnableInMainMenu`）
+- [ ] T005 [P] 更新 `src/JellyfinSuite.Plugin/Plugin.cs`，追加 `JellyfinSuitePlayerEnhancer` 的 `PluginPageInfo`（`EmbeddedResourcePath` 指向 `jellyfin-suite-enhancer.js`，不含 `EnableInMainMenu`）
 
 **Checkpoint**: `npm run build` 在 player-enhancer 目录可执行，产物路径正确
 
@@ -73,12 +73,12 @@
 - [ ] T006 新建 `src/player-enhancer/src/types/jellyfin.ts`，定义精简 interface：`MediaStream`、`MediaSource`、`PlaybackManager`、`JellyfinPluginDeps`（含 `playbackManager`、`events`）
 - [ ] T007 [P] 新建 `src/player-enhancer/src/i18n.ts`，实现 `t(key)` 函数；语言检测顺序：`document.documentElement.lang` → `navigator.language` → `'en'`；使用前缀最优匹配（`zh-*` → zh，`ja-*` → ja，其他 → en）；包含 zh/ja/en 完整翻译 key（帧步进 tooltip × 4、截图 × 2、OSD 标签 × 2、提示信息 × 3）
 - [ ] T008 [P] 新建 `src/player-enhancer/src/icons.ts`，导出帧步进四个 SVG 字符串常量（`|◁◁` `|◁` `▷|` `▷▷|`）及截图图标 SVG
-- [ ] T009 [P] 新建 `src/player-enhancer/src/styles.ts`，导出 `injectStyles()` 函数，向 `document.head` 插入带 `id="jr-enhancer-styles"` 的 `<style>` 标签；所有选择器以 `.jr-enhancer-` 前缀隔离
-- [ ] T010 在 `src/JellyfinRecents.Plugin/Configuration/PluginConfiguration.cs` 追加 `bool AutoInjectEnabled { get; set; } = true;` 字段；新建 `PlayerEnhancerEntryPoint.cs`，实现 `IHostedService`：`StartAsync()` 先检查 `Plugin.Instance.Configuration.AutoInjectEnabled`，为 `false` 时直接返回，否则读取 `IApplicationPaths.WebPath + "/config.json"` 幂等追加 enhancer URL，写入失败时记录警告不抛出异常
-- [ ] T011 新建 `src/player-enhancer/src/injector.ts`，实现 `initInjector(playbackManager, events)`：MutationObserver 监听 `document.body` 检测 `.videoPlayerContainer`，同时 `Events.on(playbackManager, 'playbackstart', ...)` 兜底；幂等注入（检查 `#jr-enhancer-root` 是否已存在）；调用 `injectStyles()`
+- [ ] T009 [P] 新建 `src/player-enhancer/src/styles.ts`，导出 `injectStyles()` 函数，向 `document.head` 插入带 `id="jfs-enhancer-styles"` 的 `<style>` 标签；所有选择器以 `.jfs-enhancer-` 前缀隔离
+- [ ] T010 在 `src/JellyfinSuite.Plugin/Configuration/PluginConfiguration.cs` 追加 `bool AutoInjectEnabled { get; set; } = true;` 字段；新建 `PlayerEnhancerEntryPoint.cs`，实现 `IHostedService`：`StartAsync()` 先检查 `Plugin.Instance.Configuration.AutoInjectEnabled`，为 `false` 时直接返回，否则读取 `IApplicationPaths.WebPath + "/config.json"` 幂等追加 enhancer URL，写入失败时记录警告不抛出异常
+- [ ] T011 新建 `src/player-enhancer/src/injector.ts`，实现 `initInjector(playbackManager, events)`：MutationObserver 监听 `document.body` 检测 `.videoPlayerContainer`，同时 `Events.on(playbackManager, 'playbackstart', ...)` 兜底；幂等注入（检查 `#jfs-enhancer-root` 是否已存在）；调用 `injectStyles()`
 - [ ] T012 新建 `src/player-enhancer/src/index.ts`，`export default class PlayerEnhancerPlugin`，构造函数调用 `injectStyles()` 和 `initInjector(playbackManager, events)`
 
-**Checkpoint**: 构建产物加载后，播放任意视频时 DevTools 可见 `.videoPlayerContainer` 内出现 `#jr-enhancer-root` 容器（暂无子元素）
+**Checkpoint**: 构建产物加载后，播放任意视频时 DevTools 可见 `.videoPlayerContainer` 内出现 `#jfs-enhancer-root` 容器（暂无子元素）
 
 ---
 
@@ -161,10 +161,10 @@
 
 **Independent Test**: 以管理员账号打开设置面板，可见注入管理区域及状态标签；点击"重新注入"后标签更新为已启用并提示刷新；点击"卸载注入"后更新为已禁用；以普通用户账号打开，注入管理区域不可见
 
-- [ ] T024 [US5] 新建 `src/JellyfinRecents.Plugin/Controllers/PlayerEnhancerController.cs`，实现三个 endpoint，**全部加 `[Authorize(Policy = Policies.RequiresElevation)]`**（仅 Jellyfin 管理员可调用）：
-  - `GET /JellyfinRecents/PlayerEnhancer/Status` → `{ autoInjectEnabled: bool }`（读 `Plugin.Instance.Configuration.AutoInjectEnabled`）
-  - `POST /JellyfinRecents/PlayerEnhancer/Inject` → `AutoInjectEnabled = true` → `SaveConfiguration()` → 幂等追加 URL；失败时返回 500 含错误描述
-  - `DELETE /JellyfinRecents/PlayerEnhancer/Inject` → `AutoInjectEnabled = false` → `SaveConfiguration()` → 移除 URL；失败时返回 500 含错误描述
+- [ ] T024 [US5] 新建 `src/JellyfinSuite.Plugin/Controllers/PlayerEnhancerController.cs`，实现三个 endpoint，**全部加 `[Authorize(Policy = Policies.RequiresElevation)]`**（仅 Jellyfin 管理员可调用）：
+  - `GET /JellyfinSuite/PlayerEnhancer/Status` → `{ autoInjectEnabled: bool }`（读 `Plugin.Instance.Configuration.AutoInjectEnabled`）
+  - `POST /JellyfinSuite/PlayerEnhancer/Inject` → `AutoInjectEnabled = true` → `SaveConfiguration()` → 幂等追加 URL；失败时返回 500 含错误描述
+  - `DELETE /JellyfinSuite/PlayerEnhancer/Inject` → `AutoInjectEnabled = false` → `SaveConfiguration()` → 移除 URL；失败时返回 500 含错误描述
   - 提取共享 `PlayerEnhancerConfigPatcher` 静态工具类（供 T010 的 EntryPoint 共用 config.json 读写）；同步重构 T010 使用此工具类
 - [ ] T025 [P] [US5] 新建 `src/frontend/src/api/playerEnhancerApi.ts`，封装三个 API 调用函数：`getEnhancerStatus()` → `{ autoInjectEnabled: bool }`、`injectEnhancer()`、`removeEnhancer()`，使用项目现有 `jellyfinClient` 模式；收到 401/403 时向调用方抛出（正常路径由 T026 的 `IsAdministrator` 前置检查保证不触发）
 - [ ] T026 [US5] 新建 `src/frontend/src/components/PlayerEnhancerPanel.tsx`（Preact 组件）：
@@ -184,7 +184,7 @@
 
 **Purpose**: 完善细节，覆盖遗漏的边界行为
 
-- [ ] T029 [P] 完善 `src/player-enhancer/src/styles.ts` 中所有 UI 组件的 CSS（按钮 hover/active 状态、OSD 动画、ripple 动画、Switch 样式）；确认 `.jr-enhancer-` 前缀无泄漏
+- [ ] T029 [P] 完善 `src/player-enhancer/src/styles.ts` 中所有 UI 组件的 CSS（按钮 hover/active 状态、OSD 动画、ripple 动画、Switch 样式）；确认 `.jfs-enhancer-` 前缀无泄漏
 - [ ] T030 [P] 新建 `tests/player-enhancer/` 目录，用 vitest 为纯逻辑函数编写单元测试：`getFps` fallback 逻辑、`stepFrames` clamp 边界、`t()` 语言回退、OSD value clamp
 - [ ] T031 在 jellyfin-dev 容器上手动验收全部 5 个用户故事（完整 E2E 检查清单）：帧步进精度、截图含/不含字幕、移动端双击三区域、滑动亮度/音量、注入管理 UI
 - [ ] T032 [P] 更新 `specs/005-player-enhancer/checklists/requirements.md`，将所有验收项标记完成
@@ -269,8 +269,8 @@ Phase 8   → Polish + tests + release
 ## Notes
 
 - `[P]` = 可与同阶段其他 `[P]` 任务并行（不同文件）
-- Phase 0（R001–R011）为跨功能改名，影响现有代码；R002–R010 均可并行；R011 必须最后执行
-- Phase 0 的改动不改变 AssemblyName / 插件文件夹 / Task.Key / DB 文件名，无需任何数据迁移
+- Phase 0（R001–R015）为完整改名，包含目录、AssemblyName、命名空间、API 路由、CSS 前缀、localStorage key、DB 文件名；R001–R014 已完成，R015（gh repo rename）待合并 main 后执行
+- Phase 0 含向后兼容迁移：DB（VACUUM INTO）、settings localStorage、poster localStorage、unlock localStorage
 - `[USn]` = 所属用户故事，用于追踪 spec 验收
 - Phase 2 完成前不得开始任何 US 工作
 - US3 和 US4 共用 `gestures.ts` 和 `osd-overlay.ts`，US4 是对这两个文件的**扩展**而非重写
