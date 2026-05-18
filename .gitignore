@@ -55,6 +55,7 @@ tests/JellyfinRecents.Tests/obj/
 *.db-wal
 *.db-shm
 *.db.bak
+*-backup.sql
 .opencode/tmp/
 
 # Rust
