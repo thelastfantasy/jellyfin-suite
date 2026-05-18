@@ -67,10 +67,10 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
   }
 
   return (
-    <div class="jr-settings-btn-wrap">
+    <div class="jfs-settings-btn-wrap">
       <button
         ref={btnRef}
-        class="jr-settings-gear-btn"
+        class="jfs-settings-gear-btn"
         onClick={handleToggle}
         title={t.settingsTitle}
       >
@@ -78,29 +78,29 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
       </button>
       <Popover open={open} onClose={() => setOpen(false)}>
         <div
-          class="jr-settings-popover"
+          class="jfs-settings-popover"
           style={{
             position: 'fixed',
             ...style,
             zIndex: '999999',
           }}
         >
-          <div class="jr-settings-popover__title">{t.settingsTitle}</div>
-          <div class="jr-settings-popover__mode">{label}</div>
-          <div class="jr-settings-popover__presets">
+          <div class="jfs-settings-popover__title">{t.settingsTitle}</div>
+          <div class="jfs-settings-popover__mode">{label}</div>
+          <div class="jfs-settings-popover__presets">
             {presets.map((n) => (
               <button
                 key={n}
-                class={`jr-settings-popover__btn${pageSize === n ? ' jr-settings-popover__btn--active' : ''}`}
+                class={`jfs-settings-popover__btn${pageSize === n ? ' jfs-settings-popover__btn--active' : ''}`}
                 onClick={() => commitSize(n)}
               >
                 {n}
               </button>
             ))}
           </div>
-          <div class="jr-settings-popover__row">
+          <div class="jfs-settings-popover__row">
             <input
-              class="jr-settings-popover__input"
+              class="jfs-settings-popover__input"
               type="number"
               min="1"
               max="999"
@@ -110,7 +110,7 @@ export function SettingsPopover({ groupBy, pageSize, onChange }: Props) {
                 if (v > 0) commitSize(v)
               }}
             />
-            <span class="jr-settings-popover__unit">{label}</span>
+            <span class="jfs-settings-popover__unit">{label}</span>
           </div>
         </div>
       </Popover>

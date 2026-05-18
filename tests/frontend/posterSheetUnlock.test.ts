@@ -18,7 +18,7 @@ describe('registerPosterViewClick', () => {
     }
     expect(registerPosterViewClick()).toBe(true)
     expect(isPosterUnlocked()).toBe(true)
-    expect(localStorage.getItem('jr-poster-unlocked')).toBe('1')
+    expect(localStorage.getItem('jfs-poster-unlocked')).toBe('1')
   })
 
   it('6 clicks then 5 s timeout → counter resets, next click does not unlock', () => {
@@ -57,12 +57,19 @@ describe('isPosterUnlocked', () => {
   })
 
   it('returns true when localStorage key is set to "1"', () => {
-    localStorage.setItem('jr-poster-unlocked', '1')
+    localStorage.setItem('jfs-poster-unlocked', '1')
     expect(isPosterUnlocked()).toBe(true)
   })
 
   it('returns false for any value other than "1"', () => {
-    localStorage.setItem('jr-poster-unlocked', 'true')
+    localStorage.setItem('jfs-poster-unlocked', 'true')
     expect(isPosterUnlocked()).toBe(false)
+  })
+
+  it('migrates jr-poster-unlocked to jfs-poster-unlocked on first call', () => {
+    localStorage.setItem('jr-poster-unlocked', '1')
+    expect(isPosterUnlocked()).toBe(true)
+    expect(localStorage.getItem('jfs-poster-unlocked')).toBe('1')
+    expect(localStorage.getItem('jr-poster-unlocked')).toBeNull()
   })
 })

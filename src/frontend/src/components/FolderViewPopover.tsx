@@ -90,40 +90,40 @@ export function FolderViewPopover({ itemId, showTypeLabel, viewMode }: Props) {
   const isList = viewMode === 'list'
 
   return (
-    <div class={`jr-folder-btn-wrap${showTypeLabel && !isList ? ' jr-folder-btn-wrap--with-type' : ''}${isList ? ' jr-folder-btn-wrap--list' : ''}`}>
+    <div class={`jfs-folder-btn-wrap${showTypeLabel && !isList ? ' jfs-folder-btn-wrap--with-type' : ''}${isList ? ' jfs-folder-btn-wrap--list' : ''}`}>
       <button
         ref={btnRef}
-        class={`jr-folder-btn${isList ? ' jr-folder-btn--list' : ''}`}
+        class={`jfs-folder-btn${isList ? ' jfs-folder-btn--list' : ''}`}
         onClick={handleToggle}
         title={t.folderViewTitle}
       >
         {loading ? (
-          <span class="jr-folder-btn__spinner" />
+          <span class="jfs-folder-btn__spinner" />
         ) : (
           <MdFolder size={24} />
         )}
       </button>
       <Popover open={open} onClose={close}>
-        <div class="jr-folder-popover" style={style}>
-            <div class="jr-folder-popover__title">{t.folderViewTitle}</div>
+        <div class="jfs-folder-popover" style={style}>
+            <div class="jfs-folder-popover__title">{t.folderViewTitle}</div>
             {loading ? (
-              <div class="jr-folder-popover__loading">
-                <span class="jr-folder-popover__sk" />
-                <span class="jr-folder-popover__sk" />
-                <span class="jr-folder-popover__sk" />
+              <div class="jfs-folder-popover__loading">
+                <span class="jfs-folder-popover__sk" />
+                <span class="jfs-folder-popover__sk" />
+                <span class="jfs-folder-popover__sk" />
               </div>
             ) : (
-              <ul class="jr-folder-popover__list">
+              <ul class="jfs-folder-popover__list">
                 {ancestors.map((a, i) => (
-                  <li key={a.Id} class={`jr-folder-popover__item jr-folder-popover__item--l${i}`}>
+                  <li key={a.Id} class={`jfs-folder-popover__item jfs-folder-popover__item--l${i}`}>
                     <a
-                      class="jr-folder-popover__link"
+                      class="jfs-folder-popover__link"
                       href={`#!/list.html?parentId=${a.Id}&serverId=${a.ServerId}`}
                       onClick={close}
                       title={a.Name}
                     >
-                      <span class="jr-folder-popover__lvl" />
-                      <span class="jr-folder-popover__text">{a.Name}</span>
+                      <span class="jfs-folder-popover__lvl" />
+                      <span class="jfs-folder-popover__text">{a.Name}</span>
                     </a>
                   </li>
                 ))}

@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn stitch_produces_valid_webp() {
-        let out = tmp_path("jr_test_stitch_valid.webp");
+        let out = tmp_path("jfs_test_stitch_valid.webp");
         let (cell_w, cell_h, rows, cols) = (320u32, 180u32, 2u32, 3u32);
         let frames: Vec<(DynamicImage, f64)> = (0..rows * cols)
             .map(|i| (blank_frame(cell_w, cell_h), i as f64 * 10.0))
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn stitch_correct_dimensions_with_header() {
-        let out = tmp_path("jr_test_stitch_dims.webp");
+        let out = tmp_path("jfs_test_stitch_dims.webp");
         let (cell_w, cell_h, rows, cols) = (320u32, 180u32, 2u32, 3u32);
         let frames: Vec<(DynamicImage, f64)> = (0..rows * cols)
             .map(|i| (blank_frame(cell_w, cell_h), i as f64))
@@ -340,7 +340,7 @@ mod tests {
 
     #[test]
     fn stitch_no_overlay_no_header() {
-        let out = tmp_path("jr_test_stitch_nooverlay.webp");
+        let out = tmp_path("jfs_test_stitch_nooverlay.webp");
         let (cell_w, cell_h, rows, cols) = (320u32, 180u32, 2u32, 2u32);
         let frames: Vec<(DynamicImage, f64)> = (0..rows * cols)
             .map(|i| (blank_frame(cell_w, cell_h), i as f64))
@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn stitch_empty_frames_returns_error() {
-        let out = tmp_path("jr_test_stitch_empty.webp");
+        let out = tmp_path("jfs_test_stitch_empty.webp");
         let result = stitch_grid(
             vec![],
             320, 2, 3,
@@ -380,7 +380,7 @@ mod tests {
 
     #[test]
     fn stitch_single_frame_1x1() {
-        let out = tmp_path("jr_test_stitch_1x1.webp");
+        let out = tmp_path("jfs_test_stitch_1x1.webp");
         let (cell_w, cell_h) = (320u32, 180u32);
         let frames = vec![(blank_frame(cell_w, cell_h), 0.0)];
         let timestamps: Vec<f64> = vec![0.0];
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn stitch_transparent_no_bg_fill() {
-        let out = tmp_path("jr_test_stitch_transp.webp");
+        let out = tmp_path("jfs_test_stitch_transp.webp");
         let (cell_w, cell_h, rows, cols) = (320u32, 180u32, 2u32, 2u32);
         let frames: Vec<(DynamicImage, f64)> = (0..rows * cols)
             .map(|i| (blank_frame(cell_w, cell_h), i as f64))

@@ -31,11 +31,11 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/main.tsx'),
-      name: 'JellyfinRecents',
+      name: 'JellyfinSuite',
       formats: ['iife'],
-      fileName: () => 'jellyfin-recents.js',
+      fileName: () => 'jellyfin-suite.js',
     },
-    outDir: resolve(__dirname, '../JellyfinRecents.Plugin/Web'),
+    outDir: resolve(__dirname, '../JellyfinSuite.Plugin/Web'),
     emptyOutDir: false,
     rollupOptions: {
       output: {
@@ -48,7 +48,7 @@ export default defineConfig({
       '/Users': { target: process.env.VITE_JELLYFIN_URL || 'http://localhost:8600', changeOrigin: true },
       '/Items': { target: process.env.VITE_JELLYFIN_URL || 'http://localhost:8600', changeOrigin: true },
       '/System': { target: process.env.VITE_JELLYFIN_URL || 'http://localhost:8600', changeOrigin: true },
-      '/JellyfinRecents': { target: process.env.VITE_JELLYFIN_URL || 'http://localhost:8600', changeOrigin: true },
+      '/JellyfinSuite': { target: process.env.VITE_JELLYFIN_URL || 'http://localhost:8600', changeOrigin: true },
     },
   },
 })

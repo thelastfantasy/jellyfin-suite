@@ -60,7 +60,7 @@ export async function getHistoryPlayed(query: HistoryQuery): Promise<HistoryResu
   if (query.groupDedup) params['groupDedup'] = 'true'
   params['pageSize'] = String(query.pageSize)
 
-  const url = window.ApiClient.getUrl('JellyfinRecents/PlayHistory', params)
+  const url = window.ApiClient.getUrl('JellyfinSuite/PlayHistory', params)
   const data = (await window.ApiClient.ajax({ url, type: 'GET', dataType: 'json' })) as PlayHistoryResponse
 
   const records = data.Entries.map((entry): PlayRecord => ({

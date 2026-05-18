@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn preview_creates_valid_webp() {
-        let out = tmp_path("jr_test_preview_valid.webp");
+        let out = tmp_path("jfs_test_preview_valid.webp");
         run_preview(default_args(out.clone())).expect("preview should succeed");
 
         let bytes = std::fs::read(&out).expect("output file should exist");
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn preview_correct_dimensions_with_header() {
-        let out = tmp_path("jr_test_preview_dims.webp");
+        let out = tmp_path("jfs_test_preview_dims.webp");
         run_preview(default_args(out.clone())).expect("preview should succeed");
 
         let img = image::open(&out).expect("should open as image");
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn preview_no_overlay_omits_header() {
-        let out = tmp_path("jr_test_preview_nooverlay.webp");
+        let out = tmp_path("jfs_test_preview_nooverlay.webp");
         run_preview(PreviewArgs {
             branding_latin_font_path: None,
             branding_cjk_font_path: None,
@@ -317,7 +317,7 @@ mod tests {
     #[test]
     fn preview_all_themes_produce_valid_webp() {
         for theme in ["classic", "dark", "light", "cinematic", "minimal"] {
-            let out = tmp_path(&format!("jr_test_preview_{theme}.webp"));
+            let out = tmp_path(&format!("jfs_test_preview_{theme}.webp"));
             let mut args = default_args(out.clone());
             args.color_theme = theme.to_string();
             args.show_frame_timestamp = true;
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn preview_output_file_is_nonempty() {
-        let out = tmp_path("jr_test_preview_size.webp");
+        let out = tmp_path("jfs_test_preview_size.webp");
         run_preview(default_args(out.clone())).expect("preview should succeed");
 
         let meta = std::fs::metadata(&out).expect("file should exist");

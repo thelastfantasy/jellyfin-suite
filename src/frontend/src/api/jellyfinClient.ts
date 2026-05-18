@@ -25,8 +25,8 @@ export function getApi(): Api {
   }
 
   const jellyfin = new Jellyfin({
-    clientInfo: { name: 'Jellyfin Recents', version: '1.0.0' },
-    deviceInfo: { name: 'Browser', id: 'jellyfin-recents-browser' },
+    clientInfo: { name: 'Jellyfin Suite', version: '1.0.0' },
+    deviceInfo: { name: 'Browser', id: 'jellyfin-suite-browser' },
   })
 
   _api = jellyfin.createApi(client.serverAddress(), client.accessToken())

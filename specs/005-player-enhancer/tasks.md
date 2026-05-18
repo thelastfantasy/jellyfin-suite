@@ -14,31 +14,33 @@
 
 ⚠️ **Phase 0 必须在 Phase 1 之前完成**
 
-- [ ] R001 新建 `src/JellyfinRecents.Plugin/PluginConstants.cs`，定义五个常量：`PluginName = "Jellyfin Suite"`、`TaskCategory`、`TaskKeyPrefix = "JellyfinRecents"`、`DatabaseFileName = "jellyfin-recents.db"`、`PosterTempPrefix = "postersheet-"`
-- [ ] R002 [P] 更新 `src/JellyfinRecents.Plugin/Plugin.cs`：`Name` 属性 → `PluginConstants.PluginName`，更新 `Description` 为 "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer."
-- [ ] R003 [P] 批量更新 6 个 Task 文件（`Clean*.cs`）中的 `Category = "Jellyfin Recents"` → `PluginConstants.TaskCategory`
-- [ ] R004 [P] 修 bug：`CleanInvalidRecordsTask.cs` 将 `Type = "DailyTrigger"` 改为 `TaskTriggerInfo.TriggerDaily`
-- [ ] R005 [P] 消除重复：`CleanPosterSheetsTask.cs` 删除 `private const string TempPrefix`，改为引用 `PluginConstants.PosterTempPrefix`；`PosterSheetJobService.cs` 同步替换
-- [ ] R006 [P] 更新 `src/JellyfinRecents.Plugin/PluginServiceRegistrator.cs` 中的 DB 路径字符串 → `PluginConstants.DatabaseFileName`（引用常量，行为不变）
-- [ ] R007 [P] 更新 `src/JellyfinRecents.Plugin/meta.json`：`name` → `"Jellyfin Suite"`，`description` → 新描述，`targetAbi` → `"10.10.7.0"`；同时修复 `Makefile` 的 `update` target，追加 `docker cp meta.json` 步骤
-- [ ] R008 [P] 更新 `manifest.json`：两条 entry 的 `name`/`description`/`overview`（base 改为 "Jellyfin Suite"，bundled 改为 "Jellyfin Suite + Fonts"）；两条 `targetAbi` 均改为 `"10.10.7.0"`
-- [ ] R009 [P] 更新 `.github/workflows/release.yml`：zip 文件名 `jellyfin-recents_*.zip` → `jellyfin-suite_*.zip`；bundled jq 中的 `"Jellyfin Recents + Fonts"` → `"Jellyfin Suite + Fonts"`；manifest 步骤中的 `targetAbi` → `"10.10.7.0"`（`JellyfinRecents.Plugin.dll` / `.csproj` 引用不变，AssemblyName 保持）；`build.yml` 无需改动
-- [ ] R010 [P] 更新 `README.md` 和 `README.zh-CN.md`：标题改为 Jellyfin Suite，描述涵盖三大功能（最近播放、海报生成器、播放器增强）
-- [ ] R011 新建 `src/frontend/src/constants.ts`，集中管理前端插件级常量（与 C# 侧 `PluginConstants.cs` 对称）：
+- [x] R001 新建 `src/JellyfinRecents.Plugin/PluginConstants.cs`，定义五个常量：`PluginName = "Jellyfin Suite"`、`TaskCategory`、`TaskKeyPrefix = "JellyfinRecents"`、`DatabaseFileName = "jellyfin-recents.db"`、`PosterTempPrefix = "postersheet-"`
+- [x] R002 [P] 更新 `src/JellyfinRecents.Plugin/Plugin.cs`：`Name` 属性 → `PluginConstants.PluginName`，更新 `Description` 为 "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer."
+- [x] R003 [P] 批量更新 6 个 Task 文件（`Clean*.cs`）中的 `Category = "Jellyfin Recents"` → `PluginConstants.TaskCategory`
+- [x] R004 [P] 修 bug：`CleanInvalidRecordsTask.cs` 将 `Type = "DailyTrigger"` 改为 `TaskTriggerInfo.TriggerDaily`
+- [x] R005 [P] 消除重复：`CleanPosterSheetsTask.cs` 删除 `private const string TempPrefix`，改为引用 `PluginConstants.PosterTempPrefix`；`PosterSheetJobService.cs` 同步替换
+- [x] R006 [P] 更新 `src/JellyfinRecents.Plugin/PluginServiceRegistrator.cs` 中的 DB 路径字符串 → `PluginConstants.DatabaseFileName`（引用常量，行为不变）
+- [x] R007 [P] 更新 `src/JellyfinRecents.Plugin/meta.json`：`name` → `"Jellyfin Suite"`，`description` → 新描述，`targetAbi` → `"10.10.7.0"`；同时修复 `Makefile` 的 `update` target，追加 `docker cp meta.json` 步骤
+- [x] R008 [P] 更新 `manifest.json`：两条 entry 的 `name`/`description`/`overview`（base 改为 "Jellyfin Suite"，bundled 改为 "Jellyfin Suite + Fonts"）；两条 `targetAbi` 均改为 `"10.10.7.0"`
+- [x] R009 [P] 更新 `.github/workflows/release.yml`：zip 文件名 `jellyfin-recents_*.zip` → `jellyfin-suite_*.zip`；bundled jq 中的 `"Jellyfin Recents + Fonts"` → `"Jellyfin Suite + Fonts"`；manifest 步骤中的 `targetAbi` → `"10.10.7.0"`（`JellyfinRecents.Plugin.dll` / `.csproj` 引用不变，AssemblyName 保持）；`build.yml` 无需改动；重命名 `jellyfin-recents.sln` → `jellyfin-suite.sln`（无其他文件引用，构建不受影响）
+- [x] R010 [P] 更新 `README.md` 和 `README.zh-CN.md`：标题改为 Jellyfin Suite，描述涵盖三大功能（最近播放、海报生成器、播放器增强）
+- [x] R011 新建 `src/frontend/src/constants.ts`，集中管理前端插件级常量（与 C# 侧 `PluginConstants.cs` 对称）：
   ```ts
   export const PLUGIN_NAME         = 'Jellyfin Suite';
   export const PLUGIN_DEVICE_ID    = 'jellyfin-suite-browser';
   export const SETTINGS_KEY        = 'jellyfin-suite-settings';
   export const SETTINGS_KEY_LEGACY = 'jellyfin-recents-settings';  // 迁移用
   ```
-- [ ] R012 [P] 引用 `constants.ts` 替换散落的硬编码字符串（以下不影响 API 路由和 DOM 绑定，安全可改）：
-  - `src/frontend/src/api/posterSheetApi.ts`：`brandingText` 默认值 → `PLUGIN_NAME`
-  - `src/frontend/src/components/PosterSheetSettingsPanel.tsx`：同上 `brandingText` 默认值 → `PLUGIN_NAME`
-  - `src/frontend/src/api/jellyfinClient.ts`：`clientInfo.name` → `PLUGIN_NAME`，`deviceInfo.id` → `PLUGIN_DEVICE_ID`
-  - `src/frontend/src/components/PlayRecordCard.tsx`：日志前缀 → `[${PLUGIN_NAME}]`（或直接写 `[JellyfinSuite]`）
+- [x] R012 [P] 引用 `constants.ts` 替换散落的硬编码字符串（以下不影响 API 路由和 DOM 绑定，安全可改）：
+  - `src/frontend/src/api/posterSheetApi.ts`：`brandingText` 默认值 → `'Jellyfin Suite'`
+  - `src/frontend/src/components/PosterSheetSettingsPanel.tsx`：同上 `brandingText` 默认值 → `'Jellyfin Suite'`
+  - `src/frontend/src/api/jellyfinClient.ts`：`clientInfo.name` → `'Jellyfin Suite'`，`deviceInfo.id` → `'jellyfin-suite-browser'`
+  - `src/frontend/src/components/PlayRecordCard.tsx`：日志前缀 → `[JellyfinSuite]`
   - `src/frontend/src/styles.css`：文件头注释更新
-- [ ] R013 [P] 前端 localStorage 迁移：`src/frontend/src/state/viewSettings.ts`，将 `STORAGE_KEY` 改为引用 `SETTINGS_KEY`，并在读取前加一次性迁移——若 `SETTINGS_KEY_LEGACY` 存在则将其值复制到 `SETTINGS_KEY` 后删除旧键（不迁移则用户已保存的视图设置丢失）
-- [ ] R014 [P] 更新 Rust 端：
+  - `src/frontend/package.json`：`name` → `"jellyfin-suite-frontend"`（private 包，lock.json 自动同步）
+  - `src/JellyfinRecents.Plugin/Models/PosterSheetJob.cs`：`BrandingText` 默认值 → `"Jellyfin Suite"`（用户可见，出现在海报水印中）
+- [x] R013 [P] 前端 localStorage 迁移：`src/frontend/src/state/viewSettings.ts`，将 `STORAGE_KEY` 改为引用 `SETTINGS_KEY`，并在读取前加一次性迁移——若 `SETTINGS_KEY_LEGACY` 存在则将其值复制到 `SETTINGS_KEY` 后删除旧键（不迁移则用户已保存的视图设置丢失）
+- [x] R014 [P] 更新 Rust 端：
   - `src/poster-gen/src/main.rs`：在文件顶部提取 `const BRANDING_DEFAULT: &str = "Jellyfin Suite";`，两处 `default_value = "Jellyfin Recents"` → `default_value = BRANDING_DEFAULT`；更新 doc 注释
   - `src/poster-gen/src/qr.rs`：`QR_URL` 值暂留，待 R015 执行后改为新 repo URL
   - `text_renderer.rs` 测试中的 `"Jellyfin Recents"` 字符串**不改**（仅作哈希一致性测试用的任意输入，与名称无关）

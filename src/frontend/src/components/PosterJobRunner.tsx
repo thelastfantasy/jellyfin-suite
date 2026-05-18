@@ -17,7 +17,7 @@ export function PosterJobRunner({ jobId }: Props) {
 
     const token = window.ApiClient?.accessToken()
     const qs = token ? `?api_key=${encodeURIComponent(token)}` : ''
-    const es = new EventSource(`/JellyfinRecents/PosterSheet/${jobId}/stream${qs}`)
+    const es = new EventSource(`/JellyfinSuite/PosterSheet/${jobId}/stream${qs}`)
 
     es.onmessage = (event: MessageEvent) => {
       try {

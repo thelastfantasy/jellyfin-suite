@@ -1,6 +1,6 @@
-# Jellyfin Recents
+# Jellyfin Suite
 
-A Jellyfin plugin that provides a customizable recently-played view with flexible grouping, sorting, and a thumbnail grid generator.
+A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer.
 
 [中文文档](README.zh-CN.md)
 
@@ -37,6 +37,15 @@ Unlock by clicking the **Thumbnail** view button 7 times within 5 seconds. Once 
 - **Task queue widget**: Bottom-right overlay showing all in-progress and completed jobs; per-job progress bar, thumbnail preview, download, and delete actions
 - **Lightbox**: Full-screen viewer with wheel zoom (cursor-anchored), mouse drag pan, touch pan, and pinch-to-zoom; download and delete buttons
 
+### Web Player Enhancer
+
+Automatically injected into the Jellyfin web player. No configuration needed.
+
+- **Frame stepping**: Four buttons (|◁◁ |◁ ▷| ▷▷|) for −10f / −1f / +1f / +10f navigation; frame rate auto-detected from MediaInfo; steps pause playback automatically
+- **Screenshot**: One-click PNG download of the current video frame; optional subtitle overlay (ASS and SRT); client-side only, no server files created
+- **Mobile double-tap seek**: Double-tap left third to seek −10 s, right third to seek +10 s, center third to toggle play/pause (touch devices only)
+- **Mobile swipe controls**: Swipe up/down on the left half to adjust brightness (0–200%), right half for volume (0–100%); OSD percentage indicator shown during gesture (touch devices only)
+
 ---
 
 ## Installation
@@ -48,10 +57,10 @@ Unlock by clicking the **Thumbnail** view button 7 times within 5 seconds. Once 
    ```
    https://thelastfantasy.github.io/jellyfin-recents/manifest.json
    ```
-3. Find **Jellyfin Recents** in the **Catalog** and install
+3. Find **Jellyfin Suite** in the **Catalog** and install
 4. Restart Jellyfin
 
-> **Jellyfin Recents + Fonts** is a separate catalog entry that bundles Latin fonts (Roboto, Oswald, Playfair Display, Cinzel) so no internet access is required for font acquisition. Use this variant for air-gapped servers.
+> **Jellyfin Suite + Fonts** is a separate catalog entry that bundles Latin fonts (Roboto, Oswald, Playfair Display, Cinzel) so no internet access is required for font acquisition. Use this variant for air-gapped servers.
 
 ### Manual
 

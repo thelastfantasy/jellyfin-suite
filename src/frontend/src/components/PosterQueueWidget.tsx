@@ -34,8 +34,8 @@ export function PosterQueueWidget() {
 
   useEffect(() => {
     function handler() { setJobs(getJobs()) }
-    window.addEventListener('jr-poster-jobs-changed', handler)
-    return () => window.removeEventListener('jr-poster-jobs-changed', handler)
+    window.addEventListener('jfs-poster-jobs-changed', handler)
+    return () => window.removeEventListener('jfs-poster-jobs-changed', handler)
   }, [])
 
   const handleDelete = useCallback(async (job: JobEntry) => {
@@ -54,53 +54,53 @@ export function PosterQueueWidget() {
     <>
       {runningJobs.map(j => <PosterJobRunner key={j.jobId} jobId={j.jobId} />)}
       <button
-        class="jr-queue-widget"
+        class="jfs-queue-widget"
         onClick={() => setOpen(v => !v)}
         title={t.posterQueue}
         aria-label={t.posterQueue}
       >
         <MdGridView size={22} />
         {badgeCount > 0 && (
-          <span class="jr-queue-widget__badge">{badgeCount}</span>
+          <span class="jfs-queue-widget__badge">{badgeCount}</span>
         )}
       </button>
 
       <Popover open={open} onClose={() => setOpen(false)}>
-        <div class="jr-queue-popover">
-          <div class="jr-queue-popover__header">
+        <div class="jfs-queue-popover">
+          <div class="jfs-queue-popover__header">
             <span>{t.posterQueue}</span>
-            <button class="jr-queue-popover__header-close" onClick={() => setOpen(false)}>✕</button>
+            <button class="jfs-queue-popover__header-close" onClick={() => setOpen(false)}>✕</button>
           </div>
-          <div class="jr-queue-popover__list">
+          <div class="jfs-queue-popover__list">
             {[...jobs].reverse().map(job => (
-              <div key={job.jobId} class={`jr-queue-popover__item jr-queue-popover__item--${job.status}`}>
-                <div class="jr-queue-popover__item-header">
-                  <span class="jr-queue-popover__title" title={job.itemTitle}>{job.itemTitle}</span>
+              <div key={job.jobId} class={`jfs-queue-popover__item jfs-queue-popover__item--${job.status}`}>
+                <div class="jfs-queue-popover__item-header">
+                  <span class="jfs-queue-popover__title" title={job.itemTitle}>{job.itemTitle}</span>
                   <button
-                    class="jr-queue-popover__delete"
+                    class="jfs-queue-popover__delete"
                     onClick={() => handleDelete(job)}
                     title={t.posterQueueRemove}
                   >✕</button>
                 </div>
 
                 {job.status === 'running' && job.total > 0 && (
-                  <div class="jr-queue-popover__bar">
+                  <div class="jfs-queue-popover__bar">
                     <div
-                      class="jr-queue-popover__bar-fill"
+                      class="jfs-queue-popover__bar-fill"
                       style={{ width: `${Math.round((job.progress / job.total) * 100)}%` }}
                     />
-                    <span class="jr-queue-popover__bar-text">
+                    <span class="jfs-queue-popover__bar-text">
                       {Math.round((job.progress / job.total) * 100)}%
                     </span>
                   </div>
                 )}
 
                 {job.status === 'running' && job.total === 0 && (
-                  <div class="jr-queue-popover__status-text">Starting…</div>
+                  <div class="jfs-queue-popover__status-text">Starting…</div>
                 )}
 
                 {job.status === 'error' && (
-                  <div class="jr-queue-popover__status-text jr-queue-popover__status-text--error">
+                  <div class="jfs-queue-popover__status-text jfs-queue-popover__status-text--error">
                     {job.error ?? 'Error'}
                   </div>
                 )}
@@ -109,7 +109,7 @@ export function PosterQueueWidget() {
                   <img
                     src={getImageUrl(job.jobId)}
                     alt={job.itemTitle}
-                    class="jr-queue-popover__thumb"
+                    class="jfs-queue-popover__thumb"
                     onClick={() => { setLightboxSrc(getImageUrl(job.jobId)); setLightboxJobId(job.jobId) }}
                   />
                 )}

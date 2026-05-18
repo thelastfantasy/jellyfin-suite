@@ -1,6 +1,5 @@
 import type { ViewSettings } from '../types'
-
-const STORAGE_KEY = 'jellyfin-recents-settings'
+import { SETTINGS_KEY, SETTINGS_KEY_LEGACY } from '../constants'
 
 const DEFAULT_SETTINGS: ViewSettings = {
   groupBy: 'week',
@@ -14,9 +13,24 @@ const DEFAULT_SETTINGS: ViewSettings = {
   pageSizes: {},
 }
 
-export function loadSettings(): ViewSettings {
+function migrateOnce(): void {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    if (localStorage.getItem(SETTINGS_KEY) === null) {
+      const legacy = localStorage.getItem(SETTINGS_KEY_LEGACY)
+      if (legacy !== null) {
+        localStorage.setItem(SETTINGS_KEY, legacy)
+        localStorage.removeItem(SETTINGS_KEY_LEGACY)
+      }
+    }
+  } catch {
+    // localStorage 不可用时静默失败
+  }
+}
+
+export function loadSettings(): ViewSettings {
+  migrateOnce()
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
     if (!raw) return { ...DEFAULT_SETTINGS }
     return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
   } catch {
@@ -26,7 +40,7 @@ export function loadSettings(): ViewSettings {
 
 export function saveSettings(settings: ViewSettings): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   } catch {
     // localStorage 不可用时静默失败
   }

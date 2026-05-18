@@ -14,7 +14,7 @@ export function registerPosterViewClick(): boolean {
   if (timer) clearTimeout(timer)
   if (clicks >= REQUIRED_CLICKS) {
     clicks = 0
-    localStorage.setItem('jr-poster-unlocked', '1')
+    localStorage.setItem('jfs-poster-unlocked', '1')
     return true
   }
   timer = setTimeout(() => { clicks = 0 }, WINDOW_MS)
@@ -22,5 +22,11 @@ export function registerPosterViewClick(): boolean {
 }
 
 export function isPosterUnlocked(): boolean {
-  return localStorage.getItem('jr-poster-unlocked') === '1'
+  if (localStorage.getItem('jfs-poster-unlocked') === null) {
+    try {
+      const v = localStorage.getItem('jr-poster-unlocked')
+      if (v !== null) { localStorage.setItem('jfs-poster-unlocked', v); localStorage.removeItem('jr-poster-unlocked') }
+    } catch { /* localStorage 不可用时静默失败 */ }
+  }
+  return localStorage.getItem('jfs-poster-unlocked') === '1'
 }
