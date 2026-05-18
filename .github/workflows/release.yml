@@ -48,13 +48,19 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: src/frontend/package-lock.json
+          cache-dependency-path: |
+            src/frontend/package-lock.json
+            src/player-enhancer/package-lock.json
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
       - name: Install frontend dependencies
         working-directory: src/frontend
+        run: npm ci
+
+      - name: Install enhancer dependencies
+        working-directory: src/player-enhancer
         run: npm ci
 
       - name: Test Rust
@@ -68,6 +74,10 @@ jobs:
 
       - name: Build frontend
         working-directory: src/frontend
+        run: npm run build
+
+      - name: Build enhancer
+        working-directory: src/player-enhancer
         run: npm run build
 
       - name: Install cross
