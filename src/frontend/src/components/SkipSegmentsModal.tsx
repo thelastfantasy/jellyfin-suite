@@ -143,17 +143,17 @@ function SegmentScrubber({ startMs, endMs, maxMs, onStartChange, onEndChange }: 
   const endPct   = maxMs > 0 ? (endMs   / maxMs) * 100 : 100
 
   return (
-    <div ref={barRef} class="jr-segment-scrubber">
-      <div class="jr-segment-scrubber__track" />
-      <div class="jr-segment-scrubber__range"
+    <div ref={barRef} class="jfs-segment-scrubber">
+      <div class="jfs-segment-scrubber__track" />
+      <div class="jfs-segment-scrubber__range"
         style={{ left: `${startPct}%`, width: `${Math.max(0, endPct - startPct)}%` }} />
-      <div class="jr-segment-scrubber__thumb"
+      <div class="jfs-segment-scrubber__thumb"
         style={{ left: `${startPct}%` }}
         onPointerDown={(e: any) => handleThumbDown('start', e)} />
-      <div class="jr-segment-scrubber__thumb jr-segment-scrubber__thumb--end"
+      <div class="jfs-segment-scrubber__thumb jfs-segment-scrubber__thumb--end"
         style={{ left: `${endPct}%` }}
         onPointerDown={(e: any) => handleThumbDown('end', e)} />
-      <div class="jr-segment-scrubber__labels">
+      <div class="jfs-segment-scrubber__labels">
         <span>{formatHMS(startMs)}</span>
         <span>{formatHMS(endMs)}</span>
       </div>
@@ -183,20 +183,20 @@ export function TimeInput({ valueMs, onChange }: TimeInputProps) {
   const selectAll = (e: Event) => (e.target as HTMLInputElement).select()
 
   return (
-    <span class="jr-time-input">
-      <input class="jr-time-input__field jr-time-input__field--2"
+    <span class="jfs-time-input">
+      <input class="jfs-time-input__field jfs-time-input__field--2"
         type="number" min={0} max={99} value={h} title="小时 (0–99)"
         onFocus={selectAll} onInput={e => build(n(e), m, s, ms)} />
-      <span class="jr-time-input__sep">:</span>
-      <input class="jr-time-input__field jr-time-input__field--2"
+      <span class="jfs-time-input__sep">:</span>
+      <input class="jfs-time-input__field jfs-time-input__field--2"
         type="number" min={0} max={59} value={m} title="分钟 (0–59)"
         onFocus={selectAll} onInput={e => build(h, n(e), s, ms)} />
-      <span class="jr-time-input__sep">:</span>
-      <input class="jr-time-input__field jr-time-input__field--2"
+      <span class="jfs-time-input__sep">:</span>
+      <input class="jfs-time-input__field jfs-time-input__field--2"
         type="number" min={0} max={59} value={s} title="秒 (0–59)"
         onFocus={selectAll} onInput={e => build(h, m, n(e), ms)} />
-      <span class="jr-time-input__sep">.</span>
-      <input class="jr-time-input__field jr-time-input__field--3"
+      <span class="jfs-time-input__sep">.</span>
+      <input class="jfs-time-input__field jfs-time-input__field--3"
         type="number" min={0} max={999} value={ms} title="毫秒 (0–999)"
         onFocus={selectAll} onInput={e => build(h, m, s, n(e))} />
     </span>
@@ -294,42 +294,42 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
   const showChaptersTab = itemId != null && (chaptersLoading || chapters.length > 0)
 
   const modal = createPortal(
-    <div class="jr-skip-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div class="jr-skip-modal" onClick={e => e.stopPropagation()}>
+    <div class="jfs-skip-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div class="jfs-skip-modal" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div class="jr-poster-settings-modal__header">
+        <div class="jfs-poster-settings-modal__header">
           <span>
             跳过片段设置
             {videoDurationMs != null && (
-              <span class="jr-skip-header-duration">时长 {formatHMS(videoDurationMs)}</span>
+              <span class="jfs-skip-header-duration">时长 {formatHMS(videoDurationMs)}</span>
             )}
           </span>
-          <button class="jr-poster-settings-modal__close" onClick={onClose}>✕</button>
+          <button class="jfs-poster-settings-modal__close" onClick={onClose}>✕</button>
         </div>
 
         {/* Tab strip */}
         {showChaptersTab && (
-          <div class="jr-skip-tabs">
+          <div class="jfs-skip-tabs">
             <button
-              class={`jr-skip-tab${tab === 'chapters' ? ' jr-skip-tab--active' : ''}`}
+              class={`jfs-skip-tab${tab === 'chapters' ? ' jfs-skip-tab--active' : ''}`}
               onClick={() => setTab('chapters')}
             >按章节跳过</button>
             <button
-              class={`jr-skip-tab${tab === 'segments' ? ' jr-skip-tab--active' : ''}`}
+              class={`jfs-skip-tab${tab === 'segments' ? ' jfs-skip-tab--active' : ''}`}
               onClick={() => setTab('segments')}
             >按时间段跳过</button>
           </div>
         )}
 
         {/* Body */}
-        <div class="jr-skip-body">
+        <div class="jfs-skip-body">
 
           {/* Chapters tab */}
           {tab === 'chapters' && (
-            <div class="jr-skip-chapter-list">
+            <div class="jfs-skip-chapter-list">
               {chaptersLoading && (
-                <div class="jr-skip-placeholder">加载章节中…</div>
+                <div class="jfs-skip-placeholder">加载章节中…</div>
               )}
               {!chaptersLoading && (() => {
                 const guesses = guessOpEd(chapters, videoDurationMs)
@@ -338,19 +338,19 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                   return (
                     <button
                       key={idx}
-                      class={`jr-skip-chapter-item${isChapterSkipped(idx) ? ' jr-skip-chapter-item--active' : ''}`}
+                      class={`jfs-skip-chapter-item${isChapterSkipped(idx) ? ' jfs-skip-chapter-item--active' : ''}`}
                       onClick={() => toggleChapter(idx)}
                     >
-                      <span class="jr-skip-chapter-name">
+                      <span class="jfs-skip-chapter-name">
                         {ch.name}
                         {guess && (
-                          <span class="jr-skip-chapter-guess">
+                          <span class="jfs-skip-chapter-guess">
                             {' '}({guess === 'OP' ? t.guessOp : t.guessEd})
                           </span>
                         )}
                       </span>
-                      <span class="jr-skip-chapter-time">{msToDisplay(ch.startMs)}</span>
-                      <span class="jr-skip-chapter-duration">{formatDuration(chapterEndMs(idx) - ch.startMs)}</span>
+                      <span class="jfs-skip-chapter-time">{msToDisplay(ch.startMs)}</span>
+                      <span class="jfs-skip-chapter-duration">{formatDuration(chapterEndMs(idx) - ch.startMs)}</span>
                     </button>
                   )
                 })
@@ -360,26 +360,26 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
 
           {/* Segments tab */}
           {tab === 'segments' && (
-            <div class="jr-skip-segment-list">
-              <div class="jr-skip-hint">
+            <div class="jfs-skip-segment-list">
+              <div class="jfs-skip-hint">
                 格式：HH:MM:SS.mmm（mmm 为毫秒，非帧数）
               </div>
               {segments.length === 0 && (
-                <div class="jr-skip-placeholder">暂无跳过片段，点击下方"+"添加</div>
+                <div class="jfs-skip-placeholder">暂无跳过片段，点击下方"+"添加</div>
               )}
               {segments.map((seg, idx) => {
                 const segValid = seg.endMs > seg.startMs
                 return (
-                  <div key={idx} class="jr-skip-segment-row">
-                    <div class="jr-skip-segment-row__controls">
+                  <div key={idx} class="jfs-skip-segment-row">
+                    <div class="jfs-skip-segment-row__controls">
                       <TimeInput valueMs={seg.startMs} onChange={v => updateSegment(idx, { startMs: v })} />
-                      <span class="jr-skip-segment-dash">—</span>
+                      <span class="jfs-skip-segment-dash">—</span>
                       <TimeInput valueMs={seg.endMs} onChange={v => updateSegment(idx, { endMs: v })} />
-                      <button class="jr-skip-segment-remove" onClick={() => removeSegment(idx)} title="删除">
+                      <button class="jfs-skip-segment-remove" onClick={() => removeSegment(idx)} title="删除">
                         <MdRemove size={15} />
                       </button>
                       <button
-                        class="jr-skip-segment-add-global"
+                        class="jfs-skip-segment-add-global"
                         disabled={!segValid}
                         title={t.skipAddToGlobal}
                         onClick={e => handleAddToGlobal(seg, e.currentTarget as HTMLButtonElement)}
@@ -387,7 +387,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                         <MdLanguage size={15} />
                       </button>
                       {segValid && (
-                        <span class="jr-skip-segment-span">
+                        <span class="jfs-skip-segment-span">
                           {t.skipSegmentSpan} {formatDuration(seg.endMs - seg.startMs)}
                         </span>
                       )}
@@ -404,7 +404,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                   </div>
                 )
               })}
-              <button class="jr-skip-segment-add" onClick={addSegment}>
+              <button class="jfs-skip-segment-add" onClick={addSegment}>
                 <MdAdd size={15} />
                 添加时间段
               </button>
@@ -413,18 +413,18 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
         </div>
 
         {/* Footer */}
-        <div class="jr-skip-footer">
+        <div class="jfs-skip-footer">
           {/* Global skip intervals — shown for awareness / quick deletion */}
           {globalSkipsLocal.some(s => s.endMs > s.startMs) && (
-            <div class="jr-skip-global-display">
-              <span class="jr-skip-global-display__title">{t.posterGlobalSkip}</span>
+            <div class="jfs-skip-global-display">
+              <span class="jfs-skip-global-display__title">{t.posterGlobalSkip}</span>
               {globalSkipsLocal.map((seg, idx) => seg.endMs > seg.startMs ? (
-                <div key={idx} class="jr-skip-global-display__row">
-                  <span class="jr-skip-global-display__range">
+                <div key={idx} class="jfs-skip-global-display__row">
+                  <span class="jfs-skip-global-display__range">
                     {msToDisplay(seg.startMs)}&nbsp;—&nbsp;{msToDisplay(seg.endMs)}
                   </span>
                   <button
-                    class="jr-skip-global-display__del"
+                    class="jfs-skip-global-display__del"
                     title="删除"
                     onClick={() => {
                       const next = globalSkipsLocal.filter((_, i) => i !== idx)
@@ -438,7 +438,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
               ) : null)}
             </div>
           )}
-          <label class={`jr-skip-footer__ignore-label${!hasGlobalSkips ? ' jr-skip-footer__ignore-label--disabled' : ''}`}>
+          <label class={`jfs-skip-footer__ignore-label${!hasGlobalSkips ? ' jfs-skip-footer__ignore-label--disabled' : ''}`}>
             <input
               type="checkbox"
               checked={ignoreGlobal}
@@ -447,11 +447,11 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
             />
             {t.skipIgnoreGlobal}
           </label>
-          <div class="jr-skip-footer__actions">
-            <button class="jr-skip-footer__clear" onClick={handleClear}>清除全部</button>
+          <div class="jfs-skip-footer__actions">
+            <button class="jfs-skip-footer__clear" onClick={handleClear}>清除全部</button>
             <span style="flex:1" />
-            <button class="jr-skip-footer__cancel" onClick={onClose}>取消</button>
-            <button class="jr-skip-footer__confirm" onClick={handleConfirm}>生成</button>
+            <button class="jfs-skip-footer__cancel" onClick={onClose}>取消</button>
+            <button class="jfs-skip-footer__confirm" onClick={handleConfirm}>生成</button>
           </div>
         </div>
       </div>
@@ -464,7 +464,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
       {modal}
       {fullTooltipPos && createPortal(
         <div
-          class="jr-skip-full-tooltip"
+          class="jfs-skip-full-tooltip"
           style={{ left: fullTooltipPos.x, top: fullTooltipPos.y }}
         >
           {t.skipGlobalFull}

@@ -45,12 +45,12 @@ interface Props {
 
 function loadSettings() {
   return {
-    rows: Number(localStorage.getItem('jr-poster-rows') ?? 6),
-    cols: Number(localStorage.getItem('jr-poster-cols') ?? 8),
-    mode: (localStorage.getItem('jr-poster-mode') ?? 'deterministic') as 'deterministic' | 'random',
+    rows: Number(localStorage.getItem('jfs-poster-rows') ?? 6),
+    cols: Number(localStorage.getItem('jfs-poster-cols') ?? 8),
+    mode: (localStorage.getItem('jfs-poster-mode') ?? 'deterministic') as 'deterministic' | 'random',
     overlay: (() => {
       try {
-        return JSON.parse(localStorage.getItem('jr-poster-overlay') ?? 'null') ?? defaultOverlay()
+        return JSON.parse(localStorage.getItem('jfs-poster-overlay') ?? 'null') ?? defaultOverlay()
       } catch { return defaultOverlay() }
     })(),
   }
@@ -59,7 +59,7 @@ function loadSettings() {
 function defaultOverlay(): OverlaySettingsDto {
   return {
     brandingEnabled: true,
-    brandingText: 'Jellyfin Recents',
+    brandingText: 'Jellyfin Suite',
     videoInfoEnabled: true,
     showFileSize: true,
     showResolutionFps: true,
@@ -90,12 +90,12 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
     { v: 'outside-bottom-right' as const, style: { bottom: 2, right: 16 } },
   ]
   return (
-    <div class="jr-tspicker">
-      <div class="jr-tspicker__inner">
+    <div class="jfs-tspicker">
+      <div class="jfs-tspicker__inner">
         {inside.map(p => (
           <button
             key={p.v}
-            class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
+            class={`jfs-tspicker__btn${value === p.v ? ' jfs-tspicker__btn--active' : ''}`}
             style={p.style}
             onClick={() => onChange(p.v)}
             title={p.v}
@@ -106,7 +106,7 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
       {outside.map(p => (
         <button
           key={p.v}
-          class={`jr-tspicker__btn${value === p.v ? ' jr-tspicker__btn--active' : ''}`}
+          class={`jfs-tspicker__btn${value === p.v ? ' jfs-tspicker__btn--active' : ''}`}
           style={{...p.style, position: 'absolute'}}
           onClick={() => onChange(p.v)}
           title={p.v}
@@ -123,7 +123,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const [cols, setCols] = useState(init.cols)
   const [mode, setMode] = useState(init.mode)
   const [overlay, setOverlay] = useState<OverlaySettingsDto>(init.overlay)
-  const [headless, setHeadless] = useState(() => localStorage.getItem('jr-poster-headless') === '1')
+  const [headless, setHeadless] = useState(() => localStorage.getItem('jfs-poster-headless') === '1')
   const [globalSkips, setGlobalSkips] = useState<SkipSegment[]>(() => loadGlobalSkipSegments())
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -169,10 +169,10 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const tooManyFrames = videoDuration !== null && !isGridValid(rows, cols, videoDuration)
 
   function persist(newRows: number, newCols: number, newMode: typeof mode, newOverlay: typeof overlay) {
-    localStorage.setItem('jr-poster-rows', String(newRows))
-    localStorage.setItem('jr-poster-cols', String(newCols))
-    localStorage.setItem('jr-poster-mode', newMode)
-    localStorage.setItem('jr-poster-overlay', JSON.stringify(newOverlay))
+    localStorage.setItem('jfs-poster-rows', String(newRows))
+    localStorage.setItem('jfs-poster-cols', String(newCols))
+    localStorage.setItem('jfs-poster-mode', newMode)
+    localStorage.setItem('jfs-poster-overlay', JSON.stringify(newOverlay))
   }
 
   function updateRows(v: number) { setRows(v); persist(v, cols, mode, overlay) }
@@ -185,7 +185,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   }
   function updateHeadless(v: boolean) {
     setHeadless(v)
-    localStorage.setItem('jr-poster-headless', v ? '1' : '0')
+    localStorage.setItem('jfs-poster-headless', v ? '1' : '0')
   }
 
   function addGlobalSkip() {
@@ -256,18 +256,18 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const overlayFontsAll = [...OVERLAY_FONTS]
 
   return (
-    <div class="jr-poster-settings">
-      <h3 class="jr-poster-settings__title">{t.posterSettingsTitle}</h3>
+    <div class="jfs-poster-settings">
+      <h3 class="jfs-poster-settings__title">{t.posterSettingsTitle}</h3>
 
       {/* Grid size */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterGrid}</label>
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterGrid}</label>
         {validPresets ? (
-          <div class="jr-poster-settings__presets">
+          <div class="jfs-poster-settings__presets">
             {validPresets.map(([r, c]) => (
               <button
                 key={`${r}x${c}`}
-                class={`jr-poster-settings__preset-btn${rows === r && cols === c ? ' jr-poster-settings__preset-btn--active' : ''}`}
+                class={`jfs-poster-settings__preset-btn${rows === r && cols === c ? ' jfs-poster-settings__preset-btn--active' : ''}`}
                 onClick={() => { updateRows(r); updateCols(c) }}
               >
                 {r}x{c}
@@ -275,21 +275,21 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             ))}
           </div>
         ) : (
-          <div class="jr-poster-settings__sliders">
-            <div class="jr-poster-settings__slider-row">
+          <div class="jfs-poster-settings__sliders">
+            <div class="jfs-poster-settings__slider-row">
               <span>{t.posterCols}: {cols}</span>
               <input type="range" min={1} max={12} value={cols}
                 onInput={(e) => updateCols(Number((e.target as HTMLInputElement).value))} />
             </div>
-            <div class="jr-poster-settings__slider-row">
+            <div class="jfs-poster-settings__slider-row">
               <span>{t.posterRows}: {rows}</span>
               <input type="range" min={1} max={20} value={rows}
                 onInput={(e) => updateRows(Number((e.target as HTMLInputElement).value))} />
             </div>
-            <div class="jr-poster-settings__frame-count">
+            <div class="jfs-poster-settings__frame-count">
               {frameCount} {t.posterFrames}
               {tooManyFrames && (
-                <span class="jr-poster-settings__warn">
+                <span class="jfs-poster-settings__warn">
                   {' '}({t.posterTooMany} {frameMax})
                 </span>
               )}
@@ -299,13 +299,13 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
       </div>
 
       {/* Mode — toggle buttons */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterMode}</label>
-        <div class="jr-poster-settings__theme-group">
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterMode}</label>
+        <div class="jfs-poster-settings__theme-group">
           {MODES.map(m => (
             <button
               key={m}
-              class={`jr-poster-settings__theme-btn${mode === m ? ' jr-poster-settings__theme-btn--active' : ''}`}
+              class={`jfs-poster-settings__theme-btn${mode === m ? ' jfs-poster-settings__theme-btn--active' : ''}`}
               onClick={() => updateMode(m)}
               title={m === 'deterministic' ? t.posterDeterministicTip : t.posterRandomTip}
             >
@@ -313,29 +313,29 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             </button>
           ))}
         </div>
-        <p class="jr-poster-settings__mode-desc">
+        <p class="jfs-poster-settings__mode-desc">
           {mode === 'deterministic' ? t.posterDeterministicTip : t.posterRandomTip}
         </p>
       </div>
 
       {/* Global skip segments */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterGlobalSkip}</label>
-        <div class="jr-poster-settings__global-skips">
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterGlobalSkip}</label>
+        <div class="jfs-poster-settings__global-skips">
           {globalSkips.map((seg, idx) => (
-            <div key={idx} class="jr-skip-segment-row">
-              <div class="jr-skip-segment-row__controls">
+            <div key={idx} class="jfs-skip-segment-row">
+              <div class="jfs-skip-segment-row__controls">
                 <TimeInput valueMs={seg.startMs} onChange={v => updateGlobalSkip(idx, { startMs: v })} />
-                <span class="jr-skip-segment-dash">—</span>
+                <span class="jfs-skip-segment-dash">—</span>
                 <TimeInput valueMs={seg.endMs} onChange={v => updateGlobalSkip(idx, { endMs: v })} />
-                <button class="jr-skip-segment-remove" onClick={() => removeGlobalSkip(idx)} title="删除">
+                <button class="jfs-skip-segment-remove" onClick={() => removeGlobalSkip(idx)} title="删除">
                   <MdRemove size={15} />
                 </button>
               </div>
             </div>
           ))}
           {globalSkips.length < 2 && (
-            <button class="jr-skip-segment-add" onClick={addGlobalSkip}>
+            <button class="jfs-skip-segment-add" onClick={addGlobalSkip}>
               <MdAdd size={15} />{t.posterGlobalSkipAdd}
             </button>
           )}
@@ -343,42 +343,42 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
       </div>
 
       {/* Overlay settings */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterOverlay}</label>
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterOverlay}</label>
 
         {/* Headless mode */}
-        <div class="jr-poster-settings__check-row jr-poster-settings__check-row--headless">
+        <div class="jfs-poster-settings__check-row jfs-poster-settings__check-row--headless">
           <input type="checkbox" id="headless" checked={headless}
             onChange={e => updateHeadless((e.target as HTMLInputElement).checked)} />
           <label for="headless">{t.posterHeadless}</label>
-          <span class="jr-poster-settings__headless-tip">{t.posterHeadlessTip}</span>
+          <span class="jfs-poster-settings__headless-tip">{t.posterHeadlessTip}</span>
         </div>
 
         {/* Branding */}
-        <div class={`jr-poster-settings__check-row${headless ? ' jr-poster-settings__check-row--muted' : ''}`}>
+        <div class={`jfs-poster-settings__check-row${headless ? ' jfs-poster-settings__check-row--muted' : ''}`}>
           <input type="checkbox" id="branding" checked={overlay.brandingEnabled}
             disabled={headless}
             onChange={e => updateOverlay({ brandingEnabled: (e.target as HTMLInputElement).checked })} />
           <label for="branding">{t.posterBrandingLabel}</label>
           {overlay.brandingEnabled && (
-            <input type="text" class="jr-poster-settings__text-input"
+            <input type="text" class="jfs-poster-settings__text-input"
               value={overlay.brandingText} maxLength={200}
               onInput={e => updateOverlay({ brandingText: (e.target as HTMLInputElement).value })} />
           )}
         </div>
         {overlay.brandingEnabled && (
-          <div class={`jr-poster-settings__sub-checks${headless ? ' jr-poster-settings__sub-checks--muted' : ''}`}>
+          <div class={`jfs-poster-settings__sub-checks${headless ? ' jfs-poster-settings__sub-checks--muted' : ''}`}>
             {showLatin && (
               <>
-                <label class="jr-poster-settings__label" style="margin-bottom:0.3rem">
+                <label class="jfs-poster-settings__label" style="margin-bottom:0.3rem">
                   {brandCJK ? t.posterBrandingLatinFont : t.posterBrandingFont}
                 </label>
-                <div class="jr-poster-settings__font-group">
+                <div class="jfs-poster-settings__font-group">
                   {latinFontsAll.map(f => (
                     <button
                       key={f.value}
                       disabled={headless}
-                      class={`jr-poster-settings__font-btn${'custom' in f && f.custom ? ' jr-poster-settings__font-btn--custom' : ''}${overlay.brandingLatinFont === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+                      class={`jfs-poster-settings__font-btn${'custom' in f && f.custom ? ' jfs-poster-settings__font-btn--custom' : ''}${overlay.brandingLatinFont === f.value ? ' jfs-poster-settings__font-btn--active' : ''}`}
                       style={'style' in f ? (f as { style: string }).style : ''}
                       onClick={() => updateOverlay({ brandingLatinFont: f.value })}
                     >
@@ -390,15 +390,15 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             )}
             {showCJK && (
               <>
-                <label class="jr-poster-settings__label" style="margin-bottom:0.3rem;margin-top:0.4rem">
+                <label class="jfs-poster-settings__label" style="margin-bottom:0.3rem;margin-top:0.4rem">
                   {brandLatin ? t.posterBrandingCjkFont : t.posterBrandingFont}
                 </label>
-                <div class="jr-poster-settings__font-group">
+                <div class="jfs-poster-settings__font-group">
                   {cjkFontsAll.map(f => (
                     <button
                       key={f.value}
                       disabled={headless}
-                      class={`jr-poster-settings__font-btn${'custom' in f && f.custom ? ' jr-poster-settings__font-btn--custom' : ''}${overlay.brandingCjkFont === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+                      class={`jfs-poster-settings__font-btn${'custom' in f && f.custom ? ' jfs-poster-settings__font-btn--custom' : ''}${overlay.brandingCjkFont === f.value ? ' jfs-poster-settings__font-btn--active' : ''}`}
                       onClick={() => updateOverlay({ brandingCjkFont: f.value })}
                     >
                       {f.label}
@@ -411,14 +411,14 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
         )}
 
         {/* Video info */}
-        <div class={`jr-poster-settings__check-row${headless ? ' jr-poster-settings__check-row--muted' : ''}`}>
+        <div class={`jfs-poster-settings__check-row${headless ? ' jfs-poster-settings__check-row--muted' : ''}`}>
           <input type="checkbox" id="videoInfo" checked={overlay.videoInfoEnabled}
             disabled={headless}
             onChange={e => updateOverlay({ videoInfoEnabled: (e.target as HTMLInputElement).checked })} />
           <label for="videoInfo">{t.posterVideoInfo}</label>
         </div>
         {overlay.videoInfoEnabled && (
-          <div class={`jr-poster-settings__sub-checks${headless ? ' jr-poster-settings__sub-checks--muted' : ''}`}>
+          <div class={`jfs-poster-settings__sub-checks${headless ? ' jfs-poster-settings__sub-checks--muted' : ''}`}>
             {([
               ['showFileSize', 'posterFileSize'],
               ['showDuration', 'posterDuration'],
@@ -427,7 +427,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
               ['showAudioEncoding', 'posterAudioEncoding'],
               ['showSubtitles', 'posterSubtitles'],
             ] as [keyof OverlaySettingsDto, keyof typeof t][]).map(([key, labelKey]) => (
-              <div key={key} class="jr-poster-settings__check-row">
+              <div key={key} class="jfs-poster-settings__check-row">
                 <input type="checkbox" id={key} checked={overlay[key] as boolean}
                   disabled={headless}
                   onChange={e => updateOverlay({ [key]: (e.target as HTMLInputElement).checked })} />
@@ -438,7 +438,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
         )}
 
         {/* Timestamp badge */}
-        <div class="jr-poster-settings__check-row">
+        <div class="jfs-poster-settings__check-row">
           <input type="checkbox" id="timestamp" checked={overlay.showFrameTimestamp}
             onChange={e => updateOverlay({ showFrameTimestamp: (e.target as HTMLInputElement).checked })} />
           <label for="timestamp">{t.posterTimestamp}</label>
@@ -446,8 +446,8 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
 
         {/* Timestamp position — graphical picker */}
         {overlay.showFrameTimestamp && (
-          <div class="jr-poster-settings__sub-checks">
-            <label class="jr-poster-settings__label" style="margin-bottom:0.3rem">{t.posterTimestampPos}</label>
+          <div class="jfs-poster-settings__sub-checks">
+            <label class="jfs-poster-settings__label" style="margin-bottom:0.3rem">{t.posterTimestampPos}</label>
             <TimestampPosPicker
               value={overlay.timestampPosition as TimestampPos}
               onChange={v => updateOverlay({ timestampPosition: v })}
@@ -457,13 +457,13 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
       </div>
 
       {/* Color theme — toggle buttons */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterTheme}</label>
-        <div class="jr-poster-settings__theme-group">
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterTheme}</label>
+        <div class="jfs-poster-settings__theme-group">
           {THEMES.map(theme => (
             <button
               key={theme}
-              class={`jr-poster-settings__theme-btn${overlay.colorTheme === theme ? ' jr-poster-settings__theme-btn--active' : ''}`}
+              class={`jfs-poster-settings__theme-btn${overlay.colorTheme === theme ? ' jfs-poster-settings__theme-btn--active' : ''}`}
               onClick={() => updateOverlay({ colorTheme: theme })}
             >
               {theme.charAt(0).toUpperCase() + theme.slice(1)}
@@ -473,13 +473,13 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
       </div>
 
       {/* Font family for overlay labels/timestamps — CJK-capable only */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterFont}</label>
-        <div class="jr-poster-settings__font-group">
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterFont}</label>
+        <div class="jfs-poster-settings__font-group">
           {overlayFontsAll.map(f => (
             <button
               key={f.value}
-              class={`jr-poster-settings__font-btn${'custom' in f && f.custom ? ' jr-poster-settings__font-btn--custom' : ''}${overlay.fontFamily === f.value ? ' jr-poster-settings__font-btn--active' : ''}`}
+              class={`jfs-poster-settings__font-btn${'custom' in f && f.custom ? ' jfs-poster-settings__font-btn--custom' : ''}${overlay.fontFamily === f.value ? ' jfs-poster-settings__font-btn--active' : ''}`}
               onClick={() => updateOverlay({ fontFamily: f.value })}
             >
               {f.label}
@@ -489,13 +489,13 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
       </div>
 
       {/* Overlay language — toggle buttons */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterLang}</label>
-        <div class="jr-poster-settings__theme-group">
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterLang}</label>
+        <div class="jfs-poster-settings__theme-group">
           {LANGS.map(lang => (
             <button
               key={lang}
-              class={`jr-poster-settings__theme-btn${overlay.lang === lang ? ' jr-poster-settings__theme-btn--active' : ''}`}
+              class={`jfs-poster-settings__theme-btn${overlay.lang === lang ? ' jfs-poster-settings__theme-btn--active' : ''}`}
               onClick={() => updateOverlay({ lang })}
             >
               {lang === 'en' ? t.posterLangEn : lang === 'zh' ? t.posterLangZh : t.posterLangJa}
@@ -505,26 +505,26 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
       </div>
 
       {/* Custom fonts */}
-      <div class="jr-poster-settings__section">
-        <label class="jr-poster-settings__label">{t.posterCustomFonts}</label>
-        <p class="jr-poster-settings__hint">{t.posterCustomFontHint}</p>
+      <div class="jfs-poster-settings__section">
+        <label class="jfs-poster-settings__label">{t.posterCustomFonts}</label>
+        <p class="jfs-poster-settings__hint">{t.posterCustomFontHint}</p>
         {userFonts.length > 0 && (
-          <div class="jr-poster-settings__custom-font-list">
+          <div class="jfs-poster-settings__custom-font-list">
             {userFonts.map((f) => (
-              <div key={f.key} class="jr-poster-settings__custom-font-row">
-                <span class="jr-poster-settings__custom-font-name">{f.displayName || f.key.slice('custom-'.length)}</span>
-                <span class="jr-poster-settings__custom-font-tags">
-                  <span class={`jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--${f.script}`}>{f.script.toUpperCase()}</span>
-                  <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--format">{f.format.toUpperCase()}</span>
-                  {f.isSerif === true && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Serif</span>}
-                  {f.isSerif === false && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Sans</span>}
-                  {f.isMonospace && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Mono</span>}
-                  {f.isBold && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Bold</span>}
-                  {f.isItalic && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Italic</span>}
-                  {f.hasLigatures && <span class="jr-poster-settings__custom-font-tag jr-poster-settings__custom-font-tag--meta">Liga</span>}
+              <div key={f.key} class="jfs-poster-settings__custom-font-row">
+                <span class="jfs-poster-settings__custom-font-name">{f.displayName || f.key.slice('custom-'.length)}</span>
+                <span class="jfs-poster-settings__custom-font-tags">
+                  <span class={`jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--${f.script}`}>{f.script.toUpperCase()}</span>
+                  <span class="jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--format">{f.format.toUpperCase()}</span>
+                  {f.isSerif === true && <span class="jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--meta">Serif</span>}
+                  {f.isSerif === false && <span class="jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--meta">Sans</span>}
+                  {f.isMonospace && <span class="jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--meta">Mono</span>}
+                  {f.isBold && <span class="jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--meta">Bold</span>}
+                  {f.isItalic && <span class="jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--meta">Italic</span>}
+                  {f.hasLigatures && <span class="jfs-poster-settings__custom-font-tag jfs-poster-settings__custom-font-tag--meta">Liga</span>}
                 </span>
                 <button
-                  class="jr-poster-settings__custom-font-del"
+                  class="jfs-poster-settings__custom-font-del"
                   onClick={() => handleDeleteFont(f.key)}
                   title={t.posterCustomFontDelete}
                 >
@@ -543,9 +543,9 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
           style="display:none"
           onChange={e => setUploadFile((e.target as HTMLInputElement).files?.[0] ?? null)}
         />
-        <div class="jr-poster-settings__custom-font-upload">
+        <div class="jfs-poster-settings__custom-font-upload">
           <button
-            class="jr-poster-settings__theme-btn"
+            class="jfs-poster-settings__theme-btn"
             onClick={() => fileInputRef.current?.click()}
             type="button"
           >
@@ -553,9 +553,9 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
           </button>
           {uploadFile && (
             <>
-              <span class="jr-poster-settings__custom-font-selected">{uploadFile.name}</span>
+              <span class="jfs-poster-settings__custom-font-selected">{uploadFile.name}</span>
               <button
-                class="jr-poster-settings__theme-btn jr-poster-settings__theme-btn--accent"
+                class="jfs-poster-settings__theme-btn jfs-poster-settings__theme-btn--accent"
                 disabled={uploading}
                 onClick={handleUpload}
                 type="button"
@@ -565,23 +565,23 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             </>
           )}
         </div>
-        {uploadError && <p class="jr-poster-settings__preview-error">{uploadError}</p>}
+        {uploadError && <p class="jfs-poster-settings__preview-error">{uploadError}</p>}
       </div>
 
       {/* Preview + Disable row */}
-      <div class="jr-poster-settings__section">
-        <div class="jr-poster-settings__preview-row">
-          <button class="jr-poster-settings__preview-btn" onClick={handlePreview} disabled={previewLoading}>
+      <div class="jfs-poster-settings__section">
+        <div class="jfs-poster-settings__preview-row">
+          <button class="jfs-poster-settings__preview-btn" onClick={handlePreview} disabled={previewLoading}>
             {previewLoading ? t.posterPreviewLoading : t.posterPreview}
           </button>
-          <span class="jr-poster-settings__row-spacer" />
+          <span class="jfs-poster-settings__row-spacer" />
           {onDisable && (
-            <button class="jr-poster-settings__disable-btn" onClick={onDisable} title={t.posterDisable}>
+            <button class="jfs-poster-settings__disable-btn" onClick={onDisable} title={t.posterDisable}>
               {t.posterDisable}
             </button>
           )}
         </div>
-        {previewError && <p class="jr-poster-settings__preview-error">{previewError}</p>}
+        {previewError && <p class="jfs-poster-settings__preview-error">{previewError}</p>}
       </div>
 
       {previewLightboxOpen && previewUrl && (
@@ -595,7 +595,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
 
       {!settingsOnly && (
         <button
-          class="jr-poster-settings__generate-btn"
+          class="jfs-poster-settings__generate-btn"
           onClick={handleGenerate}
           disabled={tooManyFrames}
         >

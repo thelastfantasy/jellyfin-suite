@@ -223,27 +223,27 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
 
   return createPortal(
     <div
-      class="jr-lightbox"
+      class="jfs-lightbox"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={alt}
     >
       {/* Zoom toolbar */}
-      <div class="jr-lightbox__zoombar" onClick={e => e.stopPropagation()}>
-        <button class="jr-lightbox__zoom-btn" onClick={() => zoomBy(1.3)} title={t.lightboxZoomIn}>
+      <div class="jfs-lightbox__zoombar" onClick={e => e.stopPropagation()}>
+        <button class="jfs-lightbox__zoom-btn" onClick={() => zoomBy(1.3)} title={t.lightboxZoomIn}>
           <MdZoomIn size={20} />
         </button>
-        <button class="jr-lightbox__zoom-btn" onClick={() => zoomBy(1 / 1.3)} title={t.lightboxZoomOut}>
+        <button class="jfs-lightbox__zoom-btn" onClick={() => zoomBy(1 / 1.3)} title={t.lightboxZoomOut}>
           <MdZoomOut size={20} />
         </button>
-        <button class="jr-lightbox__zoom-btn" onClick={handleFit} title={t.lightboxFit}>
+        <button class="jfs-lightbox__zoom-btn" onClick={handleFit} title={t.lightboxFit}>
           <MdFitScreen size={18} />
         </button>
       </div>
 
       <button
-        class="jr-lightbox__close"
+        class="jfs-lightbox__close"
         onClick={e => { e.stopPropagation(); onClose() }}
         aria-label={t.lightboxClose}
       >
@@ -253,16 +253,16 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
       {/* Pan / zoom viewport */}
       <div
         ref={viewRef}
-        class="jr-lightbox__view"
+        class="jfs-lightbox__view"
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onClick={e => e.stopPropagation()}
         style={{ cursor: dragging ? 'grabbing' : 'grab' }}
       >
-        <div ref={canvasRef} class="jr-lightbox__canvas">
+        <div ref={canvasRef} class="jfs-lightbox__canvas">
           <img
             ref={imgRef}
-            class="jr-lightbox__img"
+            class="jfs-lightbox__img"
             src={src}
             alt={alt}
             onLoad={onImgLoad}
@@ -272,15 +272,15 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
       </div>
 
       {hasFooter && (
-        <div class="jr-lightbox__footer" onClick={e => e.stopPropagation()}>
+        <div class="jfs-lightbox__footer" onClick={e => e.stopPropagation()}>
           {onDownload && (
-            <button class="jr-lightbox__footer-btn" onClick={onDownload} title={t.lightboxDownload}>
+            <button class="jfs-lightbox__footer-btn" onClick={onDownload} title={t.lightboxDownload}>
               <MdDownload size={20} />
             </button>
           )}
           {onDelete && (
             <button
-              class="jr-lightbox__footer-btn jr-lightbox__footer-btn--delete"
+              class="jfs-lightbox__footer-btn jfs-lightbox__footer-btn--delete"
               onClick={onDelete}
               title={t.lightboxDelete}
             >

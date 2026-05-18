@@ -32,21 +32,21 @@ export interface StartJobRequest {
 }
 
 export function loadSkipSegments(): SkipSegment[] {
-  try { return JSON.parse(localStorage.getItem('jr-poster-skip-segments') ?? '[]') ?? [] }
+  try { return JSON.parse(localStorage.getItem('jfs-poster-skip-segments') ?? '[]') ?? [] }
   catch { return [] }
 }
 
 export function saveSkipSegments(segs: SkipSegment[]): void {
-  localStorage.setItem('jr-poster-skip-segments', JSON.stringify(segs))
+  localStorage.setItem('jfs-poster-skip-segments', JSON.stringify(segs))
 }
 
 export function loadGlobalSkipSegments(): SkipSegment[] {
-  try { return JSON.parse(localStorage.getItem('jr-poster-global-skip') ?? '[]') ?? [] }
+  try { return JSON.parse(localStorage.getItem('jfs-poster-global-skip') ?? '[]') ?? [] }
   catch { return [] }
 }
 
 export function saveGlobalSkipSegments(segs: SkipSegment[]): void {
-  localStorage.setItem('jr-poster-global-skip', JSON.stringify(segs))
+  localStorage.setItem('jfs-poster-global-skip', JSON.stringify(segs))
 }
 
 /** 合并两组区间，排序并消除重叠，过滤无效段（end <= start）。 */
@@ -94,7 +94,7 @@ export interface MediaInfoDto {
   duration: string
 }
 
-const BASE = '/JellyfinRecents/PosterSheet'
+const BASE = '/JellyfinSuite/PosterSheet'
 
 function authHeaders(): Record<string, string> {
   const token = window.ApiClient?.accessToken()
@@ -192,10 +192,31 @@ export async function fetchPreview(overlay: OverlaySettingsDto, rows: number, co
   return res.blob()
 }
 
+function migratePosterStorageOnce(): void {
+  const pairs: [string, string][] = [
+    ['jfs-poster-rows',          'jr-poster-rows'],
+    ['jfs-poster-cols',          'jr-poster-cols'],
+    ['jfs-poster-mode',          'jr-poster-mode'],
+    ['jfs-poster-overlay',       'jr-poster-overlay'],
+    ['jfs-poster-skip-segments', 'jr-poster-skip-segments'],
+    ['jfs-poster-global-skip',   'jr-poster-global-skip'],
+    ['jfs-poster-headless',      'jr-poster-headless'],
+  ]
+  try {
+    for (const [nk, ok] of pairs) {
+      if (localStorage.getItem(nk) === null) {
+        const v = localStorage.getItem(ok)
+        if (v !== null) { localStorage.setItem(nk, v); localStorage.removeItem(ok) }
+      }
+    }
+  } catch { /* localStorage 不可用时静默失败 */ }
+}
+migratePosterStorageOnce()
+
 function defaultOverlay(): OverlaySettingsDto {
   return {
     brandingEnabled: true,
-    brandingText: 'Jellyfin Recents',
+    brandingText: 'Jellyfin Suite',
     videoInfoEnabled: true,
     showFileSize: true,
     showResolutionFps: true,
@@ -214,11 +235,11 @@ function defaultOverlay(): OverlaySettingsDto {
 }
 
 export function loadStartJobRequest(): StartJobRequest {
-  const rows = Math.max(1, Number(localStorage.getItem('jr-poster-rows') ?? 6))
-  const cols = Math.max(1, Number(localStorage.getItem('jr-poster-cols') ?? 8))
-  const mode = (localStorage.getItem('jr-poster-mode') ?? 'deterministic') as 'deterministic' | 'random'
+  const rows = Math.max(1, Number(localStorage.getItem('jfs-poster-rows') ?? 6))
+  const cols = Math.max(1, Number(localStorage.getItem('jfs-poster-cols') ?? 8))
+  const mode = (localStorage.getItem('jfs-poster-mode') ?? 'deterministic') as 'deterministic' | 'random'
   const overlay: OverlaySettingsDto = (() => {
-    try { return JSON.parse(localStorage.getItem('jr-poster-overlay') ?? 'null') ?? defaultOverlay() }
+    try { return JSON.parse(localStorage.getItem('jfs-poster-overlay') ?? 'null') ?? defaultOverlay() }
     catch { return defaultOverlay() }
   })()
   return { rows, cols, mode, seed: mode === 'random' ? crypto.randomUUID() : undefined, overlay }

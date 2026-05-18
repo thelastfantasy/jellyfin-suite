@@ -11,7 +11,7 @@ export function Popover({ open, onClose, children }: Props) {
   if (!open) return null
   return createPortal(
     <div>
-      <div class="jr-popover-overlay" onClick={onClose} />
+      <div class="jfs-popover-overlay" onClick={onClose} />
       {children}
     </div>,
     document.body,

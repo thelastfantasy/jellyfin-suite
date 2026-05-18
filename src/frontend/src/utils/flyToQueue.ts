@@ -1,6 +1,6 @@
 export function flyToQueue(sourceEl: Element): void {
   const sourceRect = sourceEl.getBoundingClientRect()
-  const target = document.querySelector<HTMLElement>('.jr-queue-widget')
+  const target = document.querySelector<HTMLElement>('.jfs-queue-widget')
 
   let targetCx: number
   let targetCy: number
@@ -61,8 +61,8 @@ export function flyToQueue(sourceEl: Element): void {
     cleaned = true
     clone.remove()
     if (target) {
-      target.classList.add('jr-queue-widget--arrived')
-      setTimeout(() => target.classList.remove('jr-queue-widget--arrived'), 600)
+      target.classList.add('jfs-queue-widget--arrived')
+      setTimeout(() => target.classList.remove('jfs-queue-widget--arrived'), 600)
     }
   }
 

@@ -1,9 +1,10 @@
-import { MdArrowDownward, MdArrowUpward, MdGridView, MdViewModule, MdViewList } from 'react-icons/md'
+import { MdArrowDownward, MdArrowUpward, MdGridView, MdViewModule, MdViewList, MdBuild } from 'react-icons/md'
 import type { GroupByMode, MediaFilter, SortByMode, ViewMode, ViewSettings } from '../types'
 import { useLocale } from '../i18n/context'
 import { SettingsPopover } from './SettingsPopover'
 import { registerPosterViewClick } from '../state/posterSheetUnlock'
 import { PosterSheetSettingsPanel } from './PosterSheetSettingsPanel'
+import { PlayerEnhancerPanel } from './PlayerEnhancerPanel'
 import { Popover } from './Popover'
 
 interface Props {
@@ -14,6 +15,9 @@ interface Props {
   posterUnlocked?: boolean
   showPosterSettings?: boolean
   onTogglePosterSettings?: () => void
+  isAdmin?: boolean
+  showEnhancerPanel?: boolean
+  onToggleEnhancerPanel?: () => void
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +29,7 @@ const VIEW_MODE_ICONS: { value: ViewMode; icon: IconComponent }[] = [
   { value: 'list', icon: MdViewList as IconComponent },
 ]
 
-export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisablePoster, posterUnlocked = false, showPosterSettings = false, onTogglePosterSettings }: Props) {
+export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisablePoster, posterUnlocked = false, showPosterSettings = false, onTogglePosterSettings, isAdmin = false, showEnhancerPanel = false, onToggleEnhancerPanel }: Props) {
   const { t } = useLocale()
 
   const GROUP_OPTIONS: { value: GroupByMode; label: string }[] = [
@@ -57,13 +61,13 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
   }
 
   return (
-    <div class="jr-toolbar">
+    <div class="jfs-toolbar">
       {/* 左侧：数据筛选控制（分组 / 排序 / 类型） */}
-      <div class="jr-toolbar__left">
-        <div class="jr-toolbar__group">
-          <label class="jr-toolbar__label">{t.groupLabel}</label>
+      <div class="jfs-toolbar__left">
+        <div class="jfs-toolbar__group">
+          <label class="jfs-toolbar__label">{t.groupLabel}</label>
           <select
-            class="jr-toolbar__select"
+            class="jfs-toolbar__select"
             value={settings.groupBy}
             onChange={(e) => onSettingsChange({ groupBy: (e.target as HTMLSelectElement).value as GroupByMode })}
           >
@@ -78,10 +82,10 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
           />
         </div>
 
-        <div class="jr-toolbar__group">
-          <label class="jr-toolbar__label">{t.sortLabel}</label>
+        <div class="jfs-toolbar__group">
+          <label class="jfs-toolbar__label">{t.sortLabel}</label>
           <select
-            class="jr-toolbar__select"
+            class="jfs-toolbar__select"
             value={settings.sortBy}
             onChange={(e) => onSettingsChange({ sortBy: (e.target as HTMLSelectElement).value as SortByMode })}
           >
@@ -90,7 +94,7 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
             ))}
           </select>
           <button
-            class="jr-toolbar__sort-order"
+            class="jfs-toolbar__sort-order"
             onClick={() => onSettingsChange({ sortOrder: settings.sortOrder === 'desc' ? 'asc' : 'desc' })}
             title={settings.sortOrder === 'desc' ? t.sortDesc : t.sortAsc}
           >
@@ -98,10 +102,10 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
           </button>
         </div>
 
-        <div class="jr-toolbar__group">
-          <label class="jr-toolbar__label">{t.typeLabel}</label>
+        <div class="jfs-toolbar__group">
+          <label class="jfs-toolbar__label">{t.typeLabel}</label>
           <select
-            class="jr-toolbar__select"
+            class="jfs-toolbar__select"
             value={settings.mediaFilter}
             onChange={(e) => onSettingsChange({ mediaFilter: (e.target as HTMLSelectElement).value as MediaFilter })}
           >
@@ -113,14 +117,14 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
       </div>
 
       {/* 右侧：显示控制（视图 / 勾选框） */}
-      <div class="jr-toolbar__right">
-        <div class="jr-toolbar__group">
-          <label class="jr-toolbar__label">{t.viewLabel}</label>
-          <div class="jr-toolbar__view-modes">
+      <div class="jfs-toolbar__right">
+        <div class="jfs-toolbar__group">
+          <label class="jfs-toolbar__label">{t.viewLabel}</label>
+          <div class="jfs-toolbar__view-modes">
             {VIEW_MODE_ICONS.map((o) => (
               <button
                 key={o.value}
-                class={`jr-toolbar__view-btn${settings.viewMode === o.value ? ' jr-toolbar__view-btn--active' : ''}`}
+                class={`jfs-toolbar__view-btn${settings.viewMode === o.value ? ' jfs-toolbar__view-btn--active' : ''}`}
                 title={o.value === 'poster' ? 'Click me 7 times' : VIEW_MODE_TITLES[o.value]}
                 onClick={() => {
                   if (o.value === 'poster') {
@@ -135,9 +139,9 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
           </div>
         </div>
 
-        <div class="jr-toolbar__right-stack">
-          <div class="jr-toolbar__group">
-            <label class="jr-toolbar__label jr-toolbar__label--toggle">
+        <div class="jfs-toolbar__right-stack">
+          <div class="jfs-toolbar__group">
+            <label class="jfs-toolbar__label jfs-toolbar__label--toggle">
               <input
                 type="checkbox"
                 checked={settings.showRepeats}
@@ -145,7 +149,7 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
               />
               {t.showRepeats}
             </label>
-            <label class={`jr-toolbar__label jr-toolbar__label--toggle${!settings.showRepeats ? ' jr-toolbar__label--disabled' : ''}`}>
+            <label class={`jfs-toolbar__label jfs-toolbar__label--toggle${!settings.showRepeats ? ' jfs-toolbar__label--disabled' : ''}`}>
               <input
                 type="checkbox"
                 checked={settings.groupDedup}
@@ -157,24 +161,46 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
           </div>
 
           {posterUnlocked && (
-            <div class="jr-toolbar__poster-row">
+            <div class="jfs-toolbar__poster-row">
               <button
-                class={`jr-toolbar__poster-toggle${showPosterSettings ? ' jr-toolbar__poster-toggle--active' : ''}`}
+                class={`jfs-toolbar__poster-toggle${showPosterSettings ? ' jfs-toolbar__poster-toggle--active' : ''}`}
                 title={t.posterQueueSettings}
                 onClick={onTogglePosterSettings}
               >
                 <MdGridView size={16} />
                 <span>{t.posterQueueSettings}</span>
               </button>
+              {isAdmin && (
+                <button
+                  class={`jfs-toolbar__poster-toggle${showEnhancerPanel ? ' jfs-toolbar__poster-toggle--active' : ''}`}
+                  title={t.enhancerTitle}
+                  onClick={onToggleEnhancerPanel}
+                >
+                  <MdBuild size={16} />
+                  <span>{t.enhancerTitle}</span>
+                </button>
+              )}
+            </div>
+          )}
+          {!posterUnlocked && isAdmin && (
+            <div class="jfs-toolbar__poster-row">
+              <button
+                class={`jfs-toolbar__poster-toggle${showEnhancerPanel ? ' jfs-toolbar__poster-toggle--active' : ''}`}
+                title={t.enhancerTitle}
+                onClick={onToggleEnhancerPanel}
+              >
+                <MdBuild size={16} />
+                <span>{t.enhancerTitle}</span>
+              </button>
             </div>
           )}
           <Popover open={!!(posterUnlocked && showPosterSettings)} onClose={() => onTogglePosterSettings?.()}>
-            <div class="jr-poster-settings-modal">
-              <div class="jr-poster-settings-modal__header">
+            <div class="jfs-poster-settings-modal">
+              <div class="jfs-poster-settings-modal__header">
                 <span>{t.posterQueueSettings}</span>
-                <button class="jr-poster-settings-modal__close" onClick={() => onTogglePosterSettings?.()}>✕</button>
+                <button class="jfs-poster-settings-modal__close" onClick={() => onTogglePosterSettings?.()}>✕</button>
               </div>
-              <div class="jr-poster-settings-modal__body">
+              <div class="jfs-poster-settings-modal__body">
                 <PosterSheetSettingsPanel
                   videoDuration={null}
                   onGenerate={() => {}}
@@ -183,6 +209,9 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
                 />
               </div>
             </div>
+          </Popover>
+          <Popover open={!!(isAdmin && showEnhancerPanel)} onClose={() => onToggleEnhancerPanel?.()}>
+            <PlayerEnhancerPanel onClose={() => onToggleEnhancerPanel?.()} />
           </Popover>
         </div>
       </div>

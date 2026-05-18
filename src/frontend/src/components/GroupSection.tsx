@@ -23,17 +23,17 @@ function getRecordKey(r: PlayRecord): string {
 }
 
 function scrollToGroupHeader(index: number) {
-  const cards = document.querySelectorAll<HTMLElement>('.jr-group__cards')
+  const cards = document.querySelectorAll<HTMLElement>('.jfs-group__cards')
   const el = cards[index]
   if (!el) return
   const title = el.previousElementSibling as HTMLElement | null
   const titleH = title?.offsetHeight ?? 50
   window.scrollTo({ top: el.offsetTop - titleH - 56, behavior: 'smooth' })
   if (title) {
-    title.classList.remove('jr-group__title--highlight')
+    title.classList.remove('jfs-group__title--highlight')
     void title.offsetWidth
-    title.classList.add('jr-group__title--highlight')
-    title.addEventListener('animationend', () => title.classList.remove('jr-group__title--highlight'), { once: true })
+    title.classList.add('jfs-group__title--highlight')
+    title.addEventListener('animationend', () => title.classList.remove('jfs-group__title--highlight'), { once: true })
   }
 }
 
@@ -54,19 +54,19 @@ export function GroupSection({
     const el = cardsRef.current
     if (!el) return
 
-    const cards = el.querySelectorAll<HTMLElement>('.jr-card')
+    const cards = el.querySelectorAll<HTMLElement>('.jfs-card')
 
     // 1. 捕获新位置（在任何 transform 之前）
     const nextRects = new Map<string, DOMRect>()
     cards.forEach(c => {
-      const id = c.getAttribute('data-jr-id')
+      const id = c.getAttribute('data-jfs-id')
       if (id) nextRects.set(id, c.getBoundingClientRect())
     })
 
     // 2. 克隆当前卡片供下次渲染的退出动画使用（在 FLIP transform 之前捕获，位置准确）
     const newClones = new Map<string, HTMLElement>()
     cards.forEach(c => {
-      const id = c.getAttribute('data-jr-id')
+      const id = c.getAttribute('data-jfs-id')
       if (!id) return
       const rect = nextRects.get(id)
       if (!rect) return
@@ -102,7 +102,7 @@ export function GroupSection({
 
       // 4. FLIP：将留存卡片从旧位置平移到新位置
       cards.forEach(c => {
-        const id = c.getAttribute('data-jr-id')
+        const id = c.getAttribute('data-jfs-id')
         if (!id) return
         const prev = prevRectsRef.current.get(id)
         const next = nextRects.get(id)
@@ -144,11 +144,11 @@ export function GroupSection({
 
   return (
     <Fragment>
-      <h2 class="jr-group__title">
-        <span class="jr-group__title-text">{group.label}</span>
-        <span class="jr-group__nav">
+      <h2 class="jfs-group__title">
+        <span class="jfs-group__title-text">{group.label}</span>
+        <span class="jfs-group__nav">
           <button
-            class="jr-group__nav-btn"
+            class="jfs-group__nav-btn"
             onClick={handleUp}
             disabled={!canUp}
             title={t.groupPrev}
@@ -156,7 +156,7 @@ export function GroupSection({
             <RiArrowDropUpFill />
           </button>
           <button
-            class="jr-group__nav-btn"
+            class="jfs-group__nav-btn"
             onClick={handleDown}
             disabled={!canDown}
             title={t.groupNext}
@@ -165,7 +165,7 @@ export function GroupSection({
           </button>
         </span>
       </h2>
-      <div ref={cardsRef} class={`jr-group__cards jr-group__cards--${viewMode}`}>
+      <div ref={cardsRef} class={`jfs-group__cards jfs-group__cards--${viewMode}`}>
         {group.records.map((record) => (
           <PlayRecordCard
             key={getRecordKey(record)}

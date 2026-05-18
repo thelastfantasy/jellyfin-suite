@@ -54,4 +54,4 @@ jobs:
         run: npm run build
 
       - name: Build plugin
-        run: dotnet build src/JellyfinRecents.Plugin/JellyfinRecents.Plugin.csproj -c Release
+        run: dotnet build src/JellyfinSuite.Plugin/JellyfinSuite.Plugin.csproj -c Release

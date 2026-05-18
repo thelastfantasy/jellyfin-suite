@@ -16,9 +16,9 @@ import { DEFAULTS } from './SettingsPopover'
 import { PosterQueueWidget } from './PosterQueueWidget'
 
 // 注入 scrollbar-gutter: stable 到 html
-if (typeof document !== 'undefined' && !document.getElementById('jr-scrollbar-gutter')) {
+if (typeof document !== 'undefined' && !document.getElementById('jfs-scrollbar-gutter')) {
   const s = document.createElement('style')
-  s.id = 'jr-scrollbar-gutter'
+  s.id = 'jfs-scrollbar-gutter'
   s.textContent = 'html { scrollbar-gutter: stable; }'
   document.head.appendChild(s)
 }
@@ -44,10 +44,24 @@ export function App({ locale }: Props) {
   const [enableFolderView, setEnableFolderView] = useState(false)
   const [posterUnlocked, setPosterUnlocked] = useState(isPosterUnlocked)
   const [showPosterSettings, setShowPosterSettings] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showEnhancerPanel, setShowEnhancerPanel] = useState(false)
   const skipSpinnerRef = useRef(false)
 
   useEffect(() => {
     getFolderViewEnabled().then(setEnableFolderView)
+  }, [])
+
+  useEffect(() => {
+    if (!window.ApiClient) return
+    const userId = window.ApiClient.getCurrentUserId()
+    const url = window.ApiClient.getUrl(`Users/${userId}`)
+    window.ApiClient.ajax({ url, type: 'GET', dataType: 'json' })
+      .then((user: unknown) => {
+        const u = user as { Policy?: { IsAdministrator?: boolean } }
+        setIsAdmin(u?.Policy?.IsAdministrator ?? false)
+      })
+      .catch(() => setIsAdmin(false))
   }, [])
 
   useEffect(() => {
@@ -119,14 +133,14 @@ export function App({ locale }: Props) {
   }
 
   function handleDisablePoster() {
-    localStorage.removeItem('jr-poster-unlocked')
+    localStorage.removeItem('jfs-poster-unlocked')
     setPosterUnlocked(false)
     setShowPosterSettings(false)
   }
 
   return (
     <LocaleContext.Provider value={{ locale, t }}>
-      <div class="jr-app">
+      <div class="jfs-app">
         <Toolbar
           settings={settings}
           onSettingsChange={handleSettingsChange}
@@ -135,24 +149,27 @@ export function App({ locale }: Props) {
           posterUnlocked={posterUnlocked}
           showPosterSettings={showPosterSettings}
           onTogglePosterSettings={() => setShowPosterSettings(v => !v)}
+          isAdmin={isAdmin}
+          showEnhancerPanel={showEnhancerPanel}
+          onToggleEnhancerPanel={() => setShowEnhancerPanel(v => !v)}
         />
 
         {loading && (
-          <div class="jr-status jr-status--loading">
-            <span class="jr-spinner" />
+          <div class="jfs-status jfs-status--loading">
+            <span class="jfs-spinner" />
             {t.loading}
           </div>
         )}
 
         {error && !loading && (
-          <div class="jr-status jr-status--error">
+          <div class="jfs-status jfs-status--error">
             <p>⚠️ {error}</p>
-            <button class="jr-btn" onClick={() => fetchData(settings, pageIndex)}>{t.retry}</button>
+            <button class="jfs-btn" onClick={() => fetchData(settings, pageIndex)}>{t.retry}</button>
           </div>
         )}
 
         {!loading && !error && groups.length === 0 && (
-          <div class="jr-status jr-status--empty">
+          <div class="jfs-status jfs-status--empty">
             <p>{t.empty}</p>
           </div>
         )}

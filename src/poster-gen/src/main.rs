@@ -10,7 +10,9 @@ use clap::{Args, Parser, Subcommand};
 use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
 
-/// Jellyfin Recents poster sheet generator
+const BRANDING_DEFAULT: &str = "Jellyfin Suite";
+
+/// Jellyfin Suite poster sheet generator
 #[derive(Parser, Debug)]
 #[command(name = "poster-gen", version, about)]
 struct Cli {
@@ -89,7 +91,7 @@ struct GenerateArgs {
     show_timestamp: bool,
 
     /// Branding label
-    #[arg(long, default_value = "Jellyfin Recents")]
+    #[arg(long, default_value = BRANDING_DEFAULT)]
     branding_text: String,
 
     /// Disable branding label
@@ -164,7 +166,7 @@ struct PreviewArgs {
     timestamp_font_path: Option<String>,
 
     /// Branding label
-    #[arg(long, default_value = "Jellyfin Recents")]
+    #[arg(long, default_value = BRANDING_DEFAULT)]
     branding_text: String,
 
     /// Disable branding label

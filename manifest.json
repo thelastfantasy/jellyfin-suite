@@ -1,9 +1,9 @@
 [
   {
     "guid": "a6dd5650-d124-42b6-806a-5426f266e8f2",
-    "name": "Jellyfin Recents",
-    "description": "A customizable recently-played view with flexible grouping and sorting. Downloads fonts on first use.",
-    "overview": "Browse your recently played media grouped by day/week/month/quarter/year, with multiple sort options (play time, title, release date, favorite) and thumbnail/poster/list view modes. Includes a thumbnail grid generator with overlay text and theming. Fonts are downloaded automatically on first use.",
+    "name": "Jellyfin Suite",
+    "description": "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer. Downloads fonts on first use.",
+    "overview": "Browse recently played media with flexible grouping and sorting (day/week/month/quarter/year), multiple sort options and view modes. Generate poster sheets for your library. Enhance the web player with frame stepping, screenshots, and mobile gesture controls. Fonts are downloaded automatically on first use.",
     "owner": "thelastfantasy",
     "category": "General",
     "imageUrl": "",
@@ -11,9 +11,9 @@
   },
   {
     "guid": "9f4b2e0a-c736-4d58-b9e1-0a2f3c4d5e6b",
-    "name": "Jellyfin Recents + Fonts",
-    "description": "A customizable recently-played view with flexible grouping and sorting. Includes bundled Latin fonts — no internet access needed.",
-    "overview": "Same as Jellyfin Recents, but ships with pre-bundled Latin fonts (Roboto, RobotoMono, Oswald, Playfair Display, Cinzel). Choose this variant if your server has restricted internet access or you prefer a self-contained install. CJK fonts (Noto CJK) are still sourced from the system or downloaded separately.",
+    "name": "Jellyfin Suite + Fonts",
+    "description": "A Jellyfin plugin suite: recently played view, poster sheet generator, and web player enhancer. Includes bundled Latin fonts — no internet access needed.",
+    "overview": "Same as Jellyfin Suite, but ships with pre-bundled Latin fonts (Roboto, RobotoMono, Oswald, Playfair Display, Cinzel). Choose this variant if your server has restricted internet access or you prefer a self-contained install. CJK fonts (Noto CJK) are still sourced from the system or downloaded separately.",
     "owner": "thelastfantasy",
     "category": "General",
     "imageUrl": "",

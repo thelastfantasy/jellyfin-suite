@@ -7,6 +7,9 @@ export PATH := /c/Program Files/nodejs:$(PATH)
 build-frontend:
 	cd src/frontend && npm run build
 
+build-enhancer:
+	cd src/player-enhancer && npm install && npm run build
+
 # Build Linux Rust binary via Docker (cross 在 Windows 上有工具链检测 bug，改用 docker run 直接编译)
 build-poster-gen:
 	MSYS_NO_PATHCONV=1 docker run --rm \
@@ -15,24 +18,26 @@ build-poster-gen:
 		rust:1.88-slim-bookworm \
 		cargo build --release
 	cp src/poster-gen/target/release/poster-gen \
-		src/JellyfinRecents.Plugin/poster-gen-linux-x64
+		src/JellyfinSuite.Plugin/poster-gen-linux-x64
 
 # Build Windows Rust binary natively (run on Windows where cargo targets Windows by default)
 build-poster-gen-win:
 	cd src/poster-gen && cargo build --release
 	cp src/poster-gen/target/release/poster-gen.exe \
-		src/JellyfinRecents.Plugin/poster-gen-win-x64.exe
+		src/JellyfinSuite.Plugin/poster-gen-win-x64.exe
 
 build-plugin:
-	dotnet build src/JellyfinRecents.Plugin -c Debug --output build/plugin
+	dotnet build src/JellyfinSuite.Plugin -c Debug --output build/plugin
 
-build: build-frontend build-plugin
+build: build-frontend build-enhancer build-plugin
 
 update: build-poster-gen build
-	MSYS_NO_PATHCONV=1 docker cp build/plugin/JellyfinRecents.Plugin.dll \
-		jellyfin-dev:/config/plugins/JellyfinRecents/JellyfinRecents.Plugin.dll
+	MSYS_NO_PATHCONV=1 docker cp build/plugin/JellyfinSuite.Plugin.dll \
+		jellyfin-dev:/config/plugins/JellyfinSuite/JellyfinSuite.Plugin.dll
 	MSYS_NO_PATHCONV=1 docker cp build/plugin/poster-gen-linux-x64 \
-		jellyfin-dev:/config/plugins/JellyfinRecents/poster-gen-linux-x64
+		jellyfin-dev:/config/plugins/JellyfinSuite/poster-gen-linux-x64
+	MSYS_NO_PATHCONV=1 docker cp src/JellyfinSuite.Plugin/meta.json \
+		jellyfin-dev:/config/plugins/JellyfinSuite/meta.json
 	docker restart jellyfin-dev
 	@echo "Waiting for Jellyfin to start..."
 	@sleep 20
@@ -48,7 +53,7 @@ test-frontend:
 	cd src/frontend && bun test ../../tests/frontend/
 
 test-csharp:
-	dotnet test tests/JellyfinRecents.Tests
+	dotnet test tests/JellyfinSuite.Tests
 
 # Run all test suites sequentially; fail fast on first error
 test: test-rust test-frontend test-csharp
@@ -65,7 +70,7 @@ workflow-test-release:
 		-e .github/act-events/tag-push.json \
 		--secret GITHUB_TOKEN=$$(gh auth token) \
 		--env GITHUB_REF=refs/tags/v0.0.0-test \
-		--env GITHUB_REPOSITORY=local/jellyfin-recents
+		--env GITHUB_REPOSITORY=local/jellyfin-suite
 
 clean:
 	rm -rf build/

@@ -83,7 +83,7 @@ jobs:
 
       - name: Publish plugin
         run: |
-          dotnet publish src/JellyfinRecents.Plugin/JellyfinRecents.Plugin.csproj \
+          dotnet publish src/JellyfinSuite.Plugin/JellyfinSuite.Plugin.csproj \
             -c Release \
             -p:Version=${{ steps.version.outputs.ver4 }} \
             -o publish/
@@ -104,15 +104,15 @@ jobs:
             --arg ver "$VER4" \
             --arg ts "$TIMESTAMP" \
             '.version = $ver | .timestamp = $ts' \
-            src/JellyfinRecents.Plugin/meta.json \
+            src/JellyfinSuite.Plugin/meta.json \
             > publish/meta.json
 
           # Bundled variant — different GUID and name so Jellyfin treats it as a separate plugin
           jq \
             --arg ver "$VER4" \
             --arg ts "$TIMESTAMP" \
-            '.guid = "9f4b2e0a-c736-4d58-b9e1-0a2f3c4d5e6b" | .name = "Jellyfin Recents + Fonts" | .version = $ver | .timestamp = $ts' \
-            src/JellyfinRecents.Plugin/meta.json \
+            '.guid = "9f4b2e0a-c736-4d58-b9e1-0a2f3c4d5e6b" | .name = "Jellyfin Suite + Fonts" | .version = $ver | .timestamp = $ts' \
+            src/JellyfinSuite.Plugin/meta.json \
             > publish/meta-bundled.json
 
       - name: Download bundled fonts
@@ -147,9 +147,9 @@ jobs:
           VER4="${{ steps.version.outputs.ver4 }}"
 
           # Base zip — download-on-demand variant
-          ZIPNAME="jellyfin-recents_${VER4}.zip"
+          ZIPNAME="jellyfin-suite_${VER4}.zip"
           cd publish
-          zip "../${ZIPNAME}" JellyfinRecents.Plugin.dll meta.json poster-gen-linux-x64 poster-gen-win-x64.exe
+          zip "../${ZIPNAME}" JellyfinSuite.Plugin.dll meta.json poster-gen-linux-x64 poster-gen-win-x64.exe
           cd ..
           CHECKSUM="$(md5sum "${ZIPNAME}" | awk '{print $1}')"
           echo "zipname=$ZIPNAME" >> $GITHUB_OUTPUT
@@ -157,9 +157,9 @@ jobs:
           echo "Zip: $ZIPNAME  MD5: $CHECKSUM"
 
           # Bundled zip — separate staging dir so meta.json has the bundled GUID/name
-          BUNDLED_ZIPNAME="jellyfin-recents-fonts_${VER4}.zip"
+          BUNDLED_ZIPNAME="jellyfin-suite-fonts_${VER4}.zip"
           mkdir -p publish-bundled/fonts
-          cp publish/JellyfinRecents.Plugin.dll publish-bundled/
+          cp publish/JellyfinSuite.Plugin.dll publish-bundled/
           cp publish/poster-gen-linux-x64 publish-bundled/
           cp publish/poster-gen-win-x64.exe publish-bundled/
           cp publish/fonts/* publish-bundled/fonts/
@@ -198,7 +198,7 @@ jobs:
             --argjson base "{
               \"version\": \"$VER4\",
               \"changelog\": \"https://github.com/${{ github.repository }}/releases/tag/v${TAG}\",
-              \"targetAbi\": \"10.8.0.0\",
+              \"targetAbi\": \"10.10.7.0\",
               \"sourceUrl\": \"$SOURCE_URL\",
               \"checksum\": \"$CHECKSUM\",
               \"timestamp\": \"$TIMESTAMP\"
@@ -206,7 +206,7 @@ jobs:
             --argjson bundled "{
               \"version\": \"$VER4\",
               \"changelog\": \"https://github.com/${{ github.repository }}/releases/tag/v${TAG}\",
-              \"targetAbi\": \"10.8.0.0\",
+              \"targetAbi\": \"10.10.7.0\",
               \"sourceUrl\": \"$BUNDLED_SOURCE_URL\",
               \"checksum\": \"$BUNDLED_CHECKSUM\",
               \"timestamp\": \"$TIMESTAMP\"

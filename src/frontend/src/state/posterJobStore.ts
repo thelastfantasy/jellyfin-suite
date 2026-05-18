@@ -12,7 +12,7 @@ export interface JobEntry {
 const _jobs = new Map<string, JobEntry>()
 
 function notify(): void {
-  window.dispatchEvent(new CustomEvent('jr-poster-jobs-changed'))
+  window.dispatchEvent(new CustomEvent('jfs-poster-jobs-changed'))
 }
 
 export function addJob(jobId: string, itemId: string, itemTitle: string): void {
