@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -75,7 +76,7 @@ public class PlayerEnhancerEntryPoint : IHostedService
         }
 
         plugins.Add(url);
-        File.WriteAllText(configPath, obj.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        WriteIndented(configPath, obj);
         return true;
     }
 
@@ -100,11 +101,20 @@ public class PlayerEnhancerEntryPoint : IHostedService
             if (plugins[i] is JsonValue val && val.TryGetValue<string>(out var s) && s == url)
             {
                 plugins.RemoveAt(i);
-                File.WriteAllText(configPath, obj.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                WriteIndented(configPath, obj);
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static void WriteIndented(string path, JsonNode node)
+    {
+        using var ms = new System.IO.MemoryStream();
+        using var writer = new Utf8JsonWriter(ms, new JsonWriterOptions { Indented = true });
+        node.WriteTo(writer);
+        writer.Flush();
+        File.WriteAllBytes(path, ms.ToArray());
     }
 }
