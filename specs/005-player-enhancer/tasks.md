@@ -54,11 +54,11 @@
 
 **Purpose**: 建立 `src/player-enhancer/` 独立包并接入构建流水线
 
-- [ ] T001 新建 `src/player-enhancer/package.json`，添加 vite + typescript 依赖，配置 `build` 脚本
-- [ ] T002 新建 `src/player-enhancer/tsconfig.json`，target ESNext，moduleResolution bundler，严格模式
-- [ ] T003 新建 `src/player-enhancer/vite.config.ts`，ESM lib 格式，输出 `jellyfin-suite-enhancer.js` 至 `src/JellyfinSuite.Plugin/Web/`
-- [ ] T004 [P] 更新 `Makefile` build target，追加 `cd src/player-enhancer && npm run build`
-- [ ] T005 [P] 更新 `src/JellyfinSuite.Plugin/Plugin.cs`，追加 `JellyfinSuitePlayerEnhancer` 的 `PluginPageInfo`（`EmbeddedResourcePath` 指向 `jellyfin-suite-enhancer.js`，不含 `EnableInMainMenu`）
+- [x] T001 新建 `src/player-enhancer/package.json`，添加 vite + typescript 依赖，配置 `build` 脚本
+- [x] T002 新建 `src/player-enhancer/tsconfig.json`，target ESNext，moduleResolution bundler，严格模式
+- [x] T003 新建 `src/player-enhancer/vite.config.ts`，ESM lib 格式，输出 `jellyfin-suite-enhancer.js` 至 `src/JellyfinSuite.Plugin/Web/`
+- [x] T004 [P] 更新 `Makefile` build target，追加 `cd src/player-enhancer && npm run build`
+- [x] T005 [P] 更新 `src/JellyfinSuite.Plugin/Plugin.cs`，追加 `JellyfinSuitePlayerEnhancer` 的 `PluginPageInfo`（`EmbeddedResourcePath` 指向 `jellyfin-suite-enhancer.js`，不含 `EnableInMainMenu`）
 
 **Checkpoint**: `npm run build` 在 player-enhancer 目录可执行，产物路径正确
 
@@ -70,13 +70,13 @@
 
 ⚠️ **所有 US 必须等待本阶段完成后才能开始**
 
-- [ ] T006 新建 `src/player-enhancer/src/types/jellyfin.ts`，定义精简 interface：`MediaStream`、`MediaSource`、`PlaybackManager`、`JellyfinPluginDeps`（含 `playbackManager`、`events`）
-- [ ] T007 [P] 新建 `src/player-enhancer/src/i18n.ts`，实现 `t(key)` 函数；语言检测顺序：`document.documentElement.lang` → `navigator.language` → `'en'`；使用前缀最优匹配（`zh-*` → zh，`ja-*` → ja，其他 → en）；包含 zh/ja/en 完整翻译 key（帧步进 tooltip × 4、截图 × 2、OSD 标签 × 2、提示信息 × 3）
-- [ ] T008 [P] 新建 `src/player-enhancer/src/icons.ts`，导出帧步进四个 SVG 字符串常量（`|◁◁` `|◁` `▷|` `▷▷|`）及截图图标 SVG
-- [ ] T009 [P] 新建 `src/player-enhancer/src/styles.ts`，导出 `injectStyles()` 函数，向 `document.head` 插入带 `id="jfs-enhancer-styles"` 的 `<style>` 标签；所有选择器以 `.jfs-enhancer-` 前缀隔离
-- [ ] T010 在 `src/JellyfinSuite.Plugin/Configuration/PluginConfiguration.cs` 追加 `bool AutoInjectEnabled { get; set; } = true;` 字段；新建 `PlayerEnhancerEntryPoint.cs`，实现 `IHostedService`：`StartAsync()` 先检查 `Plugin.Instance.Configuration.AutoInjectEnabled`，为 `false` 时直接返回，否则读取 `IApplicationPaths.WebPath + "/config.json"` 幂等追加 enhancer URL，写入失败时记录警告不抛出异常
-- [ ] T011 新建 `src/player-enhancer/src/injector.ts`，实现 `initInjector(playbackManager, events)`：MutationObserver 监听 `document.body` 检测 `.videoPlayerContainer`，同时 `Events.on(playbackManager, 'playbackstart', ...)` 兜底；幂等注入（检查 `#jfs-enhancer-root` 是否已存在）；调用 `injectStyles()`
-- [ ] T012 新建 `src/player-enhancer/src/index.ts`，`export default class PlayerEnhancerPlugin`，构造函数调用 `injectStyles()` 和 `initInjector(playbackManager, events)`
+- [x] T006 新建 `src/player-enhancer/src/types/jellyfin.ts`，定义精简 interface：`MediaStream`、`MediaSource`、`PlaybackManager`、`JellyfinPluginDeps`（含 `playbackManager`、`events`）
+- [x] T007 [P] 新建 `src/player-enhancer/src/i18n.ts`，实现 `t(key)` 函数；语言检测顺序：`document.documentElement.lang` → `navigator.language` → `'en'`；使用前缀最优匹配（`zh-*` → zh，`ja-*` → ja，其他 → en）；包含 zh/ja/en 完整翻译 key（帧步进 tooltip × 4、截图 × 2、OSD 标签 × 2、提示信息 × 3）
+- [x] T008 [P] 新建 `src/player-enhancer/src/icons.ts`，导出帧步进四个 SVG 字符串常量（`F-10` `F-1` `F+1` `F+10`，双行 text SVG：上行大字 `F`，下行小字修饰符；`font-size="13/10"` `font-weight="800/700"`）及截图图标 SVG（camera 图形）
+- [x] T009 [P] 新建 `src/player-enhancer/src/styles.ts`，导出 `injectStyles()` 函数，向 `document.head` 插入带 `id="jfs-enhancer-styles"` 的 `<style>` 标签；所有选择器以 `.jfs-enhancer-` 前缀隔离
+- [x] T010 在 `src/JellyfinSuite.Plugin/Configuration/PluginConfiguration.cs` 追加 `bool AutoInjectEnabled { get; set; } = true;` 字段；新建 `PlayerEnhancerEntryPoint.cs`，实现 `IHostedService`：`StartAsync()` 先检查 `Plugin.Instance.Configuration.AutoInjectEnabled`，为 `false` 时直接返回，否则读取 `IApplicationPaths.WebPath + "/config.json"` 幂等追加 enhancer URL，写入失败时记录警告不抛出异常
+- [x] T011 新建 `src/player-enhancer/src/injector.ts`，实现 `initInjector(playbackManager, events)`：MutationObserver 监听 `document.body` 检测 `.videoPlayerContainer`，同时 `Events.on(playbackManager, 'playbackstart', ...)` 兜底；幂等注入（检查 `#jfs-enhancer-root` 是否已存在）；调用 `injectStyles()`
+- [x] T012 新建 `src/player-enhancer/src/index.ts`，`export default class PlayerEnhancerPlugin`，构造函数调用 `injectStyles()` 和 `initInjector(playbackManager, events)`
 
 **Checkpoint**: 构建产物加载后，播放任意视频时 DevTools 可见 `.videoPlayerContainer` 内出现 `#jfs-enhancer-root` 容器（暂无子元素）
 
@@ -125,7 +125,7 @@
 
 **Independent Test**: Chrome 设备模式下，双击左侧 1/3 退 10s 并显示 `-10s` ripple；双击中间 1/3 切换暂停；双击右侧 1/3 进 10s；桌面端无响应
 
-- [ ] T018 [US3] 新建 `src/player-enhancer/src/osd-overlay.ts`，实现 `showRipple(side: 'left' | 'right', label: string)`：在点击区域附近创建绝对定位 div，CSS keyframe 动画扩散消失（纯 DOM + CSS，无框架）
+- [ ] T018 [US3] 新建 `src/player-enhancer/src/osd-overlay.ts`，实现 `showRipple(side: 'left' | 'right', label: string)`：YouTube 风格动画——贴屏边的半透明半椭圆（`.jfs-enhancer-ripple-bg`），内含三个 `›`/`‹` 字符（`.jfs-enhancer-ripple-arrow`）做向目标方向平移的 stagger keyframe 动画（delay 0/0.18/0.36s），label 显示 `+10s`/`-10s`；右侧快进时 label 在箭头下方，左侧快退时 label 在箭头下方（结构：`ripple-bg > [ripple-arrows, ripple-label]`）；纯 DOM + CSS，1s 后 `remove()`
 - [ ] T019 [US3] 新建 `src/player-enhancer/src/gestures.ts`，实现 `initGestures(videoEl, playbackManager)`：
   - `navigator.maxTouchPoints > 0` 检查，否则直接返回
   - `touchend` 事件（`capture: true`）三区域双击检测：`zone = x < W/3 ? 'left' : x < 2W/3 ? 'center' : 'right'`；300ms 窗口内同 zone 第二次 tap → 触发对应操作；`preventDefault()` + `stopPropagation()` 阻止 Jellyfin OSD 单击行为

@@ -42,6 +42,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // 必须用 IHostedService 手动订阅
         serviceCollection.AddHostedService<FavoriteEntryPoint>();
 
+        // 播放器增强：启动时幂等追加 enhancer URL 到 web/config.json
+        serviceCollection.AddHostedService<PlayerEnhancerEntryPoint>();
+
         // FontAcquisitionService: 先注册为 Singleton（供 Controller/JobService 注入），
         // 再用同一实例注册为 IHostedService（触发 StartAsync/StopAsync 生命周期）
         serviceCollection.AddSingleton<FontAcquisitionService>(sp =>

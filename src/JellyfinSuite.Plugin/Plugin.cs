@@ -48,6 +48,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             {
                 Name = "JellyfinSuiteBundle",
                 EmbeddedResourcePath = prefix + "jellyfin-suite.js",
+            },
+            new PluginPageInfo
+            {
+                Name = "JellyfinSuitePlayerEnhancer",
+                EmbeddedResourcePath = prefix + "jellyfin-suite-enhancer.js",
             }
         ];
     }

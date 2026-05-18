@@ -1,0 +1,60 @@
+const TRANSLATIONS = {
+  en: {
+    'framestepper.back10':    'Back 10 frames',
+    'framestepper.back1':     'Back 1 frame',
+    'framestepper.forward1':  'Forward 1 frame',
+    'framestepper.forward10': 'Forward 10 frames',
+    'screenshot.button':      'Screenshot',
+    'screenshot.subtitles':   'Include subtitles',
+    'osd.brightness':         'Brightness',
+    'osd.volume':             'Volume',
+    'screenshot.drm':         'DRM-protected content cannot be captured',
+    'screenshot.srt':         'SRT/VTT subtitles cannot be included in screenshot',
+    'screenshot.saved':       'Screenshot saved',
+  },
+  zh: {
+    'framestepper.back10':    '后退 10 帧',
+    'framestepper.back1':     '后退 1 帧',
+    'framestepper.forward1':  '前进 1 帧',
+    'framestepper.forward10': '前进 10 帧',
+    'screenshot.button':      '截图',
+    'screenshot.subtitles':   '包含字幕',
+    'osd.brightness':         '亮度',
+    'osd.volume':             '音量',
+    'screenshot.drm':         '受版权保护的内容无法截图',
+    'screenshot.srt':         'SRT/VTT 字幕无法包含在截图中',
+    'screenshot.saved':       '截图已保存',
+  },
+  ja: {
+    'framestepper.back10':    '10フレーム戻る',
+    'framestepper.back1':     '1フレーム戻る',
+    'framestepper.forward1':  '1フレーム進む',
+    'framestepper.forward10': '10フレーム進む',
+    'screenshot.button':      'スクリーンショット',
+    'screenshot.subtitles':   '字幕を含める',
+    'osd.brightness':         '明るさ',
+    'osd.volume':             '音量',
+    'screenshot.drm':         'DRMで保護されたコンテンツはキャプチャできません',
+    'screenshot.srt':         'SRT/VTT字幕はスクリーンショットに含められません',
+    'screenshot.saved':       'スクリーンショットを保存しました',
+  },
+} as const;
+
+type TranslationKey = keyof typeof TRANSLATIONS.en;
+
+function detectLang(): 'en' | 'zh' | 'ja' {
+  const lang =
+    document.documentElement.lang ||
+    navigator.language ||
+    'en';
+  const prefix = lang.toLowerCase().split('-')[0];
+  if (prefix === 'zh') return 'zh';
+  if (prefix === 'ja') return 'ja';
+  return 'en';
+}
+
+const _lang = detectLang();
+
+export function t(key: TranslationKey): string {
+  return TRANSLATIONS[_lang][key] ?? TRANSLATIONS.en[key] ?? key;
+}

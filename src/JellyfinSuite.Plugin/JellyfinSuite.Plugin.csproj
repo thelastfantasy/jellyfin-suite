@@ -26,6 +26,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Web\config.html" />
     <EmbeddedResource Include="Web\jellyfin-suite.js" Condition="Exists('Web\jellyfin-suite.js')" />
+    <EmbeddedResource Include="Web\jellyfin-suite-enhancer.js" Condition="Exists('Web\jellyfin-suite-enhancer.js')" />
   </ItemGroup>
 
   <ItemGroup>

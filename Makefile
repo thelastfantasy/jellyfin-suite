@@ -7,6 +7,9 @@ export PATH := /c/Program Files/nodejs:$(PATH)
 build-frontend:
 	cd src/frontend && npm run build
 
+build-enhancer:
+	cd src/player-enhancer && npm install && npm run build
+
 # Build Linux Rust binary via Docker (cross 在 Windows 上有工具链检测 bug，改用 docker run 直接编译)
 build-poster-gen:
 	MSYS_NO_PATHCONV=1 docker run --rm \
@@ -26,7 +29,7 @@ build-poster-gen-win:
 build-plugin:
 	dotnet build src/JellyfinSuite.Plugin -c Debug --output build/plugin
 
-build: build-frontend build-plugin
+build: build-frontend build-enhancer build-plugin
 
 update: build-poster-gen build
 	MSYS_NO_PATHCONV=1 docker cp build/plugin/JellyfinSuite.Plugin.dll \
