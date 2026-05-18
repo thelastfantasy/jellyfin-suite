@@ -43,10 +43,11 @@ Thumbs.db
 *.swp
 src/frontend/node_modules/
 src/frontend/dist/
-src/JellyfinRecents.Plugin/Web/jellyfin-recents.js
-src/JellyfinRecents.Plugin/Web/jellyfin-recents-frontend.css
-src/JellyfinRecents.Plugin/bin/
-src/JellyfinRecents.Plugin/obj/
+src/JellyfinSuite.Plugin/Web/jellyfin-suite.js
+src/JellyfinSuite.Plugin/Web/jellyfin-suite-enhancer.js
+src/JellyfinSuite.Plugin/Web/jellyfin-suite-frontend.css
+src/JellyfinSuite.Plugin/bin/
+src/JellyfinSuite.Plugin/obj/
 tests/JellyfinRecents.Tests/bin/
 tests/JellyfinRecents.Tests/obj/
 
