@@ -27,3 +27,17 @@ export interface JellyfinPluginDeps {
   playbackManager: PlaybackManager;
   events: JellyfinEvents;
 }
+
+declare global {
+  interface Window {
+    ApiClient?: {
+      serverAddress(): string;
+      accessToken(): string;
+      getCurrentUserId(): string;
+      getUrl(name: string, params?: Record<string, string>): string;
+      ajax(req: { url: string; type?: string; dataType?: string }): Promise<unknown>;
+      getJSON(url: string): Promise<unknown>;
+      getCurrentUser(): Promise<{ Policy?: { IsAdministrator?: boolean } }>;
+    };
+  }
+}

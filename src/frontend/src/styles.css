@@ -2725,3 +2725,38 @@ a.jfs-card__series-name:hover {
   padding: 0 1px;
 }
 
+
+/* ── Player Enhancer 管理面板 ── */
+.jfs-enhancer-panel .jfs-poster-settings-modal__body { min-width: 260px; }
+.jfs-enhancer-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+.jfs-enhancer-panel__status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.5);
+}
+.jfs-enhancer-panel__status--on { color: #4caf50; }
+.jfs-enhancer-panel__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.jfs-btn--danger {
+  background: rgba(220,50,50,0.15);
+  border-color: rgba(220,50,50,0.4);
+  color: #ff6b6b;
+}
+.jfs-btn--danger:hover:not(:disabled) {
+  background: rgba(220,50,50,0.3);
+  border-color: rgba(220,50,50,0.7);
+}
+.jfs-enhancer-panel__hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.jfs-enhancer-panel__hint--ok { color: #4caf50; }
+.jfs-enhancer-panel__hint--err { color: #ff6b6b; }

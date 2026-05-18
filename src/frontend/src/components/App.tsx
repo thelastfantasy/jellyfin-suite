@@ -44,10 +44,24 @@ export function App({ locale }: Props) {
   const [enableFolderView, setEnableFolderView] = useState(false)
   const [posterUnlocked, setPosterUnlocked] = useState(isPosterUnlocked)
   const [showPosterSettings, setShowPosterSettings] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showEnhancerPanel, setShowEnhancerPanel] = useState(false)
   const skipSpinnerRef = useRef(false)
 
   useEffect(() => {
     getFolderViewEnabled().then(setEnableFolderView)
+  }, [])
+
+  useEffect(() => {
+    if (!window.ApiClient) return
+    const userId = window.ApiClient.getCurrentUserId()
+    const url = window.ApiClient.getUrl(`Users/${userId}`)
+    window.ApiClient.ajax({ url, type: 'GET', dataType: 'json' })
+      .then((user: unknown) => {
+        const u = user as { Policy?: { IsAdministrator?: boolean } }
+        setIsAdmin(u?.Policy?.IsAdministrator ?? false)
+      })
+      .catch(() => setIsAdmin(false))
   }, [])
 
   useEffect(() => {
@@ -135,6 +149,9 @@ export function App({ locale }: Props) {
           posterUnlocked={posterUnlocked}
           showPosterSettings={showPosterSettings}
           onTogglePosterSettings={() => setShowPosterSettings(v => !v)}
+          isAdmin={isAdmin}
+          showEnhancerPanel={showEnhancerPanel}
+          onToggleEnhancerPanel={() => setShowEnhancerPanel(v => !v)}
         />
 
         {loading && (

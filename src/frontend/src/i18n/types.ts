@@ -127,4 +127,12 @@ export interface Translations {
   posterCustomFontUpload: string
   posterCustomFontDelete: string
   posterCustomFontSuffix: string
+  // Player Enhancer management panel (admin only)
+  enhancerTitle: string
+  enhancerStatusEnabled: string
+  enhancerStatusDisabled: string
+  enhancerInject: string
+  enhancerRemove: string
+  enhancerReloadHint: string
+  enhancerErrorHint: string
 }

@@ -86,13 +86,13 @@
 
 **Goal**: OSD 底部出现四个帧步进按钮，精确按帧移动画面
 
-**Independent Test**: 打开任意视频，OSD 可见 `|◁◁ |◁ ▷| ▷▷|` 四按钮；点击 `▷|` 后画面前进一帧并保持暂停
+**Independent Test**: 打开任意视频，OSD 可见 `F-10 F-1 F+1 F+10` 四按钮（双行 text SVG：上行大字 `F`，下行小字修饰符）；点击 `F+1` 后画面前进一帧并保持暂停
 
-- [ ] T013 [US1] 新建 `src/player-enhancer/src/fps-cache.ts`，实现 `getFps(itemId)` 异步函数：调用 `window.ApiClient.getJSON('/Items/{id}')` 取 `MediaSources[0].MediaStreams` 中 video stream 的 `RealFrameRate ?? AverageFrameRate ?? 24`，结果以 itemId 为 key 缓存至 Map
-- [ ] T014 [US1] 新建 `src/player-enhancer/src/framestepper.ts`，实现：
+- [x] T013 [US1] 新建 `src/player-enhancer/src/fps-cache.ts`，实现 `getFps(itemId)` 异步函数：调用 `window.ApiClient.getJSON('/Items/{id}')` 取 `MediaSources[0].MediaStreams` 中 video stream 的 `RealFrameRate ?? AverageFrameRate ?? 24`，结果以 itemId 为 key 缓存至 Map
+- [x] T014 [US1] 新建 `src/player-enhancer/src/framestepper.ts`，实现：
   - `createFrameStepButtons()` 返回包含四个 `<button>` 的容器 div，按钮使用 `icons.ts` 中的 SVG，`title` 属性调用 `t()` 获取 tooltip
   - `stepFrames(videoEl, delta, itemId)` 异步函数：获取 fps → 若播放中先暂停 → `currentTime = clamp(currentTime + delta/fps, 0, duration)`
-- [ ] T015 [US1] 在 `src/player-enhancer/src/injector.ts` 中接入帧步进：将 `createFrameStepButtons()` 结果 `prepend` 至 `.osdControls .buttons.focuscontainer-x`，绑定四个按钮的 click 事件（-10f / -1f / +1f / +10f）；从 `playbackManager.currentItem()` 获取 `itemId` 传入 `stepFrames`
+- [x] T015 [US1] 在 `src/player-enhancer/src/injector.ts` 中接入帧步进：将 `createFrameStepButtons()` 结果 `prepend` 至 `.osdControls .buttons.focuscontainer-x`，绑定四个按钮的 click 事件（-10f / -1f / +1f / +10f）；从 `playbackManager.currentItem()` 获取 `itemId` 传入 `stepFrames`
 
 **Checkpoint**: US1 完整可验收，帧步进精度与 fps 一致，边界不越界
 
@@ -104,13 +104,13 @@
 
 **Independent Test**: 暂停视频，点击截图按钮，浏览器下载 PNG，分辨率 = 视频编码分辨率，不含黑边
 
-- [ ] T016 [US2] 新建 `src/player-enhancer/src/screenshot.ts`，实现 `takeScreenshot(videoEl, includeSubtitles)`：
+- [x] T016 [US2] 新建 `src/player-enhancer/src/screenshot.ts`，实现 `takeScreenshot(videoEl, includeSubtitles)`：
   - `OffscreenCanvas(videoEl.videoWidth, videoEl.videoHeight)`
   - `ctx.drawImage(videoEl, 0, 0, w, h)`，catch `SecurityError` → 调用 `t('screenshot.drm')` 显示 toast
   - 若 `includeSubtitles`：尝试 `drawImage('.libassjs-canvas-parent canvas')` 叠加 ASS 字幕（不存在则静默跳过）
   - `canvas.convertToBlob({ type: 'image/png' })` → 触发下载，文件名 `jellyfin-screenshot-{itemTitle}-{Date.now()}.png`（itemTitle 取自 `playbackManager.currentItem()?.Name`，非法字符替换为下划线）；截图为客户端纯内存操作，不产生服务端文件
   - **已知 v1 限制**：若亮度经手势调节，截图像素为原始亮度（CSS `filter` 不影响 `drawImage` 读取的像素值），截图与屏幕显示存在亮度差异，不作为缺陷处理
-- [ ] T017 [US2] 在 `src/player-enhancer/src/injector.ts` 中接入截图：
+- [x] T017 [US2] 在 `src/player-enhancer/src/injector.ts` 中接入截图：
   - 创建截图按钮（使用 `icons.ts` SVG，tooltip 调用 `t()`）
   - 创建字幕 Switch（`<label>` + `<input type="checkbox">`，默认 unchecked；不持久化——每次播放器初始化重置，不读写 localStorage）
   - 将按钮与 Switch 追加至帧步进按钮容器，绑定 click 事件调用 `takeScreenshot`
@@ -125,12 +125,12 @@
 
 **Independent Test**: Chrome 设备模式下，双击左侧 1/3 退 10s 并显示 `-10s` ripple；双击中间 1/3 切换暂停；双击右侧 1/3 进 10s；桌面端无响应
 
-- [ ] T018 [US3] 新建 `src/player-enhancer/src/osd-overlay.ts`，实现 `showRipple(side: 'left' | 'right', label: string)`：YouTube 风格动画——贴屏边的半透明半椭圆（`.jfs-enhancer-ripple-bg`），内含三个 `›`/`‹` 字符（`.jfs-enhancer-ripple-arrow`）做向目标方向平移的 stagger keyframe 动画（delay 0/0.18/0.36s），label 显示 `+10s`/`-10s`；右侧快进时 label 在箭头下方，左侧快退时 label 在箭头下方（结构：`ripple-bg > [ripple-arrows, ripple-label]`）；纯 DOM + CSS，1s 后 `remove()`
-- [ ] T019 [US3] 新建 `src/player-enhancer/src/gestures.ts`，实现 `initGestures(videoEl, playbackManager)`：
+- [x] T018 [US3] 新建 `src/player-enhancer/src/osd-overlay.ts`，实现 `showRipple(side: 'left' | 'right', label: string)`：YouTube 风格动画——贴屏边的半透明半椭圆（`.jfs-enhancer-ripple-bg`），内含三个 `›`/`‹` 字符（`.jfs-enhancer-ripple-arrow`）做向目标方向平移的 stagger keyframe 动画（delay 0/0.18/0.36s），label 显示 `+10s`/`-10s`；右侧快进时 label 在箭头下方，左侧快退时 label 在箭头下方（结构：`ripple-bg > [ripple-arrows, ripple-label]`）；纯 DOM + CSS，1s 后 `remove()`
+- [x] T019 [US3] 新建 `src/player-enhancer/src/gestures.ts`，实现 `initGestures(videoEl, playbackManager)`：
   - `navigator.maxTouchPoints > 0` 检查，否则直接返回
   - `touchend` 事件（`capture: true`）三区域双击检测：`zone = x < W/3 ? 'left' : x < 2W/3 ? 'center' : 'right'`；300ms 窗口内同 zone 第二次 tap → 触发对应操作；`preventDefault()` + `stopPropagation()` 阻止 Jellyfin OSD 单击行为
   - 左/右：`videoEl.currentTime ± 10`，调用 `showRipple()`；中：`videoEl.paused ? videoEl.play() : videoEl.pause()`
-- [ ] T020 [US3] 在 `src/player-enhancer/src/injector.ts` 中调用 `initGestures(videoEl, playbackManager)`
+- [x] T020 [US3] 在 `src/player-enhancer/src/injector.ts` 中调用 `initGestures(videoEl, playbackManager)`
 
 **Checkpoint**: US3 完整可验收，三区域触发正确，桌面端无副作用
 
@@ -142,14 +142,14 @@
 
 **Independent Test**: Chrome 设备模式下，在左侧向上拖拽，画面变亮且 OSD 显示亮度百分比；新视频开始时亮度自动重置 100%
 
-- [ ] T021 [US4] 在 `src/player-enhancer/src/osd-overlay.ts` 中追加 `showValueOsd(type: 'brightness' | 'volume', value: number)` 函数：屏幕中央半透明浮层，显示图标 + 百分比数字，1.5s 后自动隐藏
-- [ ] T022 [US4] 在 `src/player-enhancer/src/gestures.ts` 中追加滑动控制逻辑（`touchstart` / `touchmove` / `touchend`，`passive: false`）：
-  - `touchstart`：记录 `startY`、`side`（左/右半屏）、初始值（亮度/音量）
-  - `touchmove`：`deltaY = startY - currentY`；归一化 `delta = deltaY / (innerHeight * 0.5)`
-    - 左：`brightness = clamp(start + delta, 0, 2.0)`（0 = 全黑，1.0 = 正常，2.0 = 200%；半屏滑动覆盖全量程），`videoEl.style.filter = brightness(${v})`，调用 `showValueOsd`
-    - 右：`volume = clamp(start + delta, 0, 1)`，`videoEl.volume = v`，调用 `showValueOsd`
-  - `touchend`：重置 swipe 状态
-- [ ] T023 [US4] 在 `src/player-enhancer/src/injector.ts` 中监听 `playbackstart` 事件，重置 `videoEl.style.filter = 'brightness(1)'`
+- [x] T021 [US4] 在 `src/player-enhancer/src/osd-overlay.ts` 中追加 `showValueOsd(type: 'brightness' | 'volume', value: number)` 函数：屏幕中央半透明浮层，显示图标 + 百分比数字，1.5s 后自动隐藏
+- [x] T022 [US4] 在 `src/player-enhancer/src/gestures.ts` 中追加滑动控制逻辑（`touchstart` / `touchmove` / `touchend`，`passive: false`）：
+  - `touchstart`：记录 `startX`、`startY`、`side`（左/右半屏）、初始值（亮度/音量）、`directionLock = null`
+  - `touchmove`：**方向锁定**——移动超过 10px 后通过 `|dy| >= |dx|` 判定为纵向锁定，否则标记横向并忽略后续事件（允许用户斜向滑动，只要大体纵向即可）；`delta = (startY - currentY) / (innerHeight * 0.5)`
+    - 纵向锁定后，左：`brightness = clamp(start + delta, 0, 2.0)`，`videoEl.style.filter = brightness(${v})`，调用 `showValueOsd`
+    - 纵向锁定后，右：`volume = clamp(start + delta, 0, 1)`，`videoEl.volume = v`，调用 `showValueOsd`
+  - `touchend`：重置 swipe 状态（含 `directionLock`）
+- [x] T023 [US4] 在 `src/player-enhancer/src/injector.ts` 中监听 `playbackstart` 事件，重置 `videoEl.style.filter = 'brightness(1)'`
 
 **Checkpoint**: US4 完整可验收，边界不越界，新视频亮度自动重置，桌面端无副作用
 
@@ -161,20 +161,20 @@
 
 **Independent Test**: 以管理员账号打开设置面板，可见注入管理区域及状态标签；点击"重新注入"后标签更新为已启用并提示刷新；点击"卸载注入"后更新为已禁用；以普通用户账号打开，注入管理区域不可见
 
-- [ ] T024 [US5] 新建 `src/JellyfinSuite.Plugin/Controllers/PlayerEnhancerController.cs`，实现三个 endpoint，**全部加 `[Authorize(Policy = Policies.RequiresElevation)]`**（仅 Jellyfin 管理员可调用）：
+- [x] T024 [US5] 新建 `src/JellyfinSuite.Plugin/Controllers/PlayerEnhancerController.cs`，实现三个 endpoint，**全部加 `[Authorize(Policy = Policies.RequiresElevation)]`**（仅 Jellyfin 管理员可调用）：
   - `GET /JellyfinSuite/PlayerEnhancer/Status` → `{ autoInjectEnabled: bool }`（读 `Plugin.Instance.Configuration.AutoInjectEnabled`）
   - `POST /JellyfinSuite/PlayerEnhancer/Inject` → `AutoInjectEnabled = true` → `SaveConfiguration()` → 幂等追加 URL；失败时返回 500 含错误描述
   - `DELETE /JellyfinSuite/PlayerEnhancer/Inject` → `AutoInjectEnabled = false` → `SaveConfiguration()` → 移除 URL；失败时返回 500 含错误描述
   - 提取共享 `PlayerEnhancerConfigPatcher` 静态工具类（供 T010 的 EntryPoint 共用 config.json 读写）；同步重构 T010 使用此工具类
-- [ ] T025 [P] [US5] 新建 `src/frontend/src/api/playerEnhancerApi.ts`，封装三个 API 调用函数：`getEnhancerStatus()` → `{ autoInjectEnabled: bool }`、`injectEnhancer()`、`removeEnhancer()`，使用项目现有 `jellyfinClient` 模式；收到 401/403 时向调用方抛出（正常路径由 T026 的 `IsAdministrator` 前置检查保证不触发）
-- [ ] T026 [US5] 新建 `src/frontend/src/components/PlayerEnhancerPanel.tsx`（Preact 组件）：
+- [x] T025 [P] [US5] 新建 `src/frontend/src/api/playerEnhancerApi.ts`，封装三个 API 调用函数：`getEnhancerStatus()` → `{ autoInjectEnabled: bool }`、`injectEnhancer()`、`removeEnhancer()`，使用项目现有 `jellyfinClient` 模式；收到 401/403 时向调用方抛出（正常路径由 T026 的 `IsAdministrator` 前置检查保证不触发）
+- [x] T026 [US5] 新建 `src/frontend/src/components/PlayerEnhancerPanel.tsx`（Preact 组件）：
   - **仅对管理员渲染**：通过 `jellyfinClient.getCurrentUser().Policy.IsAdministrator` 判断，非管理员直接返回 `null`
   - 挂载时调用 `getEnhancerStatus()` 获取并显示状态（● 已启用 / ○ 已禁用）；状态基于 `autoInjectEnabled`
   - "重新注入"按钮：调用 `injectEnhancer()`，成功后刷新状态，显示"请刷新页面生效"提示；**失败时显示错误 toast 并附加"查看服务端日志"引导，按钮恢复可点击，状态不变**
   - "卸载注入"按钮：调用 `removeEnhancer()`，成功后刷新状态；**失败时同上错误处理**
   - 操作执行中按钮 disabled + loading 状态防重复提交
-- [ ] T027 [P] [US5] 将 `PlayerEnhancerPanel` 集成到现有设置面板（`SettingsPopover` 或对应区块）
-- [ ] T028 [P] [US5] 在 `src/frontend/src/i18n/locales/en.ts`、`zh.ts`、`ja.ts` 中添加管理 UI 的三语翻译 key（状态标签、按钮文字、提示信息）
+- [x] T027 [P] [US5] 将 `PlayerEnhancerPanel` 集成到现有设置面板（`SettingsPopover` 或对应区块）
+- [x] T028 [P] [US5] 在 `src/frontend/src/i18n/locales/en.ts`、`zh.ts`、`ja.ts` 中添加管理 UI 的三语翻译 key（状态标签、按钮文字、提示信息）
 
 **Checkpoint**: US5 完整可验收，三个 API endpoint 正确响应，UI 状态实时刷新
 

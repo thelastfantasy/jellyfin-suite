@@ -1,9 +1,10 @@
-import { MdArrowDownward, MdArrowUpward, MdGridView, MdViewModule, MdViewList } from 'react-icons/md'
+import { MdArrowDownward, MdArrowUpward, MdGridView, MdViewModule, MdViewList, MdBuild } from 'react-icons/md'
 import type { GroupByMode, MediaFilter, SortByMode, ViewMode, ViewSettings } from '../types'
 import { useLocale } from '../i18n/context'
 import { SettingsPopover } from './SettingsPopover'
 import { registerPosterViewClick } from '../state/posterSheetUnlock'
 import { PosterSheetSettingsPanel } from './PosterSheetSettingsPanel'
+import { PlayerEnhancerPanel } from './PlayerEnhancerPanel'
 import { Popover } from './Popover'
 
 interface Props {
@@ -14,6 +15,9 @@ interface Props {
   posterUnlocked?: boolean
   showPosterSettings?: boolean
   onTogglePosterSettings?: () => void
+  isAdmin?: boolean
+  showEnhancerPanel?: boolean
+  onToggleEnhancerPanel?: () => void
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +29,7 @@ const VIEW_MODE_ICONS: { value: ViewMode; icon: IconComponent }[] = [
   { value: 'list', icon: MdViewList as IconComponent },
 ]
 
-export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisablePoster, posterUnlocked = false, showPosterSettings = false, onTogglePosterSettings }: Props) {
+export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisablePoster, posterUnlocked = false, showPosterSettings = false, onTogglePosterSettings, isAdmin = false, showEnhancerPanel = false, onToggleEnhancerPanel }: Props) {
   const { t } = useLocale()
 
   const GROUP_OPTIONS: { value: GroupByMode; label: string }[] = [
@@ -166,6 +170,28 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
                 <MdGridView size={16} />
                 <span>{t.posterQueueSettings}</span>
               </button>
+              {isAdmin && (
+                <button
+                  class={`jfs-toolbar__poster-toggle${showEnhancerPanel ? ' jfs-toolbar__poster-toggle--active' : ''}`}
+                  title={t.enhancerTitle}
+                  onClick={onToggleEnhancerPanel}
+                >
+                  <MdBuild size={16} />
+                  <span>{t.enhancerTitle}</span>
+                </button>
+              )}
+            </div>
+          )}
+          {!posterUnlocked && isAdmin && (
+            <div class="jfs-toolbar__poster-row">
+              <button
+                class={`jfs-toolbar__poster-toggle${showEnhancerPanel ? ' jfs-toolbar__poster-toggle--active' : ''}`}
+                title={t.enhancerTitle}
+                onClick={onToggleEnhancerPanel}
+              >
+                <MdBuild size={16} />
+                <span>{t.enhancerTitle}</span>
+              </button>
             </div>
           )}
           <Popover open={!!(posterUnlocked && showPosterSettings)} onClose={() => onTogglePosterSettings?.()}>
@@ -183,6 +209,9 @@ export function Toolbar({ settings, onSettingsChange, onPosterUnlocked, onDisabl
                 />
               </div>
             </div>
+          </Popover>
+          <Popover open={!!(isAdmin && showEnhancerPanel)} onClose={() => onToggleEnhancerPanel?.()}>
+            <PlayerEnhancerPanel onClose={() => onToggleEnhancerPanel?.()} />
           </Popover>
         </div>
       </div>

@@ -117,4 +117,11 @@ export const ja: Translations = {
   posterCustomFontUpload: 'アップロード',
   posterCustomFontDelete: '削除',
   posterCustomFontSuffix: '(カスタム)',
+  enhancerTitle: 'プレーヤー拡張',
+  enhancerStatusEnabled: '● 有効',
+  enhancerStatusDisabled: '○ 無効',
+  enhancerInject: '再注入',
+  enhancerRemove: '注入を解除',
+  enhancerReloadHint: '成功しました。ページを再読み込みしてください',
+  enhancerErrorHint: '失敗しました。サーバーログを確認してください',
 }

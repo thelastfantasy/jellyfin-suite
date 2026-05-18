@@ -117,4 +117,11 @@ export const en: Translations = {
   posterCustomFontUpload: 'Upload',
   posterCustomFontDelete: 'Remove',
   posterCustomFontSuffix: '(Custom)',
+  enhancerTitle: 'Player Enhancer',
+  enhancerStatusEnabled: '● Enabled',
+  enhancerStatusDisabled: '○ Disabled',
+  enhancerInject: 'Re-inject',
+  enhancerRemove: 'Remove Injection',
+  enhancerReloadHint: 'Success — please reload the page',
+  enhancerErrorHint: 'Failed — check server logs',
 }
