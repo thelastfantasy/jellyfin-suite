@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/004-rust-layout-engine/plan.md
+at specs/005-player-enhancer/plan.md
 <!-- SPECKIT END -->
 
 ## 部署工作流程（必须遵守）
