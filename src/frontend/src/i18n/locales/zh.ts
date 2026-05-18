@@ -124,4 +124,7 @@ export const zh: Translations = {
   enhancerRemove: '卸载注入',
   enhancerReloadHint: '已成功，请刷新页面生效',
   enhancerErrorHint: '操作失败，请查看服务端日志',
+  enhancerSeekLabel: '双击快进/快退',
+  enhancerSeekUnit: '秒',
+  enhancerSeekSave: '保存',
 }

@@ -1,34 +1,62 @@
 import { injectStyles } from './styles';
 import { createFrameStepButtons, stepFrames } from './framestepper';
 import { takeScreenshot } from './screenshot';
-import { initGestures } from './gestures';
+import { initGestures, setSeekSeconds } from './gestures';
 import { t } from './i18n';
 import { ICON_SCREENSHOT } from './icons';
-import type { PlaybackManager, JellyfinEvents } from './types/jellyfin';
 
 const ROOT_ID = 'jfs-enhancer-root';
 
-let _observer: MutationObserver | null = null;
-let _playbackManager: PlaybackManager | null = null;
 let _currentVideoEl: HTMLVideoElement | null = null;
-let _buttonsInjected = false;
+let _cachedItemId = '';
 
-export function initInjector(playbackManager: PlaybackManager, events: JellyfinEvents): void {
+async function loadGestureConfig(): Promise<void> {
+  try {
+    const res = await fetch('/JellyfinSuite/PlayerEnhancer/GestureConfig');
+    if (res.ok) {
+      const cfg = await res.json() as { seekSeconds?: number };
+      if (typeof cfg.seekSeconds === 'number' && cfg.seekSeconds > 0) {
+        setSeekSeconds(cfg.seekSeconds);
+      }
+    }
+  } catch {
+    // keep default
+  }
+}
+
+function extractItemIdFromSearch(search: string): string {
+  return new URLSearchParams(search).get('id') ?? '';
+}
+
+function extractItemIdFromUrl(url: string): string {
+  const qIndex = url.indexOf('?');
+  if (qIndex < 0) return '';
+  return extractItemIdFromSearch(url.slice(qIndex + 1));
+}
+
+function getItemId(): string {
+  return extractItemIdFromUrl(window.location.href) || _cachedItemId;
+}
+
+export function initInjector(): void {
   injectStyles();
-  _playbackManager = playbackManager;
-
-  events.on(playbackManager, 'playbackstart', () => {
-    // Reset brightness for new video
-    if (_currentVideoEl) _currentVideoEl.style.filter = '';
-    // Allow re-injection (video source may have changed)
-    _buttonsInjected = false;
-    document.getElementById(ROOT_ID)?.remove();
-    tryInject();
+  loadGestureConfig();
+  window.addEventListener('jfs:seekSecondsChanged', (e: Event) => {
+    const { seconds } = (e as CustomEvent<{ seconds: number }>).detail;
+    if (typeof seconds === 'number' && seconds > 0) setSeekSeconds(seconds);
   });
 
-  _observer = new MutationObserver(() => tryInject());
-  _observer.observe(document.body, { childList: true, subtree: true });
+  // Jellyfin uses @remix-run/router with history.pushState — no hashchange fires.
+  // Intercept pushState to capture item ID before the URL changes.
+  const _origPushState = history.pushState.bind(history);
+  history.pushState = function (data: unknown, unused: string, url?: string | URL | null) {
+    const id = extractItemIdFromUrl(window.location.href);
+    if (id) _cachedItemId = id;
+    return _origPushState(data, unused, url);
+  };
 
+  const observer = new MutationObserver(() => tryInject());
+  observer.observe(document.body, { childList: true, subtree: true });
   tryInject();
 }
 
@@ -39,25 +67,26 @@ function tryInject(): void {
   const videoEl = container.querySelector<HTMLVideoElement>('video.htmlvideoplayer');
   if (!videoEl) return;
 
-  _currentVideoEl = videoEl;
+  // Reset filter and re-init gestures when video element changes
+  if (videoEl !== _currentVideoEl) {
+    if (_currentVideoEl) _currentVideoEl.style.filter = '';
+    _currentVideoEl = videoEl;
+    initGestures(videoEl);
+  }
 
-  // Ensure root marker exists
+  // Ensure root marker exists (idempotent)
   if (!document.getElementById(ROOT_ID)) {
     const root = document.createElement('div');
     root.id = ROOT_ID;
     container.appendChild(root);
   }
 
-  // Inject OSD buttons once OSD controls are available
-  if (!_buttonsInjected) {
-    const osdButtons = container.querySelector<HTMLElement>(
-      '.osdControls .buttons.focuscontainer-x'
-    );
-    if (osdButtons) {
-      injectPlayerButtons(osdButtons, videoEl);
-      if (_playbackManager) initGestures(videoEl, _playbackManager);
-      _buttonsInjected = true;
-    }
+  // Inject OSD buttons; presence-check so we re-inject if Jellyfin rebuilds the OSD
+  const osdButtons = document.querySelector<HTMLElement>(
+    '.osdControls .buttons.focuscontainer-x'
+  );
+  if (osdButtons && !osdButtons.querySelector('.jfs-enhancer-framestep-wrap')) {
+    injectPlayerButtons(osdButtons, videoEl);
   }
 }
 
@@ -71,14 +100,10 @@ function injectPlayerButtons(
     frameStepWrap.querySelectorAll('button')
   );
 
-  const getItemId = () => _playbackManager?.currentItem()?.Id ?? '';
-
   btnBack10.addEventListener('click', () => stepFrames(videoEl, -10, getItemId()));
   btnBack1.addEventListener('click',  () => stepFrames(videoEl, -1,  getItemId()));
   btnFwd1.addEventListener('click',   () => stepFrames(videoEl,  1,  getItemId()));
   btnFwd10.addEventListener('click',  () => stepFrames(videoEl,  10, getItemId()));
-
-  osdButtons.prepend(frameStepWrap);
 
   // ── Screenshot button + subtitle switch ────────────────────────────────
   const screenshotWrap = document.createElement('div');
@@ -94,20 +119,40 @@ function injectPlayerButtons(
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.checked = false;
-  const switchText = document.createTextNode(t('screenshot.subtitles'));
+  const toggleTrack = document.createElement('span');
+  toggleTrack.className = 'jfs-enhancer-toggle-track';
   switchLabel.appendChild(checkbox);
-  switchLabel.appendChild(switchText);
+  switchLabel.appendChild(toggleTrack);
+  switchLabel.appendChild(document.createTextNode(t('screenshot.subtitles')));
 
   screenshotBtn.addEventListener('click', () => {
-    const title = _playbackManager?.currentItem()?.Name;
+    const title = document.title.replace(/\s*[-|]\s*Jellyfin\s*$/i, '').trim() || undefined;
     takeScreenshot(videoEl, checkbox.checked, title);
   });
 
   screenshotWrap.appendChild(screenshotBtn);
   screenshotWrap.appendChild(switchLabel);
-  osdButtons.prepend(screenshotWrap);
-}
 
-export function getPlaybackManager(): PlaybackManager | null {
-  return _playbackManager;
+  // Show subtitle toggle only when subtitles are actually active
+  function updateSubtitleToggleVisibility() {
+    const hasAssSubtitles = !!document.querySelector('.libassjs-canvas-parent canvas');
+    const srtEl = document.querySelector('.videoSubtitles');
+    const hasSrtSubtitles = !!srtEl && srtEl.textContent!.trim().length > 0;
+    const active = hasAssSubtitles || hasSrtSubtitles;
+    switchLabel.style.display = active ? '' : 'none';
+    screenshotWrap.classList.toggle('jfs-has-subtitles', active);
+  }
+  updateSubtitleToggleVisibility();
+  const subtitleObserver = new MutationObserver(updateSubtitleToggleVisibility);
+  subtitleObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+  // Insert after the native controls (dir="ltr" div), before secondary controls
+  const dirLtr = osdButtons.querySelector<HTMLElement>('div[dir="ltr"]');
+  if (dirLtr) {
+    dirLtr.after(frameStepWrap);
+    frameStepWrap.after(screenshotWrap);
+  } else {
+    osdButtons.append(frameStepWrap);
+    osdButtons.append(screenshotWrap);
+  }
 }

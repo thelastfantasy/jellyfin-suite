@@ -1,5 +1,4 @@
 import { showRipple, showValueOsd } from './osd-overlay';
-import type { PlaybackManager } from './types/jellyfin';
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
@@ -17,19 +16,39 @@ interface SwipeState {
   directionLock: 'vertical' | 'horizontal' | null;
 }
 
-export function initGestures(
-  videoEl: HTMLVideoElement,
-  playbackManager: PlaybackManager
-): void {
+/** 判断触摸是否落在 OSD 控件上（按钮/滑块/标签），避免误触发手势 */
+function isOsdControl(target: EventTarget | null): boolean {
+  let el = target as Element | null;
+  while (el && el !== document.body) {
+    const tag = el.tagName;
+    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'LABEL') return true;
+    if (el.classList.contains('osdControls')) return true;
+    if (el.classList.contains('sliderContainer')) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
+
+let _seekSeconds = 10;
+
+export function setSeekSeconds(s: number): void {
+  _seekSeconds = s;
+}
+
+export function initGestures(videoEl: HTMLVideoElement): void {
   if (navigator.maxTouchPoints <= 0) return;
 
   let lastTap: TapState = { time: 0, zone: 'center' };
   const swipe: SwipeState = { active: false, startX: 0, startY: 0, side: 'left', startValue: 1, directionLock: null };
 
-  const container = videoEl.closest('.videoPlayerContainer') ?? document.body;
+  // 监听 document.body：videoPlayerContainer 在 OSD overlay 之后，
+  // 用户触摸屏幕时事件目标是 OSD 页面元素，必须在更高层捕获
+  const container = document.body;
 
   // ── Double-tap gesture (capture phase to intercept Jellyfin's tap handler) ──
   container.addEventListener('touchend', (e: TouchEvent) => {
+    if (isOsdControl(e.target)) return;
+
     const touch = e.changedTouches[0];
     if (!touch) return;
 
@@ -43,17 +62,17 @@ export function initGestures(
       e.preventDefault();
 
       if (zone === 'left') {
-        videoEl.currentTime = Math.max(0, videoEl.currentTime - 10);
-        showRipple('left', '-10s');
+        videoEl.currentTime = Math.max(0, videoEl.currentTime - _seekSeconds);
+        showRipple('left', `-${_seekSeconds}s`);
       } else if (zone === 'right') {
-        videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 10);
-        showRipple('right', '+10s');
+        videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + _seekSeconds);
+        showRipple('right', `+${_seekSeconds}s`);
       } else {
         if (videoEl.paused) videoEl.play().catch(() => {});
         else videoEl.pause();
       }
 
-      lastTap = { time: 0, zone: 'center' }; // reset after double-tap consumed
+      lastTap = { time: 0, zone: 'center' };
     } else {
       lastTap = { time: now, zone };
     }
@@ -62,9 +81,12 @@ export function initGestures(
   // ── Swipe brightness / volume (passive: false to allow preventDefault) ──
   container.addEventListener('touchstart', (e: TouchEvent) => {
     if (e.touches.length !== 1) return;
+    if (isOsdControl(e.target)) return;
+
     const touch = e.touches[0];
     const side = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
 
+    // Jellyfin 以立方根缩放显示音量，startValue 记录当前线性音量
     swipe.active = true;
     swipe.startX = touch.clientX;
     swipe.startY = touch.clientY;
@@ -81,7 +103,6 @@ export function initGestures(
     const dx = Math.abs(touch.clientX - swipe.startX);
     const dy = Math.abs(touch.clientY - swipe.startY);
 
-    // 移动超过 10px 后判定方向，横向移动占优则忽略此次滑动
     if (swipe.directionLock === null && (dx > 10 || dy > 10)) {
       swipe.directionLock = dy >= dx ? 'vertical' : 'horizontal';
     }
@@ -97,7 +118,8 @@ export function initGestures(
     } else {
       const volume = clamp(swipe.startValue + delta, 0, 1);
       videoEl.volume = volume;
-      showValueOsd('volume', volume * 100);
+      // 显示与 Jellyfin 音量条一致的立方根百分比
+      showValueOsd('volume', Math.pow(volume, 1 / 3) * 100);
     }
 
     e.preventDefault();
@@ -107,5 +129,4 @@ export function initGestures(
     swipe.active = false;
   }, { passive: true });
 
-  void playbackManager; // referenced to avoid unused-param warning
 }

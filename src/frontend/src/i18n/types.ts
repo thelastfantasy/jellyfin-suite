@@ -135,4 +135,7 @@ export interface Translations {
   enhancerRemove: string
   enhancerReloadHint: string
   enhancerErrorHint: string
+  enhancerSeekLabel: string
+  enhancerSeekUnit: string
+  enhancerSeekSave: string
 }

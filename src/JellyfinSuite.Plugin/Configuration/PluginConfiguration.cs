@@ -12,4 +12,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Set to false when the user has explicitly removed the injection via the management UI.
     /// </summary>
     public bool AutoInjectEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Number of seconds to seek on mobile double-tap gesture. Default 10.
+    /// </summary>
+    public double SeekSeconds { get; set; } = 10;
 }

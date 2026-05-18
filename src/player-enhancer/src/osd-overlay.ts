@@ -1,9 +1,5 @@
 import { t } from './i18n';
 
-function getContainer(): Element {
-  return document.querySelector('.videoPlayerContainer') ?? document.body;
-}
-
 // ── YouTube-style seek ripple ──────────────────────────────────────────────
 
 export function showRipple(side: 'left' | 'right', label: string): void {
@@ -32,41 +28,75 @@ export function showRipple(side: 'left' | 'right', label: string): void {
   bg.appendChild(arrows);
   bg.appendChild(labelEl);
   ripple.appendChild(bg);
-  getContainer().appendChild(ripple);
+  document.body.appendChild(ripple);
 
   setTimeout(() => ripple.remove(), 1000);
 }
 
-// ── Brightness / Volume OSD ────────────────────────────────────────────────
+// ── Brightness / Volume OSD (left and right, tall portrait rectangle) ─────
 
-let _osdTimer: ReturnType<typeof setTimeout> | null = null;
-let _osdEl: HTMLDivElement | null = null;
+interface OsdState {
+  el: HTMLDivElement | null;
+  fill: HTMLDivElement | null;
+  pct: HTMLDivElement | null;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+const _brightness: OsdState = { el: null, fill: null, pct: null, timer: null };
+const _volume: OsdState = { el: null, fill: null, pct: null, timer: null };
+
+function getOrCreateOsd(state: OsdState, side: 'left' | 'right', icon: string, label: string): OsdState {
+  if (!state.el) {
+    const el = document.createElement('div');
+    el.className = `jfs-enhancer-osd jfs-enhancer-osd--${side}`;
+
+    const iconEl = document.createElement('div');
+    iconEl.className = 'jfs-enhancer-osd__icon';
+    iconEl.textContent = icon;
+
+    const track = document.createElement('div');
+    track.className = 'jfs-enhancer-osd__bar-track';
+    const fill = document.createElement('div');
+    fill.className = 'jfs-enhancer-osd__bar-fill';
+    track.appendChild(fill);
+
+    const pct = document.createElement('div');
+    pct.className = 'jfs-enhancer-osd__pct';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'jfs-enhancer-osd__label';
+    labelEl.textContent = label;
+
+    el.appendChild(iconEl);
+    el.appendChild(track);
+    el.appendChild(pct);
+    el.appendChild(labelEl);
+
+    document.body.appendChild(el);
+    state.el = el;
+    state.fill = fill;
+    state.pct = pct;
+  }
+  return state;
+}
 
 export function showValueOsd(type: 'brightness' | 'volume', value: number): void {
-  if (!_osdEl) {
-    _osdEl = document.createElement('div');
-    _osdEl.className = 'jfs-enhancer-osd';
-    getContainer().appendChild(_osdEl);
-  }
+  const isBrightness = type === 'brightness';
+  const state = isBrightness ? _brightness : _volume;
+  const side = isBrightness ? 'left' : 'right';
+  const icon = isBrightness ? '☀' : '🔊';
+  const label = isBrightness ? t('osd.brightness') : t('osd.volume');
 
-  const icon = type === 'brightness' ? '☀' : '🔊';
-  const label = type === 'brightness' ? t('osd.brightness') : t('osd.volume');
-  _osdEl.textContent = '';
+  getOrCreateOsd(state, side, icon, label);
 
-  const iconEl = document.createElement('div');
-  iconEl.style.fontSize = '22px';
-  iconEl.textContent = icon;
+  const rounded = Math.round(value);
+  state.pct!.textContent = `${rounded}%`;
+  state.fill!.style.height = `${Math.min(100, Math.max(0, rounded))}%`;
+  state.el!.style.opacity = '1';
 
-  const pct = document.createElement('div');
-  pct.textContent = `${label} ${Math.round(value)}%`;
-
-  _osdEl.appendChild(iconEl);
-  _osdEl.appendChild(pct);
-  _osdEl.style.opacity = '1';
-
-  if (_osdTimer) clearTimeout(_osdTimer);
-  _osdTimer = setTimeout(() => {
-    if (_osdEl) _osdEl.style.opacity = '0';
-    _osdTimer = null;
+  if (state.timer) clearTimeout(state.timer);
+  state.timer = setTimeout(() => {
+    if (state.el) state.el.style.opacity = '0';
+    state.timer = null;
   }, 1500);
 }

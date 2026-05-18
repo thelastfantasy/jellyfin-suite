@@ -69,6 +69,7 @@
 .jfs-toolbar__poster-row {
   display: flex;
   justify-content: flex-end;
+  gap: 0.4rem;
 }
 
 .jfs-toolbar__group {
@@ -2727,7 +2728,8 @@ a.jfs-card__series-name:hover {
 
 
 /* ── Player Enhancer 管理面板 ── */
-.jfs-enhancer-panel .jfs-poster-settings-modal__body { min-width: 260px; }
+.jfs-enhancer-panel { width: fit-content; min-width: 280px; max-width: min(400px, 90vw); }
+.jfs-enhancer-panel .jfs-poster-settings-modal__body { min-width: 0; }
 .jfs-enhancer-panel__body {
   display: flex;
   flex-direction: column;
@@ -2760,3 +2762,34 @@ a.jfs-card__series-name:hover {
 }
 .jfs-enhancer-panel__hint--ok { color: #4caf50; }
 .jfs-enhancer-panel__hint--err { color: #ff6b6b; }
+.jfs-enhancer-panel__seek-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.jfs-enhancer-panel__seek-label {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.6);
+}
+.jfs-enhancer-panel__seek-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.jfs-enhancer-panel__seek-input {
+  width: 58px;
+  padding: 4px 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+}
+.jfs-enhancer-panel__seek-unit {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.5);
+  flex-shrink: 0;
+}

@@ -40,58 +40,141 @@ const CSS = `
 .jfs-enhancer-screenshot-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
+}
+
+/* Pill styling only when subtitle toggle is visible */
+.jfs-enhancer-screenshot-wrap.jfs-has-subtitles {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 0 10px 0 0;
+}
+
+.jfs-enhancer-screenshot-wrap.jfs-has-subtitles > .jfs-enhancer-btn {
+  border-radius: 20px 0 0 20px;
 }
 
 .jfs-enhancer-switch {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
+  gap: 6px;
   cursor: pointer;
   user-select: none;
 }
 
-.jfs-enhancer-switch input {
-  cursor: pointer;
+/* Hide native checkbox */
+.jfs-enhancer-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Toggle track */
+.jfs-enhancer-toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.jfs-enhancer-switch input:checked ~ .jfs-enhancer-toggle-track {
+  background: #00a4dc;
+}
+
+/* Toggle thumb */
+.jfs-enhancer-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.jfs-enhancer-switch input:checked ~ .jfs-enhancer-toggle-track::after {
+  transform: translateX(12px);
 }
 
 .jfs-enhancer-osd {
-  position: absolute;
+  position: fixed;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateY(-50%);
   background: rgba(0, 0, 0, 0.65);
   color: #fff;
-  border-radius: 8px;
-  padding: 12px 20px;
-  font-size: 18px;
-  font-weight: bold;
+  border-radius: 12px;
+  padding: 18px 10px;
+  width: 62px;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 99999;
   transition: opacity 0.3s;
+}
+
+.jfs-enhancer-osd--left  { left: 18%; }
+.jfs-enhancer-osd--right { right: 18%; }
+
+.jfs-enhancer-osd__icon { font-size: 24px; line-height: 1; }
+
+.jfs-enhancer-osd__bar-track {
+  width: 6px;
+  height: 90px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.jfs-enhancer-osd__bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 3px;
+  transition: height 0.1s;
+}
+
+.jfs-enhancer-osd__pct {
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.jfs-enhancer-osd__label {
+  font-size: 11px;
+  opacity: 0.75;
+  line-height: 1;
 }
 
 /* YouTube-style seek ripple — half-oval on screen edge + animated arrows */
 .jfs-enhancer-ripple {
-  position: absolute;
+  position: fixed;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  z-index: 9998;
+  z-index: 99999;
 }
 
 .jfs-enhancer-ripple-left  { left: 0; }
 .jfs-enhancer-ripple-right { right: 0; }
 
 .jfs-enhancer-ripple-bg {
-  width: 120px;
-  height: 180px;
+  width: 150px;
+  height: 220px;
   background: rgba(0, 0, 0, 0.42);
   display: flex;
   flex-direction: column;
@@ -102,19 +185,19 @@ const CSS = `
 }
 
 /* Half-oval cut on screen edge: right side gets left half of pill, left side gets right half */
-.jfs-enhancer-ripple-right .jfs-enhancer-ripple-bg { border-radius: 90px 0 0 90px; padding-left: 12px; }
-.jfs-enhancer-ripple-left  .jfs-enhancer-ripple-bg { border-radius: 0 90px 90px 0; padding-right: 12px; }
+.jfs-enhancer-ripple-right .jfs-enhancer-ripple-bg { border-radius: 110px 0 0 110px; padding-left: 16px; }
+.jfs-enhancer-ripple-left  .jfs-enhancer-ripple-bg { border-radius: 0 110px 110px 0; padding-right: 16px; }
 
 .jfs-enhancer-ripple-arrows {
   display: flex;
   flex-direction: row;
-  gap: 1px;
-  height: 28px;
+  gap: 2px;
+  height: 40px;
   align-items: center;
 }
 
 .jfs-enhancer-ripple-arrow {
-  font-size: 22px;
+  font-size: 36px;
   line-height: 1;
   color: #fff;
   display: inline-block;
@@ -135,7 +218,7 @@ const CSS = `
 
 .jfs-enhancer-ripple-label {
   color: #fff;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }

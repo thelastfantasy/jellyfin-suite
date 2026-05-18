@@ -66,7 +66,9 @@ src/poster-gen/target/
 src/poster-gen/poster-gen-linux-x64
 src/poster-gen/poster-gen-win-x64.exe
 src/JellyfinRecents.Plugin/poster-gen-linux-x64
+src/JellyfinSuite.Plugin/poster-gen-linux-x64
 src/JellyfinRecents.Plugin/poster-gen-win-x64.exe
+src/JellyfinSuite.Plugin/poster-gen-win-x64.exe
 
 # Vite 构建缓存
 src/frontend/.vite/

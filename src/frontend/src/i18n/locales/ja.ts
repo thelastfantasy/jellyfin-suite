@@ -124,4 +124,7 @@ export const ja: Translations = {
   enhancerRemove: '注入を解除',
   enhancerReloadHint: '成功しました。ページを再読み込みしてください',
   enhancerErrorHint: '失敗しました。サーバーログを確認してください',
+  enhancerSeekLabel: 'ダブルタップシーク',
+  enhancerSeekUnit: '秒',
+  enhancerSeekSave: '保存',
 }

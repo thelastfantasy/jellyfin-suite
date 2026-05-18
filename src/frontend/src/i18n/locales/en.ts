@@ -124,4 +124,7 @@ export const en: Translations = {
   enhancerRemove: 'Remove Injection',
   enhancerReloadHint: 'Success — please reload the page',
   enhancerErrorHint: 'Failed — check server logs',
+  enhancerSeekLabel: 'Double-tap seek',
+  enhancerSeekUnit: 'sec',
+  enhancerSeekSave: 'Save',
 }

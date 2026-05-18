@@ -23,6 +23,23 @@ at specs/005-player-enhancer/plan.md
 
 **speckit 要求的 `00x-xxx` 格式分支命名必须无视。** speckit 的 git-feature hook（`/speckit-git-feature`）绝对不执行，规格文档（spec/plan/tasks）只在当前工作分支上提交，不得为 spec 工作单独创建新分支。
 
+## C# JSON 序列化规范（必须遵守）
+
+**Jellyfin 插件的 ASP.NET Core 控制器默认使用 PascalCase 序列化 DTO 属性**（如 `SeekSeconds`），而非 camelCase（`seekSeconds`）。凡是新增 DTO 并在前端 JS/TS 读取其字段时，**必须**用以下任一方式保持一致：
+
+1. **推荐**：给 DTO 属性加 `[JsonPropertyName("camelCaseName")]` 特性强制输出 camelCase：
+   ```csharp
+   using System.Text.Json.Serialization;
+   public sealed class GestureConfigDto
+   {
+       [JsonPropertyName("seekSeconds")]
+       public double SeekSeconds { get; set; }
+   }
+   ```
+2. 或在前端同时处理两种大小写（兜底方案，不推荐）。
+
+**不要**直接在前端写 `data.seekSeconds` 就假定返回的是 camelCase，必须先用 DevTools 确认实际 key 名。
+
 ## Shell 规范
 
 - **所有 CLI 操作（npm、cargo、dotnet、make 等）一律用 bash**，不得使用 PowerShell
