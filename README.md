@@ -41,7 +41,7 @@ Unlock by clicking the **Thumbnail** view button 7 times within 5 seconds. Once 
 
 Automatically injected into the Jellyfin web player. No configuration needed.
 
-- **Frame stepping**: Four buttons (|◁◁ |◁ ▷| ▷▷|) for −10f / −1f / +1f / +10f navigation; frame rate auto-detected from MediaInfo; steps pause playback automatically
+- **Frame stepping**: F−10 / F−1 / F+1 / F+10 buttons for frame-accurate navigation; frame rate auto-detected from MediaInfo; steps pause playback automatically
 - **Screenshot**: One-click PNG download of the current video frame; optional subtitle overlay (ASS and SRT); client-side only, no server files created
 - **Mobile double-tap seek**: Double-tap left third to seek back, right third to seek forward, center third to toggle play/pause; seek duration configurable in the plugin management panel (default 10 s, touch devices only)
 - **Mobile swipe controls**: Swipe up/down on the left half to adjust brightness (0–200%), right half for volume (0–100%); OSD percentage indicator shown during gesture (touch devices only)

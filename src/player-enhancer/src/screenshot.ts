@@ -34,13 +34,28 @@ export async function takeScreenshot(
   const h = videoEl.videoHeight;
   if (!w || !h) return;
 
-  const canvas = new OffscreenCanvas(w, h);
+  // DOM-attached canvas works around Firefox Android hardware-decode black-frame bug
+  // (OffscreenCanvas cannot read hardware-decoded frames on Firefox for Android)
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.cssText = 'position:fixed;top:-9999px;left:-9999px;pointer-events:none;';
+  document.body.appendChild(canvas);
+
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) { canvas.remove(); return; }
 
   try {
-    ctx.drawImage(videoEl, 0, 0, w, h);
+    try {
+      // createImageBitmap is a dedicated frame-capture path, handles hardware frames better
+      const bmp = await createImageBitmap(videoEl);
+      ctx.drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+    } catch {
+      ctx.drawImage(videoEl, 0, 0, w, h);
+    }
   } catch (e) {
+    canvas.remove();
     if (e instanceof DOMException && e.name === 'SecurityError') {
       showToast(t('screenshot.drm'));
       return;
@@ -59,7 +74,13 @@ export async function takeScreenshot(
     // SRT/VTT native ::cue — cannot be captured by Canvas API, silently skipped
   }
 
-  const blob = await canvas.convertToBlob({ type: 'image/png' });
-  const title = sanitize(itemTitle ?? 'screenshot');
-  downloadBlob(blob, `jellyfin-screenshot-${title}-${Date.now()}.png`);
+  await new Promise<void>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      canvas.remove();
+      if (!blob) { reject(new Error('toBlob returned null')); return; }
+      const title = sanitize(itemTitle ?? 'screenshot');
+      downloadBlob(blob, `jellyfin-screenshot-${title}-${Date.now()}.png`);
+      resolve();
+    }, 'image/png');
+  });
 }

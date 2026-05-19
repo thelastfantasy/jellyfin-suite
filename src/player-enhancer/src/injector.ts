@@ -153,6 +153,12 @@ function injectPlayerButtons(
     takeScreenshot(videoEl, checkbox.checked, title);
   });
 
+  // Firefox mobile 上 label>checkbox 的 touch 联动不可靠，直接处理 touchend
+  switchLabel.addEventListener('touchend', (e) => {
+    e.preventDefault(); // 阻止合成 click 造成二次触发
+    checkbox.checked = !checkbox.checked;
+  }, { passive: false });
+
   screenshotWrap.appendChild(screenshotBtn);
   screenshotWrap.appendChild(switchLabel);
 

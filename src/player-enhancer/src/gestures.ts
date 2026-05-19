@@ -24,16 +24,30 @@ function isOsdControl(target: EventTarget | null): boolean {
     if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'LABEL') return true;
     if (el.classList.contains('osdControls')) return true;
     if (el.classList.contains('sliderContainer')) return true;
+    // 我们自己注入的控件区域（Firefox 有时报告不同的 target，通过 ancestor 兜底）
+    if (el.classList.contains('jfs-enhancer-screenshot-wrap')) return true;
+    if (el.classList.contains('jfs-enhancer-framestep-wrap')) return true;
     el = el.parentElement;
   }
   return false;
 }
 
 let _seekSeconds = 10;
+/** 最近一次我们处理双击的时间戳，用于阻止 Firefox 同时触发的 dblclick 事件 */
+let _lastDoubleTapMs = 0;
 
 export function setSeekSeconds(s: number): void {
   _seekSeconds = s;
 }
+
+// Firefox 在 touchend.preventDefault() 后仍会触发 dblclick（与 Chrome 不同）
+// 在 document 上 capture 拦截，确保我们处理过的双击不再冒泡到 Jellyfin 的全屏处理器
+document.addEventListener('dblclick', (e: MouseEvent) => {
+  if (Date.now() - _lastDoubleTapMs < 600) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+}, { capture: true });
 
 export function initGestures(videoEl: HTMLVideoElement): void {
   if (navigator.maxTouchPoints <= 0) return;
@@ -61,6 +75,7 @@ export function initGestures(videoEl: HTMLVideoElement): void {
     if (now - lastTap.time < 300 && zone === lastTap.zone) {
       e.stopPropagation();
       e.preventDefault();
+      _lastDoubleTapMs = Date.now(); // 告知 dblclick 拦截器本次双击已由我们处理
 
       if (zone === 'left') {
         videoEl.currentTime = Math.max(0, videoEl.currentTime - _seekSeconds);
