@@ -4,6 +4,7 @@ export interface EnhancerStatus {
 
 export interface GestureConfig {
   seekSeconds: number  // 0.5 – 30
+  speedRate: number    // 1.25 – 4.0
 }
 
 export async function getEnhancerStatus(): Promise<EnhancerStatus> {

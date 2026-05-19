@@ -2,6 +2,7 @@ import { injectStyles } from './styles';
 import { createFrameStepButtons, stepFrames } from './framestepper';
 import { takeScreenshot } from './screenshot';
 import { initGestures, setSeekSeconds } from './gestures';
+import { initLongPress } from './long-press';
 import { t } from './i18n';
 import { ICON_SCREENSHOT } from './icons';
 
@@ -9,14 +10,18 @@ const ROOT_ID = 'jfs-enhancer-root';
 
 let _currentVideoEl: HTMLVideoElement | null = null;
 let _cachedItemId = '';
+let _speedRate = 2.0;
 
 async function loadGestureConfig(): Promise<void> {
   try {
     const res = await fetch('/JellyfinSuite/PlayerEnhancer/GestureConfig');
     if (res.ok) {
-      const cfg = await res.json() as { seekSeconds?: number };
+      const cfg = await res.json() as { seekSeconds?: number; speedRate?: number };
       if (typeof cfg.seekSeconds === 'number' && cfg.seekSeconds > 0) {
         setSeekSeconds(cfg.seekSeconds);
+      }
+      if (typeof cfg.speedRate === 'number' && cfg.speedRate >= 1.25) {
+        _speedRate = cfg.speedRate;
       }
     }
   } catch {
@@ -45,6 +50,10 @@ export function initInjector(): void {
     const { seconds } = (e as CustomEvent<{ seconds: number }>).detail;
     if (typeof seconds === 'number' && seconds > 0) setSeekSeconds(seconds);
   });
+  window.addEventListener('jfs:speedRateChanged', (e: Event) => {
+    const { rate } = (e as CustomEvent<{ rate: number }>).detail;
+    if (typeof rate === 'number' && rate >= 1.25) _speedRate = rate;
+  });
 
   // Jellyfin uses @remix-run/router with history.pushState — no hashchange fires.
   // Intercept pushState to capture item ID before the URL changes.
@@ -71,7 +80,8 @@ function tryInject(): void {
   if (videoEl !== _currentVideoEl) {
     if (_currentVideoEl) _currentVideoEl.style.filter = '';
     _currentVideoEl = videoEl;
-    initGestures(videoEl);
+    const { activateSwipeTransfer } = initGestures(videoEl);
+    initLongPress(videoEl, () => _speedRate, activateSwipeTransfer);
   }
 
   // Ensure root marker exists (idempotent)

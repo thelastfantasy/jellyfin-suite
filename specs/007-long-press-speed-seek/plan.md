@@ -234,34 +234,74 @@ function showSpeedOsd(offset: number): void {
 
 ---
 
-## 5. 与 gestures.ts 的冲突避免
+## 5. Touch Session 所有权模型（核心架构原则）
 
-### WAITING 阶段
+**一次触摸只能属于一个手势类别**，三类手势互斥：
 
-`gestures.ts` 的 `touchstart` 正常初始化 `swipe.active = true`，long-press 模块的 `touchstart` 也同时触发（两者都监听 `document.body`）。
+| 类别 | 触发区域 | 所有权获取方式 |
+|------|---------|--------------|
+| 长按加速 + Seek | 底部 1/3 | touchstart 时由 long-press 独占 |
+| 亮度调节 | 左半屏（非底部 1/3）| touchstart 时由 swipe 直接获取 |
+| 音量调节 | 右半屏（非底部 1/3）| touchstart 时由 swipe 直接获取 |
 
-在 WAITING 期间：
-- 如果方向判定为纵向 → long-press 取消定时器后不再消费事件，gestures.ts 的 `touchmove` 正常接管 ✓
-- 如果方向判定为横向 → long-press 取消定时器，gestures.ts 判定方向为 `'horizontal'` 并忽略，结果双方都不处理 ✓（正确：横向无既有手势）
+**双击快进/快退** 不受影响——它监听 `touchend`，长按场景下 touchend 距 touchstart ≥500ms，不满足 300ms 双击条件，天然不冲突。
+
+### touchstart 路由
+
+```typescript
+// gestures.ts — touchstart handler
+container.addEventListener('touchstart', (e: TouchEvent) => {
+  if (isInLongPressZone(e.touches[0], videoEl)) return; // ← 新增：底部 1/3 交给 long-press 模块
+  // 以下是原有 swipe 初始化逻辑（不变）
+  swipe.active = true;
+  ...
+});
+```
+
+`isInLongPressZone(touch, video)` 由 `long-press.ts` 导出：
+
+```typescript
+export function isInLongPressZone(touch: Touch, video: HTMLVideoElement): boolean {
+  const r = video.getBoundingClientRect();
+  return touch.clientY >= r.top + r.height * (1 - BOTTOM_FRACTION);
+}
+```
+
+### 方向确定后的所有权移交
+
+`gestures.ts` 新增 `activateSwipeTransfer(touch, video)` 接口，供 long-press 在判定为纵向时显式移交：
+
+```typescript
+// gestures.ts — 新增导出函数
+export function activateSwipeTransfer(touch: Touch, videoEl: HTMLVideoElement): void {
+  swipe.active = true;
+  swipe.startX = touch.clientX;
+  swipe.startY = touch.clientY;
+  swipe.side = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
+  swipe.startValue = swipe.side === 'left'
+    ? parseFloat(videoEl.style.filter.replace('brightness(', '').replace(')', '') || '1')
+    : videoEl.volume;
+  swipe.directionLock = 'vertical'; // 方向已知，跳过二次判定
+}
+```
+
+在 `long-press.ts` 方向判定逻辑中：
+
+```typescript
+const deg = Math.atan2(Math.abs(dy), Math.abs(dx)) * 180 / Math.PI;
+clearTimeout(timer); timer = null;
+if (deg >= HORIZ_DEG) {
+  // 纵向：移交所有权给 swipe，由它继续处理亮度/音量
+  activateSwipeTransfer(currentTouch, video);
+}
+// 横向（deg < HORIZ_DEG）：不移交，无人处理，此次手势作废
+```
 
 ### SPEEDING 阶段
 
-`gestures.ts` 中 `touchmove` 的纵向逻辑需要被屏蔽：
+由于 swipe 在底部 1/3 的 touchstart 时就被拦截（`isInLongPressZone` 返回 `true`），不会初始化 `swipe.active`，因此 **SPEEDING 期间无需 `isLongPressActive()` 守卫**——swipe 根本没有在这次 touch session 中启动。
 
-```typescript
-// gestures.ts — touchmove handler
-if (swipe.directionLock !== 'vertical') return;
-if (isLongPressActive()) return;   // ← 新增守卫
-
-// 以下亮度/音量逻辑不再执行
-```
-
-这样即使 SPEEDING 时用户有轻微纵向漂移，也不会误调亮度/音量。
-
-### 双击快进的独立性
-
-双击快进（double-tap seek）监听 `touchend`，在 `touchend` 时检查两次 tap 的时间差。
-长按场景下，`touchend` 触发时 `lastTap.time` 距 touchstart 已过 ≥500ms，必然不满足 `< 300ms` 的双击条件，因此两者**天然不冲突**，无需额外处理。
+这比之前 plan 中的"守卫"方案更干净：两个 handler 从未并存，无竞争。
 
 ---
 
@@ -316,7 +356,7 @@ export function initLongPress(video: HTMLVideoElement, getRate: () => number): v
   const sig = _abortCtrl.signal;
 
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let startX = 0, startY = 0, lastX = 0;
+  let startX = 0, startY = 0, lastX = 0, lastY = 0;
   let seekOffset = 0;
   let wasPaused = false;
 
@@ -351,7 +391,7 @@ export function initLongPress(video: HTMLVideoElement, getRate: () => number): v
     const t0 = e.touches[0];
     if (t0.clientY < bottomThird().top) return;
     startX = lastX = t0.clientX;
-    startY = t0.clientY;
+    startY = lastY = t0.clientY;
     seekOffset = 0;
     timer = setTimeout(enter, LONG_PRESS_MS);
   }, { passive: true, signal: sig });
@@ -382,13 +422,26 @@ export function initLongPress(video: HTMLVideoElement, getRate: () => number): v
       return;
     }
 
-    // SPEEDING：增量累积 seekOffset
+    // SPEEDING：根据当前帧移动方向动态调速 + 累积 seekOffset
     const deltaX = touch.clientX - lastX;
+    const deltaY = touch.clientY - lastY;
     lastX = touch.clientX;
-    const dur = isFinite(video.duration) ? video.duration : 0;
-    const sPerVw = Math.max(0.1, Math.min(10, dur * 0.001));
-    seekOffset += (deltaX / window.innerWidth * 100) * sPerVw;
-    updateOsd(seekOffset);
+    lastY = touch.clientY;
+    const moveDist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    if (moveDist > 2) {
+      const deg = Math.atan2(Math.abs(deltaY), Math.abs(deltaX)) * 180 / Math.PI;
+      if (deg < HORIZ_DEG) {
+        // 横向：降到 1x 让用户听清内容，累积 seek 偏移
+        video.playbackRate = 1;
+        const dur = isFinite(video.duration) ? video.duration : 0;
+        const sPerVw = Math.max(0.1, Math.min(10, dur * 0.001));
+        seekOffset += (deltaX / window.innerWidth * 100) * sPerVw;
+        updateOsd(seekOffset);
+      } else {
+        // 纵向：恢复 speedRate，不触发亮度/音量（long-press 持有本次 session）
+        video.playbackRate = getRate();
+      }
+    }
   }, { passive: true, signal: sig });
 
   const onEnd = () => {

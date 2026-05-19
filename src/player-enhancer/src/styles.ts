@@ -253,6 +253,36 @@ const CSS = `
   65%  { opacity: 1; }
   100% { opacity: 0; }
 }
+
+.jfs-speed-osd {
+  position: fixed;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 20px;
+  pointer-events: none;
+  z-index: 99999;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.jfs-speed-osd__line1 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.jfs-speed-osd__line2 {
+  font-size: 13px;
+  opacity: 0.85;
+  line-height: 1.3;
+  margin-top: 2px;
+}
 `;
 
 export function injectStyles(): void {

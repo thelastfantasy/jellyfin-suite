@@ -17,4 +17,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Number of seconds to seek on mobile double-tap gesture. Default 10.
     /// </summary>
     public double SeekSeconds { get; set; } = 10;
+
+    /// <summary>
+    /// Playback speed multiplier for long-press speed-up gesture. Default 2.0.
+    /// </summary>
+    public double SpeedRate { get; set; } = 2.0;
 }

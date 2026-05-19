@@ -1,5 +1,7 @@
 const TRANSLATIONS = {
   en: {
+    'longpress.speeding':     'Speeding ×{rate}',
+    'longpress.seekHint':     '← → to seek',
     'framestepper.back10':    'Back 10 frames',
     'framestepper.back1':     'Back 1 frame',
     'framestepper.forward1':  'Forward 1 frame',
@@ -14,6 +16,8 @@ const TRANSLATIONS = {
     'screenshot.hwdecode':    'Screenshot failed: this browser cannot capture hardware-decoded video frames.',
   },
   zh: {
+    'longpress.speeding':     '正在加速 ×{rate}',
+    'longpress.seekHint':     '← → 调节进度',
     'framestepper.back10':    '后退 10 帧',
     'framestepper.back1':     '后退 1 帧',
     'framestepper.forward1':  '前进 1 帧',
@@ -28,6 +32,8 @@ const TRANSLATIONS = {
     'screenshot.hwdecode':    '截图失败：此浏览器无法捕获硬件解码的视频帧。',
   },
   ja: {
+    'longpress.speeding':     '高速再生 ×{rate}',
+    'longpress.seekHint':     '← → でシーク',
     'framestepper.back10':    '10フレーム戻る',
     'framestepper.back1':     '1フレーム戻る',
     'framestepper.forward1':  '1フレーム進む',

@@ -152,6 +152,8 @@ export interface Translations {
   enhancerSeekLabel: string
   enhancerSeekUnit: string
   enhancerSeekSave: string
+  enhancerSpeedLabel: string
+  enhancerSpeedUnit: string
   enhancerIndexHtmlNote: string
   enhancerBrowserNote: string
 }

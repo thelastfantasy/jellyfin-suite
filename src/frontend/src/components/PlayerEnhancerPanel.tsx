@@ -20,6 +20,7 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
   const [busy, setBusy] = useState(false)
   const [hint, setHint] = useState<Hint>(null)
   const [seekSeconds, setSeekSeconds] = useState(10)
+  const [speedRate, setSpeedRate] = useState(2.0)
   const [seekSaved, setSeekSaved] = useState(false)
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
       .then((s) => setEnabled(s.autoInjectEnabled))
       .catch(() => setEnabled(false))
     getGestureConfig()
-      .then((cfg) => setSeekSeconds(cfg.seekSeconds))
+      .then((cfg) => { setSeekSeconds(cfg.seekSeconds); setSpeedRate(cfg.speedRate ?? 2.0) })
       .catch(() => {})
   }, [])
 
@@ -61,8 +62,9 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
 
   async function handleSeekSave() {
     try {
-      await setGestureConfig({ seekSeconds })
+      await setGestureConfig({ seekSeconds, speedRate })
       window.dispatchEvent(new CustomEvent('jfs:seekSecondsChanged', { detail: { seconds: seekSeconds } }))
+      window.dispatchEvent(new CustomEvent('jfs:speedRateChanged', { detail: { rate: speedRate } }))
       setSeekSaved(true)
       setTimeout(() => setSeekSaved(false), 2000)
     } catch {
@@ -110,6 +112,25 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
               }}
             />
             <span class="jfs-enhancer-panel__seek-unit">{t.enhancerSeekUnit}</span>
+          </div>
+        </div>
+        <div class="jfs-enhancer-panel__seek-row">
+          <label class="jfs-enhancer-panel__seek-label">{t.enhancerSpeedLabel}</label>
+          <div class="jfs-enhancer-panel__seek-input-wrap">
+            <input
+              type="number"
+              class="jfs-enhancer-panel__seek-input"
+              min={1.25}
+              max={4}
+              step={0.25}
+              value={speedRate}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+              onInput={(e) => {
+                const v = parseFloat((e.target as HTMLInputElement).value)
+                setSpeedRate(isNaN(v) ? 2.0 : Math.min(4, Math.max(1.25, v)))
+              }}
+            />
+            <span class="jfs-enhancer-panel__seek-unit">{t.enhancerSpeedUnit}</span>
             <button class="jfs-btn" onClick={handleSeekSave}>
               {seekSaved ? '✓' : t.enhancerSeekSave}
             </button>

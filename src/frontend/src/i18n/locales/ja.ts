@@ -141,6 +141,8 @@ export const ja: Translations = {
   enhancerSeekLabel: 'ダブルタップシーク',
   enhancerSeekUnit: '秒',
   enhancerSeekSave: '保存',
+  enhancerSpeedLabel: '長押し加速倍率',
+  enhancerSpeedUnit: 'x',
   enhancerIndexHtmlNote: '⚠ Jellyfinウェブディレクトリの index.html への書き込み権限が必要です。起動時にプラグインが自動で <script> タグを注入してバンドルを読み込みます。Jellyfinアップデート後は「再注入」が必要です。',
   enhancerBrowserNote: 'ℹ 一部機能はブラウザに依存します：スクリーンショットはFirefox for Androidでは利用不可（ハードウェアデコード制限）；タッチジェスチャー（スワイプで輝度/音量、ダブルタップでシーク）はタッチデバイスのみ。',
 }

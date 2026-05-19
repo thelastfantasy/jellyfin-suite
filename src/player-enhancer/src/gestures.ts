@@ -1,4 +1,5 @@
 import { showRipple, showValueOsd } from './osd-overlay';
+import { isInLongPressZone } from './long-press';
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
@@ -49,8 +50,8 @@ if (navigator.maxTouchPoints > 0) {
   }, { capture: true });
 }
 
-export function initGestures(videoEl: HTMLVideoElement): void {
-  if (navigator.maxTouchPoints <= 0) return;
+export function initGestures(videoEl: HTMLVideoElement): { activateSwipeTransfer: (touch: Touch) => void } {
+  if (navigator.maxTouchPoints <= 0) return { activateSwipeTransfer: () => {} };
 
   let lastTap: TapState = { time: 0, zone: 'center' };
   const swipe: SwipeState = { active: false, startX: 0, startY: 0, side: 'left', startValue: 1, directionLock: null };
@@ -100,6 +101,9 @@ export function initGestures(videoEl: HTMLVideoElement): void {
     if (isOsdControl(e.target)) return;
 
     const touch = e.touches[0];
+    // long-press owns the bottom 1/3 zone — don't initialise swipe there
+    if (isInLongPressZone(touch, videoEl)) return;
+
     const side = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
 
     // Jellyfin 以立方根缩放显示音量，startValue 记录当前线性音量
@@ -149,4 +153,19 @@ export function initGestures(videoEl: HTMLVideoElement): void {
     swipe.active = false;
   }, { passive: true });
 
+  // Called by long-press.ts when vertical direction is detected in the bottom-1/3 zone,
+  // transferring session ownership to brightness/volume swipe.
+  function activateSwipeTransfer(touch: Touch): void {
+    const side = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
+    swipe.active = true;
+    swipe.startX = touch.clientX;
+    swipe.startY = touch.clientY;
+    swipe.side = side;
+    swipe.directionLock = 'vertical';
+    swipe.startValue = side === 'left'
+      ? parseFloat(videoEl.style.filter.replace('brightness(', '').replace(')', '') || '1')
+      : videoEl.volume;
+  }
+
+  return { activateSwipeTransfer };
 }

@@ -92,6 +92,7 @@ public class PlayerEnhancerController : ControllerBase
         return Ok(new GestureConfigDto
         {
             SeekSeconds = Plugin.Instance?.Configuration.SeekSeconds ?? 10,
+            SpeedRate   = Plugin.Instance?.Configuration.SpeedRate   ?? 2.0,
         });
     }
 
@@ -101,6 +102,7 @@ public class PlayerEnhancerController : ControllerBase
     {
         var config = Plugin.Instance!.Configuration;
         config.SeekSeconds = Math.Clamp(dto.SeekSeconds, 0.5, 30.0);
+        config.SpeedRate   = Math.Clamp(dto.SpeedRate,   1.25, 4.0);
         Plugin.Instance.SaveConfiguration();
         return NoContent();
     }
@@ -116,4 +118,7 @@ public sealed class GestureConfigDto
 {
     [JsonPropertyName("seekSeconds")]
     public double SeekSeconds { get; set; }
+
+    [JsonPropertyName("speedRate")]
+    public double SpeedRate { get; set; } = 2.0;
 }
