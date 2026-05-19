@@ -128,4 +128,5 @@ export const en: Translations = {
   enhancerSeekUnit: 'sec',
   enhancerSeekSave: 'Save',
   enhancerIndexHtmlNote: '⚠ Requires write access to index.html in the Jellyfin web directory. On startup the plugin injects a <script> tag into that file to load the enhancer bundle; re-injection is needed after Jellyfin upgrades.',
+  enhancerBrowserNote: 'ℹ Some features are browser-limited: screenshot is unavailable on Firefox for Android (hardware decoding restriction); touch gestures (swipe brightness/volume, double-tap seek) are touch-device only.',
 }

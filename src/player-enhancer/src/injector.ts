@@ -129,6 +129,17 @@ function injectPlayerButtons(
   btnFwd10.addEventListener('click',  () => stepFrames(videoEl,  10, getItemId()));
 
   // ── Screenshot button + subtitle switch ────────────────────────────────
+  // Firefox for Android cannot capture hardware-decoded video frames — skip screenshot UI
+  const ua = navigator.userAgent;
+  const isFirefoxMobile = ua.includes('Firefox') && ua.includes('Android') && !ua.includes('Chrome');
+  if (isFirefoxMobile) {
+    const dirLtr = osdButtons.querySelector<HTMLElement>('div[dir="ltr"]');
+    if (dirLtr) dirLtr.after(frameStepWrap);
+    else osdButtons.append(frameStepWrap);
+    initF10Adaptive(btnBack10 as HTMLElement, btnFwd10 as HTMLElement, osdButtons);
+    return;
+  }
+
   const screenshotWrap = document.createElement('div');
   screenshotWrap.className = 'jfs-enhancer-screenshot-wrap';
 

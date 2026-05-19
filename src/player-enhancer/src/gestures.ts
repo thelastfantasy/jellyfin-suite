@@ -121,10 +121,6 @@ export function initGestures(videoEl: HTMLVideoElement): void {
 
     if (swipe.directionLock === null && (dx > 10 || dy > 10)) {
       swipe.directionLock = dy >= dx ? 'vertical' : 'horizontal';
-      // 确定为右侧纵向滑动时压制 Jellyfin 原生音量 OSD
-      if (swipe.directionLock === 'vertical' && swipe.side === 'right') {
-        document.body.classList.add('jfs-volume-swiping');
-      }
     }
     if (swipe.directionLock !== 'vertical') return;
 
@@ -147,7 +143,10 @@ export function initGestures(videoEl: HTMLVideoElement): void {
 
   container.addEventListener('touchend', () => {
     swipe.active = false;
-    document.body.classList.remove('jfs-volume-swiping');
+  }, { passive: true });
+
+  container.addEventListener('touchcancel', () => {
+    swipe.active = false;
   }, { passive: true });
 
 }

@@ -139,4 +139,5 @@ export interface Translations {
   enhancerSeekUnit: string
   enhancerSeekSave: string
   enhancerIndexHtmlNote: string
+  enhancerBrowserNote: string
 }

@@ -25,6 +25,77 @@ function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+function hasContent(ctx: CanvasRenderingContext2D, w: number, h: number): boolean {
+  // Sample 5 points; any non-transparent pixel means we captured something
+  const pts: [number, number][] = [
+    [w >> 1, h >> 1],
+    [w >> 2, h >> 2], [(3 * w) >> 2, h >> 2],
+    [w >> 2, (3 * h) >> 2], [(3 * w) >> 2, (3 * h) >> 2],
+  ];
+  return pts.some(([x, y]) => ctx.getImageData(x, y, 1, 1).data[3] > 0);
+}
+
+async function drawVideoFrame(
+  videoEl: HTMLVideoElement,
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+): Promise<void> {
+  type AnyWin = Record<string, unknown>;
+  type AnyEl = Record<string, unknown>;
+
+  // Path 1: captureStream + ImageCapture — handles hardware-decoded GPU frames
+  const hasCapture = typeof (videoEl as unknown as AnyEl).captureStream === 'function';
+  const hasImageCapture = typeof (window as unknown as AnyWin).ImageCapture === 'function';
+  if (hasCapture && hasImageCapture) {
+    let track: MediaStreamTrack | undefined;
+    try {
+      const stream = (videoEl as unknown as { captureStream(): MediaStream }).captureStream();
+      track = stream.getVideoTracks()[0];
+      if (track) {
+        type IC = { grabFrame(): Promise<ImageBitmap> };
+        const ic = new (window as unknown as { ImageCapture: new (t: MediaStreamTrack) => IC }).ImageCapture(track);
+        // Give the stream one animation frame to produce a live frame
+        await new Promise(r => requestAnimationFrame(r));
+        const bmp = await ic.grabFrame();
+        ctx.drawImage(bmp, 0, 0, w, h);
+        bmp.close();
+        if (hasContent(ctx, w, h)) return;
+        ctx.clearRect(0, 0, w, h);
+      }
+    } catch { /* fall through */ } finally {
+      track?.stop();
+    }
+  }
+
+  // Path 2: requestVideoFrameCallback — fires at frame-presentation time
+  if (typeof (videoEl as unknown as AnyEl).requestVideoFrameCallback === 'function') {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        (videoEl as unknown as { requestVideoFrameCallback(cb: () => void): void })
+          .requestVideoFrameCallback(() => {
+            try { ctx.drawImage(videoEl, 0, 0, w, h); resolve(); }
+            catch (e) { reject(e); }
+          });
+      });
+      if (hasContent(ctx, w, h)) return;
+      ctx.clearRect(0, 0, w, h);
+    } catch { /* fall through */ }
+  }
+
+  // Path 3: createImageBitmap — dedicated frame-capture path
+  try {
+    const bmp = await createImageBitmap(videoEl);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    if (hasContent(ctx, w, h)) return;
+    ctx.clearRect(0, 0, w, h);
+  } catch { /* fall through */ }
+
+  // Path 4: direct drawImage (last resort)
+  ctx.drawImage(videoEl, 0, 0, w, h);
+}
+
 export async function takeScreenshot(
   videoEl: HTMLVideoElement,
   includeSubtitles: boolean,
@@ -46,14 +117,7 @@ export async function takeScreenshot(
   if (!ctx) { canvas.remove(); return; }
 
   try {
-    try {
-      // createImageBitmap is a dedicated frame-capture path, handles hardware frames better
-      const bmp = await createImageBitmap(videoEl);
-      ctx.drawImage(bmp, 0, 0, w, h);
-      bmp.close();
-    } catch {
-      ctx.drawImage(videoEl, 0, 0, w, h);
-    }
+    await drawVideoFrame(videoEl, ctx, w, h);
   } catch (e) {
     canvas.remove();
     if (e instanceof DOMException && e.name === 'SecurityError') {
@@ -61,6 +125,13 @@ export async function takeScreenshot(
       return;
     }
     throw e;
+  }
+
+  // Detect hardware-decode failure: all paths produced a transparent frame
+  if (!hasContent(ctx, w, h)) {
+    canvas.remove();
+    showToast(t('screenshot.hwdecode'));
+    return;
   }
 
   if (includeSubtitles) {

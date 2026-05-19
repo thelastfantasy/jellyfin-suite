@@ -78,6 +78,7 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
       </div>
       <div class="jfs-poster-settings-modal__body jfs-enhancer-panel__body">
         <p class="jfs-enhancer-panel__index-note">{t.enhancerIndexHtmlNote}</p>
+        <p class="jfs-enhancer-panel__browser-note">{t.enhancerBrowserNote}</p>
         <p class={`jfs-enhancer-panel__status${enabled ? ' jfs-enhancer-panel__status--on' : ''}`}>
           {enabled === null ? '…' : enabled ? t.enhancerStatusEnabled : t.enhancerStatusDisabled}
         </p>

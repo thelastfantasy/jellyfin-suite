@@ -166,8 +166,8 @@ const CSS = `
   display: none !important;
 }
 
-/* Suppress Jellyfin native volume OSD during our swipe gesture */
-body.jfs-volume-swiping .volumeOsd {
+/* Suppress Jellyfin native volume OSD — replaced by our swipe OSD */
+.volumeOsd {
   display: none !important;
 }
 
