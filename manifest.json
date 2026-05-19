@@ -9,12 +9,12 @@
     "imageUrl": "",
     "versions": [
       {
-        "version": "1.5.4.0",
-        "changelog": "https://github.com/thelastfantasy/jellyfin-suite/releases/tag/v1.5.4",
+        "version": "1.5.5.0",
+        "changelog": "https://github.com/thelastfantasy/jellyfin-suite/releases/tag/v1.5.5",
         "targetAbi": "10.10.7.0",
-        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-suite/releases/download/v1.5.4/jellyfin-suite_1.5.4.0.zip",
-        "checksum": "6a0a6cec48d32823335dedd41e1771ba",
-        "timestamp": "2026-05-19T05:22:52.0000000Z"
+        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-suite/releases/download/v1.5.5/jellyfin-suite_1.5.5.0.zip",
+        "checksum": "4feb4b9c30c306b0dcf12b216258c601",
+        "timestamp": "2026-05-19T09:59:07.0000000Z"
       }
     ]
   },
@@ -28,12 +28,12 @@
     "imageUrl": "",
     "versions": [
       {
-        "version": "1.5.4.0",
-        "changelog": "https://github.com/thelastfantasy/jellyfin-suite/releases/tag/v1.5.4",
+        "version": "1.5.5.0",
+        "changelog": "https://github.com/thelastfantasy/jellyfin-suite/releases/tag/v1.5.5",
         "targetAbi": "10.10.7.0",
-        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-suite/releases/download/v1.5.4/jellyfin-suite-fonts_1.5.4.0.zip",
-        "checksum": "3bffc28341c7307b185d8a8f1a5cf6fd",
-        "timestamp": "2026-05-19T05:22:52.0000000Z"
+        "sourceUrl": "https://github.com/thelastfantasy/jellyfin-suite/releases/download/v1.5.5/jellyfin-suite-fonts_1.5.5.0.zip",
+        "checksum": "6c862c5767fa689a94c4905a6054a956",
+        "timestamp": "2026-05-19T09:59:07.0000000Z"
       }
     ]
   }
