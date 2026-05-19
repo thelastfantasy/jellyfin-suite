@@ -48,6 +48,26 @@ Automatically injected into the Jellyfin web player. No configuration needed.
 
 ---
 
+## Screenshots
+
+### Recently Played View
+
+<img src="screenshots/01-recently-played.png" width="49%"> <img src="screenshots/02-recently-played-folder-view.png" width="49%">
+
+### Thumbnail Grid Generator
+
+<img src="screenshots/07-poster-result.png" width="100%">
+
+<img src="screenshots/04-poster-settings-grid-mode.png" width="32%"> <img src="screenshots/05-poster-settings-theme-font.png" width="32%"> <img src="screenshots/08-poster-skip-segments.png" width="32%">
+
+<img src="screenshots/03-poster-queue-widget.png" width="49%"> <img src="screenshots/09-poster-queue-done.png" width="49%">
+
+### Web Player Enhancer
+
+<img src="screenshots/10-player-enhancer-panel.png" width="49%"> <img src="screenshots/11-player-enhancer-player.png" width="49%">
+
+---
+
 ## Installation
 
 ### Plugin Repository (recommended)
