@@ -41,7 +41,6 @@ export function initLongPress(
 
   function enter(): void {
     _active = true;
-    _suppressContextMenuUntil = Infinity;
     wasPaused = video.paused;
     if (video.paused) video.play().catch(() => {});
     video.playbackRate = getRate();
@@ -97,11 +96,10 @@ export function initLongPress(
     timer = setTimeout(enter, LONG_PRESS_MS);
   }, { passive: true, signal: sig });
 
-  // Prevent browser context menu (Android long-press on <video>).
-  // contextmenu fires AFTER touchend on Android Chrome, so we suppress via timestamp window.
-  // capture:true ensures we run before any other listener.
+  // Suppress all context menus during playback (Android Chrome long-press shows native menu).
+  // Also keep an 800ms post-exit window for the touchend→contextmenu race on real devices.
   document.addEventListener('contextmenu', (e: Event) => {
-    if (Date.now() < _suppressContextMenuUntil) e.preventDefault();
+    if (!video.paused || Date.now() < _suppressContextMenuUntil) e.preventDefault();
   }, { capture: true, signal: sig });
 
   // multi-finger abort
