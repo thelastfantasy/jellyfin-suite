@@ -33,21 +33,21 @@ function isOsdControl(target: EventTarget | null): boolean {
 }
 
 let _seekSeconds = 10;
-/** 最近一次我们处理双击的时间戳，用于阻止 Firefox 同时触发的 dblclick 事件 */
-let _lastDoubleTapMs = 0;
 
 export function setSeekSeconds(s: number): void {
   _seekSeconds = s;
 }
 
-// Firefox 在 touchend.preventDefault() 后仍会触发 dblclick（与 Chrome 不同）
-// 在 document 上 capture 拦截，确保我们处理过的双击不再冒泡到 Jellyfin 的全屏处理器
-document.addEventListener('dblclick', (e: MouseEvent) => {
-  if (Date.now() - _lastDoubleTapMs < 600) {
-    e.stopPropagation();
+// Jellyfin 在 videoElement 和 view 元素上监听 dblclick（bubble 阶段）来触发全屏。
+// Firefox 从 double-tap 合成 dblclick 时不受 touchend.preventDefault() 约束，
+// 所以直接在 document capture 阶段永久拦截 dblclick，接管全屏权。
+// 仅在触摸设备上生效；桌面端 dblclick 不受影响。
+if (navigator.maxTouchPoints > 0) {
+  document.addEventListener('dblclick', (e: Event) => {
+    e.stopImmediatePropagation();
     e.preventDefault();
-  }
-}, { capture: true });
+  }, { capture: true });
+}
 
 export function initGestures(videoEl: HTMLVideoElement): void {
   if (navigator.maxTouchPoints <= 0) return;
@@ -73,9 +73,8 @@ export function initGestures(videoEl: HTMLVideoElement): void {
     const zone: Zone = x < W / 3 ? 'left' : x < (W * 2) / 3 ? 'center' : 'right';
 
     if (now - lastTap.time < 300 && zone === lastTap.zone) {
-      e.stopPropagation();
+      e.stopImmediatePropagation();
       e.preventDefault();
-      _lastDoubleTapMs = Date.now(); // 告知 dblclick 拦截器本次双击已由我们处理
 
       if (zone === 'left') {
         videoEl.currentTime = Math.max(0, videoEl.currentTime - _seekSeconds);
