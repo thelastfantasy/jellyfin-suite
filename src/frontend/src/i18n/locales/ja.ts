@@ -127,4 +127,5 @@ export const ja: Translations = {
   enhancerSeekLabel: 'ダブルタップシーク',
   enhancerSeekUnit: '秒',
   enhancerSeekSave: '保存',
+  enhancerIndexHtmlNote: '⚠ Jellyfinウェブディレクトリの index.html への書き込み権限が必要です。起動時にプラグインが自動で <script> タグを注入してバンドルを読み込みます。Jellyfinアップデート後は「再注入」が必要です。',
 }
