@@ -166,6 +166,27 @@ const CSS = `
   display: none !important;
 }
 
+/* F±10 adaptive: container query on the OSD button bar.
+   .videoOsdBottom .buttons already has flex-wrap:wrap and align-items:center.
+   Adding container-type lets us query its actual rendered width.
+   F-10 and F+10 are :first-child/:last-child inside frameStepWrap (40px each).
+   Threshold 800px: tablet landscape (≥1024px) → show; phone portrait (≤640px) → hide. */
+.videoOsdBottom .buttons {
+  container-type: inline-size;
+}
+
+.jfs-enhancer-framestep-wrap > button:first-child,
+.jfs-enhancer-framestep-wrap > button:last-child {
+  display: none;
+}
+
+@container (min-width: 800px) {
+  .jfs-enhancer-framestep-wrap > button:first-child,
+  .jfs-enhancer-framestep-wrap > button:last-child {
+    display: inline-flex;
+  }
+}
+
 /* Suppress Jellyfin native volume OSD — replaced by our swipe OSD */
 .volumeOsd {
   display: none !important;
@@ -252,6 +273,37 @@ const CSS = `
   0%   { opacity: 1; }
   65%  { opacity: 1; }
   100% { opacity: 0; }
+}
+
+.jfs-speed-osd {
+  position: fixed;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 20px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 99999;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.jfs-speed-osd__line1 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.jfs-speed-osd__line2 {
+  font-size: 13px;
+  opacity: 0.85;
+  line-height: 1.3;
+  margin-top: 2px;
 }
 `;
 
