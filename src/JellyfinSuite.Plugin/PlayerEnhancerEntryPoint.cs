@@ -17,32 +17,41 @@ public class PlayerEnhancerEntryPoint : IHostedService
 
     private readonly IApplicationPaths _appPaths;
     private readonly ILogger<PlayerEnhancerEntryPoint> _logger;
+    private readonly IHostApplicationLifetime _lifetime;
 
     public PlayerEnhancerEntryPoint(
         IApplicationPaths appPaths,
-        ILogger<PlayerEnhancerEntryPoint> logger)
+        ILogger<PlayerEnhancerEntryPoint> logger,
+        IHostApplicationLifetime lifetime)
     {
         _appPaths = appPaths;
         _logger = logger;
+        _lifetime = lifetime;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        // Migrate legacy config.json entry early (safe to do before full startup)
+        try { RemoveFromConfigJson(_appPaths.WebPath, EnhancerUrl); } catch { }
+
+        // Delay index.html injection until ApplicationStarted so that Jellyfin's own
+        // web-file initialization (which may overwrite index.html) has already run.
+        _lifetime.ApplicationStarted.Register(InjectEnhancer);
+
+        return Task.CompletedTask;
+    }
+
+    private void InjectEnhancer()
+    {
         if (Plugin.Instance?.Configuration.AutoInjectEnabled == false)
         {
             _logger.LogDebug("PlayerEnhancer auto-inject skipped: disabled by user");
-            return Task.CompletedTask;
+            return;
         }
 
         try
         {
-            // Migrate: remove legacy config.json entry from older plugin versions
-            RemoveFromConfigJson(_appPaths.WebPath, EnhancerUrl);
-
-            // Remove any existing enhancer tag (may have different version param)
             RemoveEnhancerTagsFromIndexHtml(_appPaths.WebPath);
-
-            // Inject with DLL timestamp so browser fetches fresh bundle on each deploy
             var url = GetVersionedUrl();
             var changed = PatchIndexHtml(_appPaths.WebPath, url);
             if (changed)
@@ -52,8 +61,6 @@ public class PlayerEnhancerEntryPoint : IHostedService
         {
             _logger.LogWarning(ex, "PlayerEnhancer: failed to patch index.html");
         }
-
-        return Task.CompletedTask;
     }
 
     private string GetVersionedUrl()

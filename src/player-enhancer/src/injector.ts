@@ -129,6 +129,17 @@ function injectPlayerButtons(
   btnFwd10.addEventListener('click',  () => stepFrames(videoEl,  10, getItemId()));
 
   // ── Screenshot button + subtitle switch ────────────────────────────────
+  // Firefox for Android cannot capture hardware-decoded video frames — skip screenshot UI
+  const ua = navigator.userAgent;
+  const isFirefoxMobile = ua.includes('Firefox') && ua.includes('Android') && !ua.includes('Chrome');
+  if (isFirefoxMobile) {
+    const dirLtr = osdButtons.querySelector<HTMLElement>('div[dir="ltr"]');
+    if (dirLtr) dirLtr.after(frameStepWrap);
+    else osdButtons.append(frameStepWrap);
+    initF10Adaptive(btnBack10 as HTMLElement, btnFwd10 as HTMLElement, osdButtons);
+    return;
+  }
+
   const screenshotWrap = document.createElement('div');
   screenshotWrap.className = 'jfs-enhancer-screenshot-wrap';
 
@@ -152,6 +163,12 @@ function injectPlayerButtons(
     const title = document.title.replace(/\s*[-|]\s*Jellyfin\s*$/i, '').trim() || undefined;
     takeScreenshot(videoEl, checkbox.checked, title);
   });
+
+  // Firefox mobile 上 label>checkbox 的 touch 联动不可靠，直接处理 touchend
+  switchLabel.addEventListener('touchend', (e) => {
+    e.preventDefault(); // 阻止合成 click 造成二次触发
+    checkbox.checked = !checkbox.checked;
+  }, { passive: false });
 
   screenshotWrap.appendChild(screenshotBtn);
   screenshotWrap.appendChild(switchLabel);

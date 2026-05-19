@@ -24,6 +24,9 @@ function isOsdControl(target: EventTarget | null): boolean {
     if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'LABEL') return true;
     if (el.classList.contains('osdControls')) return true;
     if (el.classList.contains('sliderContainer')) return true;
+    // 我们自己注入的控件区域（Firefox 有时报告不同的 target，通过 ancestor 兜底）
+    if (el.classList.contains('jfs-enhancer-screenshot-wrap')) return true;
+    if (el.classList.contains('jfs-enhancer-framestep-wrap')) return true;
     el = el.parentElement;
   }
   return false;
@@ -33,6 +36,17 @@ let _seekSeconds = 10;
 
 export function setSeekSeconds(s: number): void {
   _seekSeconds = s;
+}
+
+// Jellyfin 在 videoElement 和 view 元素上监听 dblclick（bubble 阶段）来触发全屏。
+// Firefox 从 double-tap 合成 dblclick 时不受 touchend.preventDefault() 约束，
+// 所以直接在 document capture 阶段永久拦截 dblclick，接管全屏权。
+// 仅在触摸设备上生效；桌面端 dblclick 不受影响。
+if (navigator.maxTouchPoints > 0) {
+  document.addEventListener('dblclick', (e: Event) => {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+  }, { capture: true });
 }
 
 export function initGestures(videoEl: HTMLVideoElement): void {
@@ -59,7 +73,7 @@ export function initGestures(videoEl: HTMLVideoElement): void {
     const zone: Zone = x < W / 3 ? 'left' : x < (W * 2) / 3 ? 'center' : 'right';
 
     if (now - lastTap.time < 300 && zone === lastTap.zone) {
-      e.stopPropagation();
+      e.stopImmediatePropagation();
       e.preventDefault();
 
       if (zone === 'left') {
@@ -107,10 +121,6 @@ export function initGestures(videoEl: HTMLVideoElement): void {
 
     if (swipe.directionLock === null && (dx > 10 || dy > 10)) {
       swipe.directionLock = dy >= dx ? 'vertical' : 'horizontal';
-      // 确定为右侧纵向滑动时压制 Jellyfin 原生音量 OSD
-      if (swipe.directionLock === 'vertical' && swipe.side === 'right') {
-        document.body.classList.add('jfs-volume-swiping');
-      }
     }
     if (swipe.directionLock !== 'vertical') return;
 
@@ -133,7 +143,10 @@ export function initGestures(videoEl: HTMLVideoElement): void {
 
   container.addEventListener('touchend', () => {
     swipe.active = false;
-    document.body.classList.remove('jfs-volume-swiping');
+  }, { passive: true });
+
+  container.addEventListener('touchcancel', () => {
+    swipe.active = false;
   }, { passive: true });
 
 }

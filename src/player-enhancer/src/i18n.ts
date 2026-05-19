@@ -11,6 +11,7 @@ const TRANSLATIONS = {
     'screenshot.drm':         'DRM-protected content cannot be captured',
     'screenshot.srt':         'SRT/VTT subtitles cannot be included in screenshot',
     'screenshot.saved':       'Screenshot saved',
+    'screenshot.hwdecode':    'Screenshot failed: this browser cannot capture hardware-decoded video frames.',
   },
   zh: {
     'framestepper.back10':    '后退 10 帧',
@@ -24,6 +25,7 @@ const TRANSLATIONS = {
     'screenshot.drm':         '受版权保护的内容无法截图',
     'screenshot.srt':         'SRT/VTT 字幕无法包含在截图中',
     'screenshot.saved':       '截图已保存',
+    'screenshot.hwdecode':    '截图失败：此浏览器无法捕获硬件解码的视频帧。',
   },
   ja: {
     'framestepper.back10':    '10フレーム戻る',
@@ -37,6 +39,7 @@ const TRANSLATIONS = {
     'screenshot.drm':         'DRMで保護されたコンテンツはキャプチャできません',
     'screenshot.srt':         'SRT/VTT字幕はスクリーンショットに含められません',
     'screenshot.saved':       'スクリーンショットを保存しました',
+    'screenshot.hwdecode':    'スクリーンショット失敗：このブラウザはハードウェアデコード動画をキャプチャできません。',
   },
 } as const;
 
