@@ -117,6 +117,20 @@ export interface Translations {
   guessEd: string
   posterGlobalSkip: string
   posterGlobalSkipAdd: string
+  skipSettings: string
+  skipAndGenerate: string
+  skipSegments: string
+  generateNow: string
+  skipDuration: string
+  skipByChapter: string
+  skipBySegment: string
+  skipChaptersLoading: string
+  skipTimeFormat: string
+  skipEmpty: string
+  skipRemove: string
+  skipAddSegment: string
+  skipClearAll: string
+  cancel: string
   skipIgnoreGlobal: string
   skipAddToGlobal: string
   skipGlobalFull: string

@@ -150,11 +150,11 @@ function PosterBtnHover({ record, enableFolderView, thumbRef }: PosterBtnHoverPr
       </button>
       <button
         class={`jfs-card__poster-skip-btn${off ? ' jfs-card__poster-skip-btn--offset' : ''}`}
-        title="跳过片段生成截图墙"
+        title={t.skipAndGenerate}
         onClick={handleSkipClick}
       >
         <MdKeyboardArrowDown size={14} />
-        <span class="jfs-card__poster-skip-label">跳过片段</span>
+        <span class="jfs-card__poster-skip-label">{t.skipSegments}</span>
       </button>
       <button
         class={`jfs-card__poster-touch-btn${off ? ' jfs-card__poster-touch-btn--offset' : ''}`}
@@ -167,11 +167,11 @@ function PosterBtnHover({ record, enableFolderView, thumbRef }: PosterBtnHoverPr
           <div class="jfs-card__touch-sheet" style={{ position: 'fixed', top: `${sheetPos.top}px`, left: `${sheetPos.left}px` }}>
             <button onClick={e => { e.stopPropagation(); handlePosterClick(e as any); setTouchSheetOpen(false) }}>
               <MdGridView size={14} />
-              立即生成
+              {t.generateNow}
             </button>
             <button onClick={e => { e.stopPropagation(); handleSkipClick(e as any); setTouchSheetOpen(false) }}>
               <MdContentCut size={14} />
-              跳过片段设置
+              {t.skipSettings}
             </button>
           </div>
         </Popover>
@@ -257,11 +257,11 @@ function PosterBtnMenu({ record, thumbRef }: PosterBtnMenuProps) {
           <div class="jfs-card__touch-sheet" style={{ position: 'fixed', top: `${sheetPos.top}px`, left: `${sheetPos.left}px` }}>
             <button onClick={e => { e.stopPropagation(); handlePosterClick(e as any); setTouchSheetOpen(false) }}>
               <MdGridView size={14} />
-              立即生成
+              {t.generateNow}
             </button>
             <button onClick={e => { e.stopPropagation(); handleSkipClick(e as any); setTouchSheetOpen(false) }}>
               <MdContentCut size={14} />
-              跳过片段设置
+              {t.skipSettings}
             </button>
           </div>
         </Popover>
