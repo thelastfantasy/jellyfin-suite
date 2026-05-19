@@ -300,9 +300,9 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
         {/* Header */}
         <div class="jfs-poster-settings-modal__header">
           <span>
-            跳过片段设置
+            {t.skipSettings}
             {videoDurationMs != null && (
-              <span class="jfs-skip-header-duration">时长 {formatHMS(videoDurationMs)}</span>
+              <span class="jfs-skip-header-duration">{t.skipDuration} {formatHMS(videoDurationMs)}</span>
             )}
           </span>
           <button class="jfs-poster-settings-modal__close" onClick={onClose}>✕</button>
@@ -314,11 +314,11 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
             <button
               class={`jfs-skip-tab${tab === 'chapters' ? ' jfs-skip-tab--active' : ''}`}
               onClick={() => setTab('chapters')}
-            >按章节跳过</button>
+            >{t.skipByChapter}</button>
             <button
               class={`jfs-skip-tab${tab === 'segments' ? ' jfs-skip-tab--active' : ''}`}
               onClick={() => setTab('segments')}
-            >按时间段跳过</button>
+            >{t.skipBySegment}</button>
           </div>
         )}
 
@@ -329,7 +329,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
           {tab === 'chapters' && (
             <div class="jfs-skip-chapter-list">
               {chaptersLoading && (
-                <div class="jfs-skip-placeholder">加载章节中…</div>
+                <div class="jfs-skip-placeholder">{t.skipChaptersLoading}</div>
               )}
               {!chaptersLoading && (() => {
                 const guesses = guessOpEd(chapters, videoDurationMs)
@@ -362,10 +362,10 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
           {tab === 'segments' && (
             <div class="jfs-skip-segment-list">
               <div class="jfs-skip-hint">
-                格式：HH:MM:SS.mmm（mmm 为毫秒，非帧数）
+                {t.skipTimeFormat}
               </div>
               {segments.length === 0 && (
-                <div class="jfs-skip-placeholder">暂无跳过片段，点击下方"+"添加</div>
+                <div class="jfs-skip-placeholder">{t.skipEmpty}</div>
               )}
               {segments.map((seg, idx) => {
                 const segValid = seg.endMs > seg.startMs
@@ -375,7 +375,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                       <TimeInput valueMs={seg.startMs} onChange={v => updateSegment(idx, { startMs: v })} />
                       <span class="jfs-skip-segment-dash">—</span>
                       <TimeInput valueMs={seg.endMs} onChange={v => updateSegment(idx, { endMs: v })} />
-                      <button class="jfs-skip-segment-remove" onClick={() => removeSegment(idx)} title="删除">
+                      <button class="jfs-skip-segment-remove" onClick={() => removeSegment(idx)} title={t.skipRemove}>
                         <MdRemove size={15} />
                       </button>
                       <button
@@ -406,7 +406,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
               })}
               <button class="jfs-skip-segment-add" onClick={addSegment}>
                 <MdAdd size={15} />
-                添加时间段
+                {t.skipAddSegment}
               </button>
             </div>
           )}
@@ -425,7 +425,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                   </span>
                   <button
                     class="jfs-skip-global-display__del"
-                    title="删除"
+                    title={t.skipRemove}
                     onClick={() => {
                       const next = globalSkipsLocal.filter((_, i) => i !== idx)
                       saveGlobalSkipSegments(next)
@@ -448,10 +448,10 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
             {t.skipIgnoreGlobal}
           </label>
           <div class="jfs-skip-footer__actions">
-            <button class="jfs-skip-footer__clear" onClick={handleClear}>清除全部</button>
+            <button class="jfs-skip-footer__clear" onClick={handleClear}>{t.skipClearAll}</button>
             <span style="flex:1" />
-            <button class="jfs-skip-footer__cancel" onClick={onClose}>取消</button>
-            <button class="jfs-skip-footer__confirm" onClick={handleConfirm}>生成</button>
+            <button class="jfs-skip-footer__cancel" onClick={onClose}>{t.cancel}</button>
+            <button class="jfs-skip-footer__confirm" onClick={handleConfirm}>{t.posterGenerate}</button>
           </div>
         </div>
       </div>
