@@ -78,3 +78,8 @@ src/frontend/.vite/
 
 # 日志文件
 *.log
+
+# 字幕文件（demo 目录下的测试字幕，不入库）
+*.ass
+*.ssa
+*.srt
