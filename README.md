@@ -16,7 +16,7 @@ A Jellyfin plugin suite: recently played view, poster sheet generator, and web p
 - **Dedup mode**: Hide repeated plays; optionally dedup within each group independently
 - **Episode info**: Series name and episode code (S×E× / SP× for specials) shown on every card
 - **Smart links**: Series name links to the series page; episode title links to the episode page
-- **Folder view**: Click the folder icon on any card to open a popover showing the item's parent folder hierarchy with direct links — supports thumbnail, poster, and list view modes
+- **Folder view**: Click the folder icon on any card to open a popover showing the item's parent folder hierarchy with direct links — supports thumbnail, poster, and list view modes *(requires **Dashboard → Libraries → Display → Show folder view for library items** to be enabled in Jellyfin)*
 - **View modes**: Thumbnail (16:9) / Poster (2:3) / List
 - **Full pagination**: First / prev / jump / next / last with configurable items per page
 - **Internationalization**: English, 简体中文, 日本語
@@ -73,6 +73,20 @@ Automatically injected into the Jellyfin web player. No configuration needed.
 
 After installation, a **Recently Played** entry will appear in the sidebar.
 
+### Player Enhancer — Docker/Linux permission
+
+The web player enhancer patches Jellyfin's `index.html` at server startup. If Jellyfin runs as a non-root user (common on Unraid, TrueNAS, or custom Docker setups), that file must be writable by the Jellyfin process. Run this **once** after installation, replacing `568:568` with your actual Jellyfin UID:GID:
+
+```bash
+docker exec -u root $(docker ps --filter name=jellyfin --format '{{.Names}}') \
+  ls /jellyfin/jellyfin-web/index.html >/dev/null && \
+  chown 568:568 $(docker inspect \
+    $(docker ps --filter name=jellyfin --format '{{.Names}}') \
+    --format '{{.GraphDriver.Data.MergedDir}}')/jellyfin/jellyfin-web/index.html
+```
+
+If the enhancer is not injecting (frame-step buttons not visible in the player), check that the Jellyfin process has write access to `index.html`.
+
 ---
 
 ## Migrating from Jellyfin Recents
@@ -125,8 +139,11 @@ make test
 
 # Build and deploy to local Jellyfin dev container
 make update
+```
 
-# Start frontend dev server (requires a local Jellyfin instance)
+### Frontend dev server
+
+```bash
 cd src/frontend
 npm install
 npm run dev
@@ -137,6 +154,24 @@ Copy `.env.example` to `.env` and set your Jellyfin URL:
 ```
 VITE_JELLYFIN_URL=http://localhost:8096
 ```
+
+### Player enhancer
+
+The web player enhancer is a separate Vite bundle injected into Jellyfin's `index.html` at server startup:
+
+```bash
+make build-enhancer   # build src/player-enhancer → JellyfinSuite.Plugin/Web/
+```
+
+Or run the dev cycle directly:
+
+```bash
+cd src/player-enhancer
+npm install
+npm run build
+```
+
+### Thumbnail generator
 
 The Rust thumbnail generator binary (`poster-gen`) is built separately via Docker:
 
