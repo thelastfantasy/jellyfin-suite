@@ -166,6 +166,27 @@ const CSS = `
   display: none !important;
 }
 
+/* F±10 adaptive: container query on the OSD button bar.
+   .videoOsdBottom .buttons already has flex-wrap:wrap and align-items:center.
+   Adding container-type lets us query its actual rendered width.
+   F-10 and F+10 are :first-child/:last-child inside frameStepWrap (40px each).
+   Threshold 800px: tablet landscape (≥1024px) → show; phone portrait (≤640px) → hide. */
+.videoOsdBottom .buttons {
+  container-type: inline-size;
+}
+
+.jfs-enhancer-framestep-wrap > button:first-child,
+.jfs-enhancer-framestep-wrap > button:last-child {
+  display: none;
+}
+
+@container (min-width: 800px) {
+  .jfs-enhancer-framestep-wrap > button:first-child,
+  .jfs-enhancer-framestep-wrap > button:last-child {
+    display: inline-flex;
+  }
+}
+
 /* Suppress Jellyfin native volume OSD — replaced by our swipe OSD */
 .volumeOsd {
   display: none !important;
@@ -264,6 +285,7 @@ const CSS = `
   border-radius: 12px;
   padding: 10px 20px;
   pointer-events: none;
+  user-select: none;
   z-index: 99999;
   text-align: center;
   white-space: nowrap;

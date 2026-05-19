@@ -6,6 +6,7 @@ const HORIZ_DEG       = 20;
 const BOTTOM_FRACTION = 1 / 3;
 
 let _active = false;
+let _suppressContextMenuUntil = 0;
 let _abortCtrl: AbortController | null = null;
 let _osdEl: HTMLDivElement | null = null;
 let _lastOsdHtml = '';
@@ -33,11 +34,14 @@ export function initLongPress(
 
   let timer: ReturnType<typeof setTimeout> | null = null;
   let startX = 0, startY = 0, lastX = 0, lastY = 0;
-  let seekOffset = 0;
+  let seekAnchorTime = -1;    // video.currentTime when horizontal drag begins; -1 = not seeking
+  let seekRelativeOffset = 0; // accumulated offset from seekAnchorTime (for OSD display)
+  let seekIdleTimer: ReturnType<typeof setTimeout> | null = null;
   let wasPaused = false;
 
   function enter(): void {
     _active = true;
+    _suppressContextMenuUntil = Infinity;
     wasPaused = video.paused;
     if (video.paused) video.play().catch(() => {});
     video.playbackRate = getRate();
@@ -47,13 +51,13 @@ export function initLongPress(
 
   function exit(): void {
     _active = false;
+    _suppressContextMenuUntil = Date.now() + 800;
+    if (seekIdleTimer) { clearTimeout(seekIdleTimer); seekIdleTimer = null; }
     video.playbackRate = 1;
     if (wasPaused) video.pause();
-    if (seekOffset !== 0) {
-      const dur = isFinite(video.duration) ? video.duration : video.currentTime;
-      video.currentTime = Math.max(0, Math.min(dur, video.currentTime + seekOffset));
-    }
-    seekOffset = 0;
+    // video.currentTime is already at the correct position — seek happened in real-time
+    seekAnchorTime = -1;
+    seekRelativeOffset = 0;
     hideOsd();
   }
 
@@ -68,9 +72,8 @@ export function initLongPress(
       line2 = t('longpress.seekHint');
     } else {
       const sign = offsetSec >= 0 ? '+' : '−';
-      const dur = isFinite(video.duration) ? video.duration : video.currentTime;
-      const target = Math.max(0, Math.min(dur, video.currentTime + offsetSec));
-      line2 = `${sign}${formatOffset(Math.abs(offsetSec))}  →  ${formatTimestamp(target)}`;
+      // video.currentTime is already at the seeked position (real-time seek)
+      line2 = `${sign}${formatOffset(Math.abs(offsetSec))}  →  ${formatTimestamp(video.currentTime)}`;
     }
 
     const html = `<div class="jfs-speed-osd__line1">▶▶ ${line1}</div>`
@@ -84,13 +87,22 @@ export function initLongPress(
   // ── touchstart: own the bottom-1/3 zone ──────────────────────────────────
   document.body.addEventListener('touchstart', (e: TouchEvent) => {
     if (!video.isConnected || e.touches.length !== 1) return;
+    if (video.paused) return;  // long-press only active during playback
     const t0 = e.touches[0];
     if (!isInLongPressZone(t0, video)) return;
     startX = lastX = t0.clientX;
     startY = lastY = t0.clientY;
-    seekOffset = 0;
+    seekAnchorTime = -1;
+    seekRelativeOffset = 0;
     timer = setTimeout(enter, LONG_PRESS_MS);
   }, { passive: true, signal: sig });
+
+  // Prevent browser context menu (Android long-press on <video>).
+  // contextmenu fires AFTER touchend on Android Chrome, so we suppress via timestamp window.
+  // capture:true ensures we run before any other listener.
+  document.addEventListener('contextmenu', (e: Event) => {
+    if (Date.now() < _suppressContextMenuUntil) e.preventDefault();
+  }, { capture: true, signal: sig });
 
   // multi-finger abort
   document.body.addEventListener('touchstart', (e: TouchEvent) => {
@@ -132,14 +144,27 @@ export function initLongPress(
     if (moveDist > 2) {
       const deg = Math.atan2(Math.abs(deltaY), Math.abs(deltaX)) * 180 / Math.PI;
       if (deg < HORIZ_DEG) {
-        // Horizontal seek: slow to 1× so user can hear content while positioning
+        // Horizontal seek: anchor to current position on first horizontal event
+        if (seekAnchorTime < 0) {
+          seekAnchorTime = video.currentTime;
+          seekRelativeOffset = 0;
+        }
         video.playbackRate = 1;
         const dur = isFinite(video.duration) ? video.duration : 0;
         const sPerVw = Math.max(0.1, Math.min(10, dur * 0.001));
-        seekOffset += (deltaX / window.innerWidth * 100) * sPerVw;
-        updateOsd(seekOffset);
+        seekRelativeOffset += (deltaX / window.innerWidth * 100) * sPerVw;
+        video.currentTime = Math.max(0, Math.min(dur, seekAnchorTime + seekRelativeOffset));
+        updateOsd(seekRelativeOffset);
+        // Resume speedRate when drag stops but finger stays on screen
+        if (seekIdleTimer) clearTimeout(seekIdleTimer);
+        seekIdleTimer = setTimeout(() => {
+          seekIdleTimer = null;
+          if (_active) video.playbackRate = getRate();
+        }, 150);
       } else {
-        // Vertical: resume speed, ignore movement (don't touch brightness/volume)
+        // Vertical: exit seek mode; next horizontal re-anchors from current position
+        seekAnchorTime = -1;
+        seekRelativeOffset = 0;
         video.playbackRate = getRate();
       }
     }
@@ -153,7 +178,6 @@ export function initLongPress(
   document.body.addEventListener('touchend',    onEnd, { passive: true, signal: sig });
   document.body.addEventListener('touchcancel', onEnd, { passive: true, signal: sig });
 
-  void startY; // suppress unused-var warning — used in direction math above
 }
 
 // ── OSD helpers ──────────────────────────────────────────────────────────────
