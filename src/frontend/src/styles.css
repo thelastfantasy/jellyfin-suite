@@ -2736,6 +2736,14 @@ a.jfs-card__series-name:hover {
   gap: 0.75rem;
   padding: 1rem;
 }
+.jfs-enhancer-panel__index-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255,200,100,0.85);
+  line-height: 1.5;
+  border-left: 2px solid rgba(255,200,100,0.5);
+  padding-left: 0.6rem;
+}
 .jfs-enhancer-panel__status {
   margin: 0;
   font-size: 0.95rem;

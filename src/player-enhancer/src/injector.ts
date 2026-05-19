@@ -90,6 +90,29 @@ function tryInject(): void {
   }
 }
 
+function initF10Adaptive(back10: HTMLElement, fwd10: HTMLElement, osdButtons: HTMLElement): void {
+  let rafId = 0;
+  function update(): void {
+    cancelAnimationFrame(rafId);
+    // 先显示让布局包含它们，再检测是否换行
+    back10.style.display = '';
+    fwd10.style.display = '';
+    rafId = requestAnimationFrame(() => {
+      const children = [...osdButtons.children] as HTMLElement[];
+      if (children.length < 2) return;
+      const refTop = children[0].getBoundingClientRect().top;
+      const wraps = children.some(c => Math.abs(c.getBoundingClientRect().top - refTop) > 4);
+      if (wraps) {
+        back10.style.display = 'none';
+        fwd10.style.display = 'none';
+      }
+    });
+  }
+  const ro = new ResizeObserver(update);
+  ro.observe(osdButtons);
+  update();
+}
+
 function injectPlayerButtons(
   osdButtons: HTMLElement,
   videoEl: HTMLVideoElement
@@ -155,4 +178,7 @@ function injectPlayerButtons(
     osdButtons.append(frameStepWrap);
     osdButtons.append(screenshotWrap);
   }
+
+  // F±10 自适应：宽度够就显示，否则隐藏
+  initF10Adaptive(btnBack10 as HTMLElement, btnFwd10 as HTMLElement, osdButtons);
 }

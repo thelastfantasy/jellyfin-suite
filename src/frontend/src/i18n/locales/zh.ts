@@ -127,4 +127,5 @@ export const zh: Translations = {
   enhancerSeekLabel: '双击快进/快退',
   enhancerSeekUnit: '秒',
   enhancerSeekSave: '保存',
+  enhancerIndexHtmlNote: '⚠ 需要 Jellyfin Web 目录下 index.html 的写入权限。插件启动时会自动在此文件中注入 <script> 标签以加载增强脚本；升级 Jellyfin 后需重新点击「重新注入」。',
 }

@@ -160,6 +160,17 @@ const CSS = `
   line-height: 1;
 }
 
+/* Hide Jellyfin native rewind/fastforward — replaced by F±1/F±10 */
+.osdControls .btnRewind,
+.osdControls .btnFastForward {
+  display: none !important;
+}
+
+/* Suppress Jellyfin native volume OSD during our swipe gesture */
+body.jfs-volume-swiping .volumeOsd {
+  display: none !important;
+}
+
 /* YouTube-style seek ripple — half-oval on screen edge + animated arrows */
 .jfs-enhancer-ripple {
   position: fixed;

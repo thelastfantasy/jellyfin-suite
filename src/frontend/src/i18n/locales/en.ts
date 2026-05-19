@@ -127,4 +127,5 @@ export const en: Translations = {
   enhancerSeekLabel: 'Double-tap seek',
   enhancerSeekUnit: 'sec',
   enhancerSeekSave: 'Save',
+  enhancerIndexHtmlNote: '⚠ Requires write access to index.html in the Jellyfin web directory. On startup the plugin injects a <script> tag into that file to load the enhancer bundle; re-injection is needed after Jellyfin upgrades.',
 }
