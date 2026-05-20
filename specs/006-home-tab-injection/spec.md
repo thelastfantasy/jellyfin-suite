@@ -2,58 +2,135 @@
 
 **Feature Branch**: `feat/home-tab-injection`
 **Created**: 2026-05-19
-**Status**: Draft
+**Revised**: 2026-05-20
+**Status**: Spec (implementation deferred)
+
+---
 
 ## Background
 
-Jellyfin 主页顶部有一个 tab 栏（`div[is="emby-tabs"].tabs-viewmenubar`），默认含"首页"和"我的最爱"两个 tab。插件的"最近播放"视图目前只能通过左侧侧栏访问——侧栏在移动端需要手动打开，在桌面端也不如顶部 tab 醒目。
+Jellyfin 主页顶部有一个 tab 栏（Home / Favorites），是用户最直接的导航入口。插件的"最近播放"视图目前只能通过插件配置页访问，路径深、移动端尤其不便。
 
-播放器增强功能已经通过向 `index.html` 注入 `<script>` 实现了运行时 DOM 操作，相同机制可以在 Jellyfin 页面渲染后注入一个 tab 按钮。
+目标：将完整的最近播放视图作为主页的第三个原生 tab 面板注入，让用户无需离开主页即可查看历史记录——与 Home / Favorites 并列，行为一致。
 
-## Observed DOM Structure (Jellyfin 10.11.x)
+---
 
-```html
-<div is="emby-tabs" data-index="0"
-     class="tabs-viewmenubar emby-tabs focusable scrollX"
-     data-scroll-mode-x="custom">
-  <div class="emby-tabs-slider" style="white-space:nowrap;">
-    <button type="button" is="emby-button"
-            class="emby-tab-button emby-button emby-tab-button-active"
-            data-index="0">
-      <div class="emby-button-foreground">首页</div>
-    </button>
-    <button type="button" is="emby-button"
-            class="emby-tab-button emby-button"
-            data-index="1">
-      <div class="emby-button-foreground">我的最爱</div>
-    </button>
-  </div>
-</div>
+## 范围
+
+### Home Tab 包含的功能（与插件配置页保持一致）
+
+- 分组浏览（日 / 周 / 月 / 季 / 年）
+- 排序（播放时间、标题、发行日期、添加日期、收藏优先）
+- 媒体筛选（全部 / 视频 / 音频）
+- 去重模式（全局去重 + 分组内去重）
+- 剧集信息（系列名称 + 集数代码）
+- 智能链接（系列名 → 作品页，集标题 → 剧集页）
+- 文件夹视图
+- 视图模式（缩略图 / 海报 / 列表）
+- 完整分页
+- 多语言（en / zh / ja）
+
+### Home Tab **不包含**的功能
+
+- 播放器增强相关设置（帧步进、截图、手势配置）——这些属于 player-enhancer
+
+### 插件配置页新增内容
+
+- Home Tab 注入开关（enable / disable），默认启用
+- 其余最近播放设置（分组、排序等）由 home tab 和配置页共享同一套后端配置
+
+---
+
+## 架构决策
+
+### 新建独立 bundle：`src/home-injector/`
+
+Home tab 注入与 player-enhancer 注入目标完全不同（主页 DOM vs 播放器 DOM），独立 bundle 使两者各自专注：
+
+```
+src/
+  home-injector/       ← 新增
+    src/
+      index.ts         ← bundle 入口，initHomeInjector()
+      home-tab.ts      ← tab 按钮 + panel 注入逻辑
+      mount.tsx        ← Preact 挂载到 panel div
+    vite.config.ts     ← 独立构建
+    tsconfig.json
+    package.json
+  frontend/            ← 现有，需重构组件导出
+  player-enhancer/     ← 不变
 ```
 
-注入目标：向 `.tabs-viewmenubar .emby-tabs-slider` 追加一个结构相同的 `button`。
+### Frontend 组件导出重构
+
+`src/frontend/` 目前是自挂载 IIFE，组件不对外导出。需将核心组件和 API 层改为正式导出，以便 home-injector 直接 import：
+
+```
+src/frontend/src/
+  components/
+    RecentlyPlayedView.tsx    ← 导出，home-injector 挂载此组件
+    PlayRecordCard.tsx        ← 导出（已是子组件）
+    ...
+  api/                        ← 全部导出
+  i18n/                       ← 全部导出
+  index.tsx                   ← 保留，自挂载入口（配置页不变）
+```
+
+home-injector 通过 Vite path alias 直接 import frontend/src 下的文件，各自构建独立 bundle，不引入 npm workspace 或发布步骤。
+
+### C# 注入层
+
+新建 `HomeInjectorEntryPoint.cs`（或复用 `PlayerEnhancerEntryPoint.cs`），在 Jellyfin 启动时向 `index.html` 注入第二个 `<script>` 标签：
+
+```html
+<script src="/JellyfinSuite/home-injector.js?v={timestamp}" defer></script>
+```
+
+### C# 配置
+
+`PluginConfiguration.cs` 新增：
+- `public bool HomeTabEnabled { get; set; } = true;`
+
+新增 API 端点（或复用 `PlayerEnhancerController`）：
+- `GET /JellyfinSuite/HomeInjectorConfig` → 返回 `{ homeTabEnabled: bool }`
+- `POST /JellyfinSuite/HomeInjectorConfig` → 保存配置
+
+---
 
 ## Clarifications
 
-- Q: tab 只在主页存在，注入后跳转到插件页，回来时 tab 还在吗？ → A: 是。tab 栏随主页渲染，MutationObserver 会在每次主页重新出现时重新注入，幂等检查（`data-jfs-tab`）防止重复。
-- Q: tab 在插件配置页上是否需要高亮 active 状态？ → A: 不需要。tab 栏仅在主页存在，用户进入插件页后 tab 栏消失，无需跨页管理 active 状态。
-- Q: 是否需要在插件管理面板提供开关？ → A: 不需要，v1 默认注入。
-- Q: 标签文字如何多语言化？ → A: 复用 player enhancer 已有的 `i18n.ts`，新增 `nav.recentlyPlayed` key（EN/ZH/JA）。
-- Q: 如果 Jellyfin 更新后选择器失效，如何处理？ → A: 找不到目标节点时静默跳过，不报错，不影响播放器增强其他功能。
+- **Tab 形态**：使用 `<button is="emby-button">` 无 href 形式（纯 DOM 切换，URL 不变），tab 面板与 Home / Favorites 并列，不跳转到配置页。
+- **数据共享**：home tab 和配置页使用同一套 `/JellyfinRecents/PlayHistory` 端点和后端配置，无需独立数据模型。
+- **幂等注入**：MutationObserver 监听主页 DOM 出现，通过 `data-jfs-hometab` 标记防止重复注入；主页离开后 tab 销毁，回来后重新注入。
+- **配置页不变**：`src/frontend/` 的配置页外观、功能、路由均不受影响；组件导出重构只是增加 export，不改变现有行为。
+- **选择器失效**：找不到 `.tabs-viewmenubar .emby-tabs-slider` 时静默跳过，不影响 player-enhancer。
+- **禁用时**：`HomeTabEnabled = false` → home-injector bundle 加载后直接返回，不注入任何 DOM。
+- **状态隔离**：home tab 和配置页各自维护自己的 UI 状态（当前页、选中分组等），互不干扰。
 
-## User Scenarios & Testing *(mandatory)*
+---
 
-### User Story 1 - 主页顶部 tab 快速导航 (Priority: P1)
+## User Stories & Acceptance Scenarios
 
-用户在 Jellyfin 主页希望通过顶部 tab 一键跳转最近播放视图，与"首页"、"我的最爱"并列，不需要展开侧栏。
+### Story 1 — 主页 Tab 面板（P1）
 
-**Independent Test**: 打开 Jellyfin 主页，顶部 tab 栏出现"Recently Played"（或对应语言文字）tab，点击后跳转到插件页面。
+**Given** 用户在 Jellyfin 主页，**When** 页面渲染完成，**Then** 顶部 tab 栏末尾出现"Recently Played / 最近播放 / 最近再生"tab。
 
-**Acceptance Scenarios**:
+**Given** 用户点击该 tab，**When** 面板激活，**Then** URL 不变，面板内显示完整的最近播放视图（卡片、分组、分页）。
 
-1. **Given** 用户在 Jellyfin 主页，**When** 页面渲染完成，**Then** 顶部 tab 栏末尾出现"Recently Played / 最近播放 / 最近再生"tab
-2. **Given** 插件 tab 已注入，**When** 用户点击该 tab，**Then** 页面跳转到 `#!/configurationpage?name=JellyfinSuite`
-3. **Given** 用户从插件页返回主页，**When** 主页重新渲染，**Then** 插件 tab 重新出现（且只出现一次）
-4. **Given** Jellyfin 界面语言为中文，**When** tab 注入时，**Then** tab 文字显示为"最近播放"
-5. **Given** Jellyfin 界面语言为日语，**When** tab 注入时，**Then** tab 文字显示为"最近再生"
-6. **Given** `.tabs-viewmenubar` 选择器在未来版本失效，**When** 注入尝试找不到目标节点，**Then** 无报错，播放器增强其他功能不受影响
+**Given** 用户切换回 Home tab，**When** 再次点击 Recently Played tab，**Then** 视图状态保持（不重置到第一页）。
+
+**Given** 用户从主页导航到其他页面再返回，**When** 主页重新渲染，**Then** tab 重新出现且只出现一次。
+
+### Story 2 — 功能完整性（P1）
+
+**Given** home tab 面板已激活，**Then** 以下功能与插件配置页行为一致：分组 / 排序 / 媒体筛选切换、去重模式切换、视图模式切换、翻页、卡片点击跳转。
+
+### Story 3 — 插件配置页新增开关（P2）
+
+**Given** 用户在插件配置页，**Then** 能看到"Home Tab 注入"开关（默认启用）。
+
+**Given** 用户关闭开关并保存，**When** 刷新主页，**Then** Recently Played tab 不再出现。
+
+### Story 4 — 配置页样式不变（P1，回归）
+
+**Given** home-injector 和 frontend 重构后，**Then** 插件配置页的所有功能和样式与重构前完全一致。
