@@ -2,6 +2,12 @@
 
 本文件约束 Claude Code 等 AI 助手在此项目中的行为。
 
+## 当前功能上下文
+
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+at specs/006-home-tab-injection/plan.md
+
 ## 核心原则
 
 - **先测试，再部署，部署须确认。**
@@ -20,6 +26,7 @@
 - 未运行测试直接 `make build` / `make update`
 - 未经用户确认执行任何部署操作
 - 跳过 `make test` 直接报告"可以部署了"
+- `make update` 会重启容器，是破坏性操作
 
 ## 代码变更工作流程
 
@@ -56,6 +63,25 @@ Claude 需要运行测试时，**优先调用 `make test`**（或具体套件的
 - Docker Desktop 必须以管理员身份运行
 - 容器停止时用 `docker start jellyfin-dev` 启动
 - 如 config 卷损坏：`docker rm jellyfin-dev && docker volume rm jellyfin-config`
+
+## Speckit 分支规范（强制覆盖）
+
+**speckit 要求的 `00x-xxx` 格式分支命名必须无视。** speckit 的 git-feature hook（`/speckit-git-feature`）绝对不执行，规格文档（spec/plan/tasks）只在当前工作分支上提交，不得为 spec 工作单独创建新分支。
+
+## C# JSON 序列化规范
+
+**Jellyfin 插件的 ASP.NET Core 控制器默认使用 PascalCase 序列化 DTO 属性**（如 `SeekSeconds`），而非 camelCase（`seekSeconds`）。凡是新增 DTO 并在前端 JS/TS 读取其字段时，**必须**用以下任一方式保持一致：
+
+1. **推荐**：给 DTO 属性加 `[JsonPropertyName("camelCaseName")]` 特性强制输出 camelCase
+2. 或在前端同时处理两种大小写（兜底方案，不推荐）
+
+**不要**直接在前端写 `data.seekSeconds` 就假定返回的是 camelCase，必须先确认实际 key 名。
+
+## Shell 规范
+
+- **所有 CLI 操作（npm、cargo、dotnet、make 等）一律用 bash**，不得使用 PowerShell
+- 文件操作（Read/Write/Edit）使用 Windows 路径格式：`D:\Dev\...`
+- bash 内路径使用 Unix 格式：`/d/Dev/...`
 
 ## 项目结构
 
