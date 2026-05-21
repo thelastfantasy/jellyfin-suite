@@ -76,6 +76,9 @@ export interface Translations {
   posterDuration: string
   posterSubtitles: string
   posterTimestamp: string
+  posterTimestampFont: string
+  posterTimestampBg: string
+  posterTimestampShadow: string
   posterTimestampPos: string
   posterTimestampPosInsideBottomLeft: string
   posterTimestampPosOutsideBottomLeft: string

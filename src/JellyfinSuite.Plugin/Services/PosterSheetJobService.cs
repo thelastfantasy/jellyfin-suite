@@ -272,6 +272,18 @@ public class PosterSheetJobService : IDisposable
         };
     }
 
+    private string? ResolveTimestampFontPath(string fontKey) => fontKey switch
+    {
+        "vollkorn" => _fontService.VollkornPath ?? _fontService.RobotoMonoPath,
+        _ => _fontService.RobotoMonoPath,
+    };
+
+    private static float TimestampFontScale(string fontKey) => fontKey switch
+    {
+        "vollkorn" => 1.3f,
+        _ => 1.0f,
+    };
+
     // Build CLI args for poster-gen (default subcommand = generate)
     private string BuildArgs(PosterSheetJob job)
     {
@@ -291,9 +303,13 @@ public class PosterSheetJobService : IDisposable
         if (fontPath != null) sb.Append($" --font-path \"{fontPath}\"");
         if (brandingLatinPath != null) sb.Append($" --branding-latin-font-path \"{brandingLatinPath}\"");
         if (brandingCjkPath != null) sb.Append($" --branding-cjk-font-path \"{brandingCjkPath}\"");
-        if (_fontService.RobotoMonoPath != null)
-            sb.Append($" --timestamp-font-path \"{_fontService.RobotoMonoPath}\"");
+        var tsFontPath = ResolveTimestampFontPath(job.Overlay.TimestampFont);
+        if (tsFontPath != null) sb.Append($" --timestamp-font-path \"{tsFontPath}\"");
         if (job.Overlay.ShowFrameTimestamp) sb.Append(" --show-timestamp");
+        if (!job.Overlay.TimestampBg) sb.Append(" --no-timestamp-bg");
+        if (job.Overlay.TimestampShadow) sb.Append(" --timestamp-shadow");
+        var tsScale = TimestampFontScale(job.Overlay.TimestampFont);
+        if (Math.Abs(tsScale - 1.0f) > 0.01f) sb.Append($" --timestamp-font-scale {tsScale:F2}");
         if (!string.IsNullOrEmpty(job.Overlay.TimestampPosition))
             sb.Append($" --timestamp-position {job.Overlay.TimestampPosition}");
         if (!job.Overlay.BrandingEnabled) sb.Append(" --no-branding");
@@ -329,9 +345,13 @@ public class PosterSheetJobService : IDisposable
         if (fontPath != null) sb.Append($" --font-path \"{fontPath}\"");
         if (brandingLatinPath != null) sb.Append($" --branding-latin-font-path \"{brandingLatinPath}\"");
         if (brandingCjkPath != null) sb.Append($" --branding-cjk-font-path \"{brandingCjkPath}\"");
-        if (_fontService.RobotoMonoPath != null)
-            sb.Append($" --timestamp-font-path \"{_fontService.RobotoMonoPath}\"");
+        var tsFontPath = ResolveTimestampFontPath(req.Overlay.TimestampFont);
+        if (tsFontPath != null) sb.Append($" --timestamp-font-path \"{tsFontPath}\"");
         if (req.Overlay.ShowFrameTimestamp) sb.Append(" --show-timestamp");
+        if (!req.Overlay.TimestampBg) sb.Append(" --no-timestamp-bg");
+        if (req.Overlay.TimestampShadow) sb.Append(" --timestamp-shadow");
+        var tsScale = TimestampFontScale(req.Overlay.TimestampFont);
+        if (Math.Abs(tsScale - 1.0f) > 0.01f) sb.Append($" --timestamp-font-scale {tsScale:F2}");
         if (!string.IsNullOrEmpty(req.Overlay.TimestampPosition))
             sb.Append($" --timestamp-position {req.Overlay.TimestampPosition}");
         if (!req.Overlay.BrandingEnabled) sb.Append(" --no-branding");

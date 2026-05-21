@@ -80,6 +80,8 @@ public class FontAcquisitionService : IHostedService
         "/usr/share/fonts/cinzel/Cinzel-Regular.ttf",
     ];
 
+    private static readonly string[] VollkornSystemPaths = [];
+
     private static readonly FontSource[] NotoSansSources =
     [
         new("https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf"),
@@ -125,6 +127,12 @@ public class FontAcquisitionService : IHostedService
         new("https://unpkg.com/@fontsource/cinzel@5/files/cinzel-latin-400-normal.woff2"),
     ];
 
+    private static readonly FontSource[] VollkornSources =
+    [
+        new("https://cdn.jsdelivr.net/npm/@fontsource/vollkorn@5/files/vollkorn-latin-400-normal.woff2"),
+        new("https://unpkg.com/@fontsource/vollkorn@5/files/vollkorn-latin-400-normal.woff2"),
+    ];
+
     public string? NotoSansPath { get; private set; }
     public string? NotoSerifPath { get; private set; }
     public string? RobotoMonoPath { get; private set; }
@@ -132,6 +140,7 @@ public class FontAcquisitionService : IHostedService
     public string? OswaldPath { get; private set; }
     public string? PlayfairPath { get; private set; }
     public string? CinzelPath { get; private set; }
+    public string? VollkornPath { get; private set; }
 
     public FontAcquisitionService(
         IApplicationPaths appPaths,
@@ -168,6 +177,8 @@ public class FontAcquisitionService : IHostedService
             fontsDir, "PlayfairDisplay-Regular.woff2", "custom-font-playfair.ttf", PlayfairSources, ct, PlayfairSystemPaths);
         CinzelPath = await AcquireFontAsync(
             fontsDir, "Cinzel-Regular.woff2", "custom-font-cinzel.ttf", CinzelSources, ct, CinzelSystemPaths);
+        VollkornPath = await AcquireFontAsync(
+            fontsDir, "Vollkorn-Regular.woff2", "custom-font-vollkorn.ttf", VollkornSources, ct, VollkornSystemPaths);
     }
 
     private async Task<string?> AcquireFontAsync(

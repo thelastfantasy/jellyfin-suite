@@ -141,6 +141,8 @@ jobs:
             "https://cdn.jsdelivr.net/npm/@fontsource/playfair-display@5/files/playfair-display-latin-400-normal.woff2"
           curl -fL -o publish/fonts/Cinzel-Regular.woff2 \
             "https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5/files/cinzel-latin-400-normal.woff2"
+          curl -fL -o publish/fonts/Vollkorn-Regular.woff2 \
+            "https://cdn.jsdelivr.net/npm/@fontsource/vollkorn@5/files/vollkorn-latin-400-normal.woff2"
           # Validate: WOFF2 magic bytes are "wOF2" = 77 4F 46 32
           for f in publish/fonts/*.woff2; do
             bytes=$(xxd -l 4 "$f" | awk '{print $2$3}')
