@@ -53,6 +53,7 @@ public class PosterSheetJob
     public string ItemTitle { get; set; } = string.Empty;
     public int Rows { get; set; }
     public int Cols { get; set; }
+    public int ThumbWidth { get; set; } = 320;
     public JobMode Mode { get; set; }
     public string Seed { get; set; } = string.Empty;
     public OverlaySettings Overlay { get; set; } = new();

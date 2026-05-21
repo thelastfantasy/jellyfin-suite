@@ -7,6 +7,7 @@ export interface JobEntry {
   total: number
   imageUrl?: string
   error?: string
+  addedAt: number
 }
 
 const _jobs = new Map<string, JobEntry>()
@@ -16,7 +17,7 @@ function notify(): void {
 }
 
 export function addJob(jobId: string, itemId: string, itemTitle: string): void {
-  _jobs.set(jobId, { jobId, itemId, itemTitle, status: 'running', progress: 0, total: 0 })
+  _jobs.set(jobId, { jobId, itemId, itemTitle, status: 'running', progress: 0, total: 0, addedAt: Date.now() })
   notify()
 }
 

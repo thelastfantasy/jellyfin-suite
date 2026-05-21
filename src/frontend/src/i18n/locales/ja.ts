@@ -53,6 +53,7 @@ export const ja: Translations = {
   posterCols: '列',
   posterFrames: 'フレーム',
   posterTooMany: 'このビデオには多すぎます、最大',
+  posterThumbWidth: 'サムネイル最大幅',
   posterMode: 'モード',
   posterDeterministic: '確定的',
   posterDeterministicTip: '固定アルゴリズムで均等配置、同じ動画は常に同じフレームを取得、キャッシュ可能',

@@ -20,6 +20,12 @@ const CSS = `
   transition: opacity 0.15s, background 0.15s;
   border-radius: 4px;
   flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.jfs-enhancer-btn:focus:not(:focus-visible) {
+  background: transparent;
+  outline: none;
 }
 
 .jfs-enhancer-btn:hover {

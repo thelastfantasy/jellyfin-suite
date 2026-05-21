@@ -41,6 +41,8 @@ fn sample_media_info() -> MediaInfo {
         source_height: 1080,
         fps: 23.976,
         video_codec: "H.265".to_string(),
+        video_profile: Some("Main 10".to_string()),
+        video_bitrate: Some("8500 kbps".to_string()),
         bit_depth: Some(10),
         hdr_type: None,
         colour_space: Some("bt709".to_string()),

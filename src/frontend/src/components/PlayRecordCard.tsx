@@ -8,7 +8,7 @@ import { FolderViewPopover } from './FolderViewPopover'
 import { Popover } from './Popover'
 import { startJob, loadStartJobRequest, loadGlobalSkipSegments, mergeSegments } from '../api/posterSheetApi'
 import type { SkipSegment } from '../api/posterSheetApi'
-import { addJob, getJobs } from '../state/posterJobStore'
+import { addJob, updateJob, getJobs } from '../state/posterJobStore'
 import { flyToQueue } from '../utils/flyToQueue'
 import { SkipSegmentsModal } from './SkipSegmentsModal'
 
@@ -107,7 +107,11 @@ function PosterBtnHover({ record, enableFolderView, thumbRef }: PosterBtnHoverPr
     if (globalSkips.length > 0) req.skipSegments = globalSkips
     startJob(record.itemId, req).then(id => {
       if (!getJobs().find(j => j.jobId === id)) addJob(id, record.itemId, title)
-    }).catch(() => {})
+    }).catch((err: unknown) => {
+      const errId = `err-${Date.now()}`
+      addJob(errId, record.itemId, title)
+      updateJob(errId, { status: 'error', error: err instanceof Error ? err.message : 'Failed to start job' })
+    })
   }
 
   function handleSkipClick(e: MouseEvent) {
@@ -136,7 +140,11 @@ function PosterBtnHover({ record, enableFolderView, thumbRef }: PosterBtnHoverPr
     if (merged.length > 0) req.skipSegments = merged
     startJob(record.itemId, req).then(id => {
       if (!getJobs().find(j => j.jobId === id)) addJob(id, record.itemId, title)
-    }).catch(() => {})
+    }).catch((err: unknown) => {
+      const errId = `err-${Date.now()}`
+      addJob(errId, record.itemId, title)
+      updateJob(errId, { status: 'error', error: err instanceof Error ? err.message : 'Failed to start job' })
+    })
   }
 
   return (
@@ -222,7 +230,11 @@ function PosterBtnMenu({ record, thumbRef }: PosterBtnMenuProps) {
     if (globalSkips.length > 0) req.skipSegments = globalSkips
     startJob(record.itemId, req).then(id => {
       if (!getJobs().find(j => j.jobId === id)) addJob(id, record.itemId, title)
-    }).catch(() => {})
+    }).catch((err: unknown) => {
+      const errId = `err-${Date.now()}`
+      addJob(errId, record.itemId, title)
+      updateJob(errId, { status: 'error', error: err instanceof Error ? err.message : 'Failed to start job' })
+    })
   }
 
   function handleSkipClick(e: MouseEvent) {
@@ -240,7 +252,11 @@ function PosterBtnMenu({ record, thumbRef }: PosterBtnMenuProps) {
     if (merged.length > 0) req.skipSegments = merged
     startJob(record.itemId, req).then(id => {
       if (!getJobs().find(j => j.jobId === id)) addJob(id, record.itemId, title)
-    }).catch(() => {})
+    }).catch((err: unknown) => {
+      const errId = `err-${Date.now()}`
+      addJob(errId, record.itemId, title)
+      updateJob(errId, { status: 'error', error: err instanceof Error ? err.message : 'Failed to start job' })
+    })
   }
 
   return (

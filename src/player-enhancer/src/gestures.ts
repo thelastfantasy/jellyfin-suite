@@ -1,5 +1,5 @@
 import { showRipple, showValueOsd } from './osd-overlay';
-import { isInLongPressZone } from './long-press';
+import { isInLongPressZone, cancelPendingLongPress } from './long-press';
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
@@ -76,6 +76,7 @@ export function initGestures(videoEl: HTMLVideoElement): { activateSwipeTransfer
     if (now - lastTap.time < 300 && zone === lastTap.zone) {
       e.stopImmediatePropagation();
       e.preventDefault();
+      cancelPendingLongPress();
 
       if (zone === 'left') {
         videoEl.currentTime = Math.max(0, videoEl.currentTime - _seekSeconds);
@@ -103,6 +104,8 @@ export function initGestures(videoEl: HTMLVideoElement): { activateSwipeTransfer
     const touch = e.touches[0];
     // long-press owns the bottom 1/3 zone — don't initialise swipe there
     if (isInLongPressZone(touch, videoEl)) return;
+    // exclude top 10% — prevents Android pull-down notification gesture from triggering swipe
+    if (touch.clientY < window.innerHeight * 0.10) return;
 
     const side = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
 

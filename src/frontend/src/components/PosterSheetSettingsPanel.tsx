@@ -34,7 +34,7 @@ function hasLatin(s: string) {
   return /[a-zA-Z]/.test(s)
 }
 
-type TimestampPos = 'inside-bottom-left' | 'outside-bottom-left' | 'inside-bottom-center' | 'outside-bottom-center' | 'inside-bottom-right' | 'outside-bottom-right'
+type TimestampPos = 'inside-top-left' | 'inside-top-center' | 'inside-top-right' | 'inside-bottom-left' | 'outside-bottom-left' | 'inside-bottom-center' | 'outside-bottom-center' | 'inside-bottom-right' | 'outside-bottom-right'
 
 interface Props {
   videoDuration: number | null
@@ -47,6 +47,7 @@ function loadSettings() {
   return {
     rows: Number(localStorage.getItem('jfs-poster-rows') ?? 6),
     cols: Number(localStorage.getItem('jfs-poster-cols') ?? 8),
+    thumbWidth: Math.min(600, Math.max(160, Number(localStorage.getItem('jfs-poster-thumb-width') ?? 320))),
     mode: (localStorage.getItem('jfs-poster-mode') ?? 'deterministic') as 'deterministic' | 'random',
     overlay: (() => {
       try {
@@ -80,6 +81,9 @@ function defaultOverlay(): OverlaySettingsDto {
 
 function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange: (v: TimestampPos) => void }) {
   const inside = [
+    { v: 'inside-top-left'      as const, style: { top: 4, left: 4 } },
+    { v: 'inside-top-center'    as const, style: { top: 4, left: '50%', marginLeft: -14 } },
+    { v: 'inside-top-right'     as const, style: { top: 4, right: 4 } },
     { v: 'inside-bottom-left'   as const, style: { bottom: 4, left: 4 } },
     { v: 'inside-bottom-center' as const, style: { bottom: 4, left: '50%', marginLeft: -14 } },
     { v: 'inside-bottom-right'  as const, style: { bottom: 4, right: 4 } },
@@ -121,6 +125,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const init = loadSettings()
   const [rows, setRows] = useState(init.rows)
   const [cols, setCols] = useState(init.cols)
+  const [thumbWidth, setThumbWidth] = useState(init.thumbWidth)
   const [mode, setMode] = useState(init.mode)
   const [overlay, setOverlay] = useState<OverlaySettingsDto>(init.overlay)
   const [headless, setHeadless] = useState(() => localStorage.getItem('jfs-poster-headless') === '1')
@@ -168,20 +173,22 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const frameCount = rows * cols
   const tooManyFrames = videoDuration !== null && !isGridValid(rows, cols, videoDuration)
 
-  function persist(newRows: number, newCols: number, newMode: typeof mode, newOverlay: typeof overlay) {
+  function persist(newRows: number, newCols: number, newThumbWidth: number, newMode: typeof mode, newOverlay: typeof overlay) {
     localStorage.setItem('jfs-poster-rows', String(newRows))
     localStorage.setItem('jfs-poster-cols', String(newCols))
+    localStorage.setItem('jfs-poster-thumb-width', String(newThumbWidth))
     localStorage.setItem('jfs-poster-mode', newMode)
     localStorage.setItem('jfs-poster-overlay', JSON.stringify(newOverlay))
   }
 
-  function updateRows(v: number) { setRows(v); persist(v, cols, mode, overlay) }
-  function updateCols(v: number) { setCols(v); persist(rows, v, mode, overlay) }
-  function updateMode(v: typeof mode) { setMode(v); persist(rows, cols, v, overlay) }
+  function updateRows(v: number) { setRows(v); persist(v, cols, thumbWidth, mode, overlay) }
+  function updateCols(v: number) { setCols(v); persist(rows, v, thumbWidth, mode, overlay) }
+  function updateThumbWidth(v: number) { setThumbWidth(v); persist(rows, cols, v, mode, overlay) }
+  function updateMode(v: typeof mode) { setMode(v); persist(rows, cols, thumbWidth, v, overlay) }
   function updateOverlay(patch: Partial<OverlaySettingsDto>) {
     const next = { ...overlay, ...patch }
     setOverlay(next)
-    persist(rows, cols, mode, next)
+    persist(rows, cols, thumbWidth, mode, next)
   }
   function updateHeadless(v: boolean) {
     setHeadless(v)
@@ -209,7 +216,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
   const handleGenerate = useCallback(() => {
     const validSkips = globalSkips.filter(s => s.endMs > s.startMs)
     const req: StartJobRequest = {
-      rows, cols, mode,
+      rows, cols, thumbWidth, mode,
       seed: mode === 'random' ? crypto.randomUUID() : undefined,
       overlay: effectiveOverlay,
       ...(validSkips.length > 0 ? { skipSegments: validSkips } : {}),
@@ -293,6 +300,11 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
                   {' '}({t.posterTooMany} {frameMax})
                 </span>
               )}
+            </div>
+            <div class="jfs-poster-settings__slider-row">
+              <span>{t.posterThumbWidth}: {thumbWidth}px</span>
+              <input type="range" min={160} max={600} step={40} value={thumbWidth}
+                onInput={(e) => updateThumbWidth(Number((e.target as HTMLInputElement).value))} />
             </div>
           </div>
         )}

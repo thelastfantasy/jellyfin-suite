@@ -72,7 +72,7 @@ export function PosterQueueWidget() {
             <button class="jfs-queue-popover__header-close" onClick={() => setOpen(false)}>✕</button>
           </div>
           <div class="jfs-queue-popover__list">
-            {[...jobs].reverse().map(job => (
+            {[...jobs].sort((a, b) => b.addedAt - a.addedAt).map(job => (
               <div key={job.jobId} class={`jfs-queue-popover__item jfs-queue-popover__item--${job.status}`}>
                 <div class="jfs-queue-popover__item-header">
                   <span class="jfs-queue-popover__title" title={job.itemTitle}>{job.itemTitle}</span>

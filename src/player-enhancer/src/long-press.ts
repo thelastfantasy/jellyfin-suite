@@ -10,6 +10,12 @@ let _suppressContextMenuUntil = 0;
 let _abortCtrl: AbortController | null = null;
 let _osdEl: HTMLDivElement | null = null;
 let _lastOsdHtml = '';
+let _cancelPending: (() => void) | null = null;
+
+/** Cancel a pending long-press timer (called by gestures.ts on double-tap). */
+export function cancelPendingLongPress(): void {
+  _cancelPending?.();
+}
 
 export function isInLongPressZone(touch: Touch, video: HTMLVideoElement): boolean {
   const r = video.getBoundingClientRect();
@@ -94,6 +100,7 @@ export function initLongPress(
     seekAnchorTime = -1;
     seekRelativeOffset = 0;
     timer = setTimeout(enter, LONG_PRESS_MS);
+    _cancelPending = () => { if (timer) { clearTimeout(timer); timer = null; } };
   }, { passive: true, signal: sig });
 
   // Suppress all context menus during playback (Android Chrome long-press shows native menu).

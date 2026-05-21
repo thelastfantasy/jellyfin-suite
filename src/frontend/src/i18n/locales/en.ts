@@ -53,6 +53,7 @@ export const en: Translations = {
   posterCols: 'Cols',
   posterFrames: 'frames',
   posterTooMany: 'too many for video, max',
+  posterThumbWidth: 'Max thumb width',
   posterMode: 'Mode',
   posterDeterministic: 'Deterministic',
   posterDeterministicTip: 'Fixed algorithm evenly spaces frames — same video always yields the same thumbnails, cacheable',
