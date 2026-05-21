@@ -293,11 +293,22 @@ impl Renderer {
         let colon_x = MARGIN + label_col_w;
         let value_x  = colon_x + colon_w;
 
-        // Row 0: Filename
+        // Clip boundary: stop info text before the Jellyfin logo (icon_x - gap).
+        // The logo is right-aligned within icon_area_w; any text beyond this x overlaps it.
+        let info_max_x = if options.branding_enabled && !options.branding_text.is_empty() {
+            let icon_size = layout.header_h.saturating_sub(MARGIN * 2);
+            layout.icon_area_w.saturating_sub(MARGIN + icon_size + MARGIN)
+        } else {
+            layout.icon_area_w.saturating_sub(MARGIN)
+        };
+
+        // Row 0: Filename — clip with ellipsis if too long to reach the logo
         if options.video_info_enabled {
-            draw_text_scaled(img, lbl_file,        MARGIN,  y, scale, theme.accent_color, font_ref);
-            draw_text_scaled(img, lbl_colon,       colon_x, y, scale, theme.accent_color, font_ref);
-            draw_text_scaled(img, &info.filename,  value_x, y, scale, theme.accent_color, font_ref);
+            let available_w = info_max_x.saturating_sub(value_x);
+            let filename = truncate_filename_to_fit(font_ref, &info.filename, scale, available_w);
+            draw_text_scaled(img, lbl_file,    MARGIN,  y, scale, theme.accent_color, font_ref);
+            draw_text_scaled(img, lbl_colon,   colon_x, y, scale, theme.accent_color, font_ref);
+            draw_text_scaled(img, &filename,   value_x, y, scale, theme.accent_color, font_ref);
         }
         y += line_h;
 
@@ -917,6 +928,32 @@ fn measure_text_width(font: Option<&FontArc>, text: &str, scale: u32) -> u32 {
     } else {
         text.len() as u32 * (5 + 1) * scale
     }
+}
+
+/// Truncate a filename so it fits within `max_w` pixels.
+/// The file extension (last `.xxx`) is always preserved at the end; only the stem is clipped.
+/// E.g. "My Long Movie Title.mkv" → "My Long Mov….mkv"
+fn truncate_filename_to_fit(font: Option<&FontArc>, filename: &str, scale: u32, max_w: u32) -> String {
+    if measure_text_width(font, filename, scale) <= max_w { return filename.to_string(); }
+    let ellipsis = "\u{2026}"; // …
+    // Split at last '.' to separate stem and extension.
+    let (stem, ext) = if let Some(pos) = filename.rfind('.') {
+        (&filename[..pos], &filename[pos..])
+    } else {
+        (filename, "")
+    };
+    let ellipsis_w = measure_text_width(font, ellipsis, scale);
+    let ext_w = measure_text_width(font, ext, scale);
+    let budget = max_w.saturating_sub(ellipsis_w + ext_w);
+    let mut out = String::new();
+    let mut used = 0u32;
+    for ch in stem.chars() {
+        let w = measure_text_width(font, &ch.to_string(), scale);
+        if used + w > budget { break; }
+        out.push(ch);
+        used += w;
+    }
+    out + ellipsis + ext
 }
 
 /// Probe the visual y-extent of timestamp characters (digits 0–9, colon, period) at the given

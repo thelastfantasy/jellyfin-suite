@@ -17,6 +17,7 @@ public class PosterSheetJobService : IDisposable
     private readonly FontAcquisitionService _fontService;
     private readonly ConcurrentDictionary<string, PosterSheetJob> _jobs = new();
     private readonly ConcurrentDictionary<string, string> _activeJobIdByItemId = new();
+    private readonly PosterCacheIndex _cacheIndex;
     private bool _disposed;
 
     private static string TempDir => Path.GetTempPath();
@@ -29,6 +30,7 @@ public class PosterSheetJobService : IDisposable
         _appPaths = appPaths;
         _logger = logger;
         _fontService = fontService;
+        _cacheIndex = new PosterCacheIndex(appPaths.DataPath);
     }
 
     public void Dispose()
@@ -42,7 +44,7 @@ public class PosterSheetJobService : IDisposable
     // Returns existing active job ID or creates a new job
     public PosterSheetJob GetOrCreateJob(string itemId, string itemTitle, PosterSheetRequestDto req, string inputPath)
     {
-        // Check for existing active job by itemId via the active-job tracking map
+        // Return existing in-progress job (don't start duplicate)
         if (_activeJobIdByItemId.TryGetValue(itemId, out var activeJobId) &&
             _jobs.TryGetValue(activeJobId, out var existing) &&
             existing.Status is JobStatus.Queued or JobStatus.Running)
@@ -56,16 +58,43 @@ public class PosterSheetJobService : IDisposable
         var skipHash = req.SkipSegments is { Count: > 0 }
             ? ComputeSkipHash(req.SkipSegments)
             : "0";
-        var outputPath = Path.Combine(TempDir,
-            $"{PluginConstants.PosterTempPrefix}{itemId}_{req.Rows}x{req.Cols}_{seed}_{overlayHash}_{skipHash}.webp");
+        var thumbWidth = Math.Clamp(req.ThumbWidth, 160, 600);
+        var cacheKey = BuildCacheKey(itemId, req.Rows, req.Cols, thumbWidth, seed, overlayHash, skipHash);
+        var outputPath = DeriveOutputPath(cacheKey);
+
+        // Cache hit via JSON index — synthesise a completed job so the caller gets a usable job ID
+        if (_cacheIndex.TryGet(cacheKey, out var cached))
+        {
+            var hit = new PosterSheetJob
+            {
+                ItemId = itemId,
+                ItemTitle = itemTitle,
+                CacheKey = cacheKey,
+                Rows = req.Rows,
+                Cols = req.Cols,
+                ThumbWidth = thumbWidth,
+                Mode = req.Mode == "random" ? JobMode.Random : JobMode.Deterministic,
+                Seed = seed,
+                Overlay = req.Overlay,
+                Total = req.Rows * req.Cols,
+                OutputPath = cached!.OutputPath,
+                SkipSegments = req.SkipSegments,
+                Status = JobStatus.Done,
+                Progress = req.Rows * req.Cols,
+            };
+            _jobs[hit.Id] = hit;
+            _activeJobIdByItemId[itemId] = hit.Id;
+            return hit;
+        }
 
         var job = new PosterSheetJob
         {
             ItemId = itemId,
             ItemTitle = itemTitle,
+            CacheKey = cacheKey,
             Rows = req.Rows,
             Cols = req.Cols,
-            ThumbWidth = Math.Clamp(req.ThumbWidth, 160, 600),
+            ThumbWidth = thumbWidth,
             Mode = req.Mode == "random" ? JobMode.Random : JobMode.Deterministic,
             Seed = seed,
             Overlay = req.Overlay,
@@ -116,12 +145,15 @@ public class PosterSheetJobService : IDisposable
             try { File.Delete(job.OutputPath); } catch { /* best-effort */ }
         }
 
+        if (!string.IsNullOrEmpty(job.CacheKey))
+            _cacheIndex.Remove(job.CacheKey);
+
         _jobs.TryRemove(jobId, out _);
         _activeJobIdByItemId.TryRemove(job.ItemId, out _);
     }
 
     /// <summary>
-    /// Remove completed jobs whose output file no longer exists on disk.
+    /// Remove completed jobs whose output file no longer exists on disk, and prune the cache index.
     /// Called by CleanPosterSheetsTask after deleting expired files.
     /// </summary>
     public void RemoveExpiredJobs()
@@ -133,15 +165,22 @@ public class PosterSheetJobService : IDisposable
             _jobs.TryRemove(job.Id, out _);
             _activeJobIdByItemId.TryRemove(job.ItemId, out _);
         }
+
+        _cacheIndex.PruneExpired();
     }
 
-    public bool TryGetCachedPath(string itemId, int rows, int cols, string seed, string overlayHash,
+    public bool TryGetCachedPath(string itemId, int rows, int cols, int thumbWidth, string seed, string overlayHash,
         out string? path)
     {
-        // File includes a skipHash segment that CheckCache doesn't know — match any variant
-        var prefix = $"{PluginConstants.PosterTempPrefix}{itemId}_{rows}x{cols}_{seed}_{overlayHash}_";
-        path = Directory.EnumerateFiles(TempDir, prefix + "*.webp").FirstOrDefault();
-        return path != null;
+        // skipHash is not known to the caller — match any entry sharing all other key components
+        var prefix = BuildCacheKey(itemId, rows, cols, thumbWidth, seed, overlayHash, string.Empty);
+        if (_cacheIndex.TryGetByPrefix(prefix, out var entry))
+        {
+            path = entry!.OutputPath;
+            return true;
+        }
+        path = null;
+        return false;
     }
 
     private async Task RunJobAsync(PosterSheetJob job, string inputPath)
@@ -149,14 +188,6 @@ public class PosterSheetJobService : IDisposable
         job.Status = JobStatus.Running;
         try
         {
-            // Cache hit — skip generation
-            if (File.Exists(job.OutputPath!))
-            {
-                job.Progress = job.Total;
-                job.Status = JobStatus.Done;
-                return;
-            }
-
             var binaryPath = GetBinaryPath();
             if (!File.Exists(binaryPath))
             {
@@ -232,6 +263,15 @@ public class PosterSheetJobService : IDisposable
             await process.WaitForExitAsync(job.Cts.Token);
             if (job.Status == JobStatus.Running)
                 job.Status = process.ExitCode == 0 ? JobStatus.Done : JobStatus.Error;
+
+            if (job.Status == JobStatus.Done && !string.IsNullOrEmpty(job.CacheKey))
+            {
+                _cacheIndex.Set(job.CacheKey, new PosterCacheEntry
+                {
+                    OutputPath = job.OutputPath!,
+                    CreatedAt = DateTime.UtcNow,
+                });
+            }
         }
         catch (OperationCanceledException)
         {
@@ -363,7 +403,7 @@ public class PosterSheetJobService : IDisposable
         if (!req.Overlay.ShowAudioEncoding) sb.Append(" --no-audio-encoding");
         if (!req.Overlay.ShowDuration) sb.Append(" --no-duration");
         if (!req.Overlay.ShowSubtitles) sb.Append(" --no-subtitles");
-        sb.Append($" --rows {req.Rows} --cols {req.Cols}");
+        sb.Append($" --thumb-width {req.ThumbWidth} --rows {req.Rows} --cols {req.Cols}");
         sb.Append($" --lang {req.Overlay.Lang}");
         return sb.ToString();
     }
@@ -415,5 +455,17 @@ public class PosterSheetJobService : IDisposable
         var str = string.Join(",", segs.OrderBy(s => s.StartMs).Select(s => $"{s.StartMs}:{s.EndMs}"));
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(str));
         return Convert.ToHexString(hash)[..8].ToLowerInvariant();
+    }
+
+    internal static string BuildCacheKey(
+        string itemId, int rows, int cols, int thumbWidth,
+        string seed, string overlayHash, string skipHash)
+        => $"{itemId}_{rows}x{cols}_{thumbWidth}w_{seed}_{overlayHash}_{skipHash}";
+
+    private static string DeriveOutputPath(string cacheKey)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(cacheKey));
+        return Path.Combine(Path.GetTempPath(),
+            $"{PluginConstants.PosterTempPrefix}{Convert.ToHexString(hash)[..16].ToLowerInvariant()}.webp");
     }
 }

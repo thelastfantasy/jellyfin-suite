@@ -236,7 +236,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
     setPreviewLoading(true)
     setPreviewError(null)
     try {
-      const blob = await fetchPreview(effectiveOverlay, rows, cols)
+      const blob = await fetchPreview(effectiveOverlay, rows, cols, thumbWidth)
       if (previewUrl) URL.revokeObjectURL(previewUrl)
       const url = URL.createObjectURL(blob)
       setPreviewUrl(url)
@@ -246,7 +246,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
     } finally {
       setPreviewLoading(false)
     }
-  }, [effectiveOverlay, rows, cols, previewUrl, t])
+  }, [effectiveOverlay, rows, cols, thumbWidth, previewUrl, t])
 
   const validPresets = isShortVideo
     ? ([[2,3],[2,4],[3,4],[2,6],[3,3]] as [number,number][])

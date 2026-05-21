@@ -229,6 +229,10 @@ struct PreviewArgs {
     #[arg(long, default_value_t = 1.0)]
     timestamp_font_scale: f32,
 
+    /// Thumbnail cell width in pixels (same meaning as the main generate command)
+    #[arg(long, default_value_t = 320)]
+    thumb_width: u32,
+
     /// Number of rows (1-10)
     #[arg(long, default_value_t = 3)]
     rows: u32,
@@ -501,6 +505,7 @@ fn run_preview_cmd(args: PreviewArgs) -> Result<(), String> {
         timestamp_bg: !args.no_timestamp_bg,
         timestamp_shadow: args.timestamp_shadow,
         timestamp_font_scale: args.timestamp_font_scale,
+        thumb_width: args.thumb_width,
         rows: args.rows,
         cols: args.cols,
         lang: args.lang,

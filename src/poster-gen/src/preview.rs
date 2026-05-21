@@ -27,6 +27,7 @@ pub struct PreviewArgs {
     pub timestamp_bg: bool,
     pub timestamp_shadow: bool,
     pub timestamp_font_scale: f32,
+    pub thumb_width: u32,
     pub rows: u32,
     pub cols: u32,
     pub lang: String,
@@ -63,8 +64,7 @@ fn sample_media_info() -> MediaInfo {
 pub fn run_preview(args: PreviewArgs) -> Result<(), String> {
     let cols: u32 = args.cols;
     let rows: u32 = args.rows;
-    let total_w = 1200u32;
-    let orig_cell_w: u32 = total_w / cols;
+    let orig_cell_w: u32 = args.thumb_width.clamp(80, 800);
     let orig_cell_h: u32 = orig_cell_w * 9 / 16;
     let header_h: u32 = if args.video_info_enabled || args.branding_enabled {
         crate::image_stitcher::HEADER_H
@@ -253,6 +253,7 @@ mod tests {
             timestamp_bg: true,
             timestamp_shadow: false,
             timestamp_font_scale: 1.0,
+            thumb_width: 400,
             rows: 2,
             cols: 3,
             lang: "en".to_string(),
@@ -315,6 +316,7 @@ mod tests {
             timestamp_bg: true,
             timestamp_shadow: false,
             timestamp_font_scale: 1.0,
+            thumb_width: 400,
             rows: 2,
             cols: 3,
             lang: "en".to_string(),

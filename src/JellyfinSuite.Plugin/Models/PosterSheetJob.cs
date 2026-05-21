@@ -54,6 +54,7 @@ public class PosterSheetJob
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string ItemId { get; set; } = string.Empty;
     public string ItemTitle { get; set; } = string.Empty;
+    public string CacheKey { get; set; } = string.Empty;
     public int Rows { get; set; }
     public int Cols { get; set; }
     public int ThumbWidth { get; set; } = 320;

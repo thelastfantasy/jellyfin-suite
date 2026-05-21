@@ -322,10 +322,11 @@ public class PosterSheetController : ControllerBase
         string itemId,
         [FromQuery] int rows,
         [FromQuery] int cols,
+        [FromQuery] int thumbWidth,
         [FromQuery] string seed,
         [FromQuery] string overlayHash)
     {
-        if (_jobService.TryGetCachedPath(itemId, rows, cols, seed, overlayHash, out _))
+        if (_jobService.TryGetCachedPath(itemId, rows, cols, thumbWidth, seed, overlayHash, out _))
         {
             var activeJobId = _jobService.GetActiveJobIdForItem(itemId);
             return Ok(new CacheCheckResponseDto { Cached = true, JobId = activeJobId });
