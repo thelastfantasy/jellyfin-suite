@@ -178,19 +178,19 @@ export async function listJobs(): Promise<JobListItemDto[]> {
 }
 
 export async function checkCache(
-  itemId: string, rows: number, cols: number, seed: string, overlayHash: string
+  itemId: string, rows: number, cols: number, thumbWidth: number, seed: string, overlayHash: string
 ): Promise<boolean> {
-  const params = new URLSearchParams({ rows: String(rows), cols: String(cols), seed, overlayHash })
+  const params = new URLSearchParams({ rows: String(rows), cols: String(cols), thumbWidth: String(thumbWidth), seed, overlayHash })
   const res = await apiFetch(`${BASE}/cache/${itemId}?${params}`)
   if (res.status === 204) return false
   if (res.ok) { const d = await res.json(); return d.cached ?? d.Cached ?? false }
   return false
 }
 
-export async function fetchPreview(overlay: OverlaySettingsDto, rows: number, cols: number): Promise<Blob> {
+export async function fetchPreview(overlay: OverlaySettingsDto, rows: number, cols: number, thumbWidth: number): Promise<Blob> {
   const res = await apiFetch(`${BASE}/preview`, {
     method: 'POST',
-    body: JSON.stringify({ overlay, rows, cols }),
+    body: JSON.stringify({ overlay, rows, cols, thumbWidth }),
   })
   if (!res.ok) throw new Error(`Preview failed: ${res.status}`)
   return res.blob()
