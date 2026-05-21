@@ -66,9 +66,12 @@ fn badge_pos(
 ) -> (u32, u32) {
     use crate::image_stitcher::TimestampPosition::*;
     match pos {
-        InsideBottomLeft  => (cell_x + pad,                      cell_y + cell_h - badge_h - pad),
+        InsideTopLeft      => (cell_x + pad,                      cell_y + pad),
+        InsideTopCenter    => (cell_x + (cell_w - badge_w) / 2,  cell_y + pad),
+        InsideTopRight     => (cell_x + cell_w - badge_w - pad,   cell_y + pad),
+        InsideBottomLeft   => (cell_x + pad,                      cell_y + cell_h - badge_h - pad),
         InsideBottomCenter => (cell_x + (cell_w - badge_w) / 2,  cell_y + cell_h - badge_h - pad),
-        InsideBottomRight => (cell_x + cell_w - badge_w - pad,   cell_y + cell_h - badge_h - pad),
+        InsideBottomRight  => (cell_x + cell_w - badge_w - pad,  cell_y + cell_h - badge_h - pad),
         OutsideBottomLeft  => (cell_x + pad,                     cell_y + cell_h + pad),
         OutsideBottomCenter => (cell_x + (cell_w - badge_w) / 2, cell_y + cell_h + pad),
         OutsideBottomRight => (cell_x + cell_w - badge_w - pad,  cell_y + cell_h + pad),
@@ -250,59 +253,92 @@ impl Renderer {
 
         let mut y = MARGIN;
 
-        // i18n labels (with CJK support when TTF font is available)
-        let (lbl_file, lbl_size, lbl_dur, lbl_cs, lbl_video, lbl_audio, lbl_sr) = match options.lang.as_str() {
-            "zh" => ("文件名：", "大小：", "时长：", "色彩空间：", "视频：", "音频：", "采样率："),
-            "ja" => ("ファイル名：", "サイズ：", "再生時間：", "色空間：", "映像：", "音声：", "サンプルレート："),
-            _    => ("File: ", "Size: ", "Dur: ", "CS: ", "Video: ", "Audio: ", "SR: "),
+        // i18n labels — no trailing colon; colon is drawn at a fixed column so all rows align.
+        let (lbl_file, lbl_size, lbl_dur, lbl_cs, lbl_video, lbl_audio, lbl_sr, lbl_colon) = match options.lang.as_str() {
+            "zh" => ("\u{6587}\u{4ef6}\u{540d}", "\u{5927}\u{5c0f}", "\u{65f6}\u{957f}", "\u{8272}\u{5f69}\u{7a7a}\u{95f4}", "\u{89c6}\u{9891}", "\u{97f3}\u{9891}", "\u{91c7}\u{6837}\u{7387}", "\u{ff1a}"),
+            "ja" => ("\u{30d5}\u{30a1}\u{30a4}\u{30eb}\u{540d}", "\u{30b5}\u{30a4}\u{30ba}", "\u{518d}\u{751f}\u{6642}\u{9593}", "\u{8272}\u{7a7a}\u{9593}", "\u{6620}\u{50cf}", "\u{97f3}\u{58f0}", "\u{30b5}\u{30f3}\u{30d7}\u{30eb}\u{30ec}\u{30fc}\u{30c8}", "\u{ff1a}"),
+            _    => ("File", "Size", "Dur", "CS", "Video", "Audio", "SR", ": "),
         };
 
-        // Row 0: Filename (left, full width, no truncation)
+        // Measure primary label widths; colon is drawn at a fixed column = MARGIN + label_col_w.
+        let label_col_w = if options.video_info_enabled {
+            [lbl_file, lbl_size, lbl_video, lbl_audio]
+                .iter()
+                .map(|lbl| measure_text_width(font_ref, lbl, scale))
+                .max()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        let colon_w = measure_text_width(font_ref, lbl_colon, scale);
+        let colon_x = MARGIN + label_col_w;
+        let value_x  = colon_x + colon_w;
+
+        // Row 0: Filename
         if options.video_info_enabled {
-            let prefix = lbl_file;
-            let row_text = format!("{prefix}{}", info.filename);
-            draw_text_scaled(img, &row_text, MARGIN, y, scale, theme.accent_color, font_ref);
+            draw_text_scaled(img, lbl_file,        MARGIN,  y, scale, theme.accent_color, font_ref);
+            draw_text_scaled(img, lbl_colon,       colon_x, y, scale, theme.accent_color, font_ref);
+            draw_text_scaled(img, &info.filename,  value_x, y, scale, theme.accent_color, font_ref);
         }
         y += line_h;
 
-        // Row 1: Size + Duration + Subtitle count
+        // Row 1: Size + optional inline Duration + Subtitles
         if options.video_info_enabled && y + line_h <= layout.header_h {
-            let mut parts: Vec<String> = Vec::new();
-            if options.show_file_size { parts.push(format!("{}{}", lbl_size, info.file_size)); }
-            if options.show_duration { parts.push(format!("{}{}", lbl_dur, info.duration)); }
+            let mut val_parts: Vec<String> = Vec::new();
+            let row1_label = if options.show_file_size {
+                val_parts.push(info.file_size.clone());
+                if options.show_duration {
+                    val_parts.push(format!("{}{}{}", lbl_dur, lbl_colon, info.duration));
+                }
+                Some(lbl_size)
+            } else if options.show_duration {
+                val_parts.push(info.duration.clone());
+                Some(lbl_dur)
+            } else {
+                None
+            };
             if options.show_subtitles && info.subtitle_count > 0 {
-                let lbl_subs = match options.lang.as_str() { "zh" => "字幕：", "ja" => "字幕：", _ => "Subs: " };
-                parts.push(format!("{}{}", lbl_subs, info.subtitle_count));
+                let lbl_subs = match options.lang.as_str() { "zh" => "\u{5b57}\u{5e55}", "ja" => "\u{5b57}\u{5e55}", _ => "Subs" };
+                val_parts.push(format!("{}{}{}", lbl_subs, lbl_colon, info.subtitle_count));
             }
-            if !parts.is_empty() {
-                draw_text_scaled(img, &parts.join("   "), MARGIN, y, scale, theme.text_color, font_ref);
+            if let Some(lbl) = row1_label {
+                draw_text_scaled(img, lbl,                    MARGIN,  y, scale, theme.text_color, font_ref);
+                draw_text_scaled(img, lbl_colon,              colon_x, y, scale, theme.text_color, font_ref);
+                draw_text_scaled(img, &val_parts.join("   "), value_x, y, scale, theme.text_color, font_ref);
+                y += line_h;
+            } else if !val_parts.is_empty() {
+                draw_text_scaled(img, &val_parts.join("   "), MARGIN, y, scale, theme.text_color, font_ref);
                 y += line_h;
             }
         }
 
-        // Row 2: Resolution + FPS + Video codec + Colour space
+        // Row 2: Video (resolution + fps  |  codec + profile + bit depth + HDR + [bitrate])
         if options.video_info_enabled && y + line_h <= layout.header_h {
-            let mut parts: Vec<String> = Vec::new();
+            let mut val_parts: Vec<String> = Vec::new();
             if options.show_resolution_fps {
-                parts.push(format!("{}{}  {}fps", lbl_video, info.resolution, format_fps(info.fps)));
+                val_parts.push(format!("{} @ {}fps", info.resolution, format_fps(info.fps)));
             }
             if options.show_video_encoding {
                 let mut enc = info.video_codec.clone();
-                if let Some(bd) = info.bit_depth { enc.push_str(&format!(" {}bit", bd)); }
-                if let Some(ref hdr) = info.hdr_type { enc.push(' '); enc.push_str(hdr); }
-                if let Some(ref cs) = info.colour_space { enc.push_str(&format!("  {}{}", lbl_cs, cs)); }
-                parts.push(enc);
+                if let Some(ref p) = info.video_profile { enc.push_str(&format!(" ({})", p)); }
+                if let Some(bd) = info.bit_depth { enc.push_str(&format!("  {}bit", bd)); }
+                if let Some(ref hdr) = info.hdr_type { enc.push_str(&format!("  {}", hdr)); }
+                if let Some(ref br) = info.video_bitrate { enc.push_str(&format!("  [{}]", br)); }
+                if let Some(ref cs) = info.colour_space { enc.push_str(&format!("  {}{}{}", lbl_cs, lbl_colon, cs)); }
+                val_parts.push(enc);
             }
-            if !parts.is_empty() {
-                draw_text_scaled(img, &parts.join("   "), MARGIN, y, scale, theme.text_color, font_ref);
+            if !val_parts.is_empty() {
+                draw_text_scaled(img, lbl_video,                    MARGIN,  y, scale, theme.text_color, font_ref);
+                draw_text_scaled(img, lbl_colon,                    colon_x, y, scale, theme.text_color, font_ref);
+                draw_text_scaled(img, &val_parts.join("  |  "),     value_x, y, scale, theme.text_color, font_ref);
                 y += line_h;
             }
         }
 
-        // Row 3: Audio codec + format + bitrate + sample rate + track count
+        // Row 3: Audio (codec + format + bitrate + sample rate inline)
         if options.video_info_enabled && options.show_audio_encoding {
             if let Some(ref ac) = info.audio_codec {
-                let mut audio = format!("{}{}", lbl_audio, ac);
+                let mut audio = ac.clone();
                 if let Some(ref af) = info.audio_format {
                     if !af.is_empty() { audio.push(' '); audio.push_str(af); }
                 }
@@ -310,12 +346,14 @@ impl Renderer {
                 if let Some(sr) = info.audio_sample_rate {
                     let sr_f = sr as f64 / 1000.0;
                     let sr_s = if sr_f.fract() == 0.0 { format!("{:.0}", sr_f) } else { format!("{:.1}", sr_f) };
-                    audio.push_str(&format!("  {}{}kHz", lbl_sr, sr_s));
+                    audio.push_str(&format!("  {}{}{}kHz", lbl_sr, lbl_colon, sr_s));
                 }
-                let lbl_tracks = match options.lang.as_str() { "zh" => "音轨", "ja" => "トラック", _ => "tracks" };
-                if info.audio_tracks > 0 { audio.push_str(&format!(" / ×{}{}", info.audio_tracks, lbl_tracks)); }
+                let lbl_tracks = match options.lang.as_str() { "zh" => "\u{97f3}\u{8f68}", "ja" => "\u{30c8}\u{30e9}\u{30c3}\u{30af}", _ => "tracks" };
+                if info.audio_tracks > 0 { audio.push_str(&format!(" / \u{d7}{}{}", info.audio_tracks, lbl_tracks)); }
                 if y + line_h <= layout.header_h + (img_height - layout.header_h) {
-                    draw_text_scaled(img, &audio, MARGIN, y, scale, theme.text_color, font_ref);
+                    draw_text_scaled(img, lbl_audio, MARGIN,  y, scale, theme.text_color, font_ref);
+                    draw_text_scaled(img, lbl_colon, colon_x, y, scale, theme.text_color, font_ref);
+                    draw_text_scaled(img, &audio,    value_x, y, scale, theme.text_color, font_ref);
                 }
             }
         }

@@ -53,6 +53,7 @@ export const zh: Translations = {
   posterCols: '列',
   posterFrames: '帧',
   posterTooMany: '对于该视频帧数过多，最大',
+  posterThumbWidth: '缩略图最大宽度',
   posterMode: '模式',
   posterDeterministic: '确定性',
   posterDeterministicTip: '固定算法均匀分布，相同视频始终定位到相同帧，可缓存',

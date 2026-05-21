@@ -65,6 +65,7 @@ public class PosterSheetJobService : IDisposable
             ItemTitle = itemTitle,
             Rows = req.Rows,
             Cols = req.Cols,
+            ThumbWidth = Math.Clamp(req.ThumbWidth, 160, 600),
             Mode = req.Mode == "random" ? JobMode.Random : JobMode.Deterministic,
             Seed = seed,
             Overlay = req.Overlay,
@@ -285,7 +286,7 @@ public class PosterSheetJobService : IDisposable
         sb.Append($" --rows {job.Rows} --cols {job.Cols}");
         sb.Append($" --seed {job.Seed}");
         if (job.Mode == JobMode.Random) sb.Append(" --mode random");
-        sb.Append($" --thumb-width 320");
+        sb.Append($" --thumb-width {job.ThumbWidth}");
         sb.Append($" --color-theme {job.Overlay.ColorTheme}");
         if (fontPath != null) sb.Append($" --font-path \"{fontPath}\"");
         if (brandingLatinPath != null) sb.Append($" --branding-latin-font-path \"{brandingLatinPath}\"");

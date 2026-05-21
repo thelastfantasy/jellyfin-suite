@@ -10,6 +10,12 @@ pub const HEADER_H: u32 = 144;
 /// Where the per-frame timestamp badge is placed relative to each thumbnail cell.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
 pub enum TimestampPosition {
+    #[value(name = "inside-top-left")]
+    InsideTopLeft,
+    #[value(name = "inside-top-center")]
+    InsideTopCenter,
+    #[value(name = "inside-top-right")]
+    InsideTopRight,
     #[default]
     #[value(name = "inside-bottom-left")]
     InsideBottomLeft,
@@ -27,8 +33,10 @@ pub enum TimestampPosition {
 
 impl std::fmt::Display for TimestampPosition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Matches the clap #[value(name = "...")] strings so --help shows the right default.
         let s = match self {
+            Self::InsideTopLeft      => "inside-top-left",
+            Self::InsideTopCenter    => "inside-top-center",
+            Self::InsideTopRight     => "inside-top-right",
             Self::InsideBottomLeft   => "inside-bottom-left",
             Self::InsideBottomCenter => "inside-bottom-center",
             Self::InsideBottomRight  => "inside-bottom-right",
@@ -246,6 +254,8 @@ mod tests {
             source_height: 720,
             fps: 24.0,
             video_codec: "H.264".to_string(),
+            video_profile: Some("High".to_string()),
+            video_bitrate: None,
             bit_depth: None,
             hdr_type: None,
             colour_space: None,

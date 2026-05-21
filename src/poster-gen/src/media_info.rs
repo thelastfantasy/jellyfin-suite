@@ -14,6 +14,8 @@ pub struct MediaInfo {
     pub source_height: u32,
     pub fps: f64,
     pub video_codec: String,
+    pub video_profile: Option<String>,
+    pub video_bitrate: Option<String>,
     pub bit_depth: Option<i32>,
     pub hdr_type: Option<String>,
     pub colour_space: Option<String>,
@@ -102,10 +104,21 @@ fn parse_ffprobe_json(json_str: &str, input: &str) -> Result<MediaInfo, String> 
         .filter(|s| s["codec_type"].as_str() == Some("subtitle"))
         .count() as i32;
 
-    // Video codec
+    // Video codec + profile
     let video_codec = friendly_video_codec(
         video_stream["codec_name"].as_str().unwrap_or("unknown"),
     );
+    let video_profile = video_stream["profile"]
+        .as_str()
+        .filter(|s| !s.is_empty() && *s != "unknown" && *s != "Unknown")
+        .map(|s| s.to_string());
+
+    // Video bitrate (from stream; fall back to format bitrate minus audio estimate)
+    let video_bitrate = video_stream["bit_rate"]
+        .as_str()
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|&b| b > 0)
+        .map(|b| format!("{} kbps", b / 1000));
 
     // Resolution
     let width = video_stream["width"].as_u64().unwrap_or(0);
@@ -186,6 +199,8 @@ fn parse_ffprobe_json(json_str: &str, input: &str) -> Result<MediaInfo, String> 
         source_height: height as u32,
         fps,
         video_codec,
+        video_profile,
+        video_bitrate,
         bit_depth,
         hdr_type,
         colour_space,

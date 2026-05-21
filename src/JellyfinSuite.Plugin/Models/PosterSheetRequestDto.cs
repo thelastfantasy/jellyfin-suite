@@ -21,6 +21,9 @@ public class PosterSheetRequestDto
 
     public string? Seed { get; set; }
 
+    [Range(160, 600)]
+    public int ThumbWidth { get; set; } = 320;
+
     public OverlaySettings Overlay { get; set; } = new();
 
     public List<SkipSegmentDto>? SkipSegments { get; set; }

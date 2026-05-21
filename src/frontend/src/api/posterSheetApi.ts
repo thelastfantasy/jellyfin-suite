@@ -25,6 +25,7 @@ export interface SkipSegment {
 export interface StartJobRequest {
   rows: number
   cols: number
+  thumbWidth: number
   mode: 'deterministic' | 'random'
   seed?: string
   overlay: OverlaySettingsDto
@@ -196,6 +197,7 @@ function migratePosterStorageOnce(): void {
   const pairs: [string, string][] = [
     ['jfs-poster-rows',          'jr-poster-rows'],
     ['jfs-poster-cols',          'jr-poster-cols'],
+    ['jfs-poster-thumb-width',   'jr-poster-thumb-width'],
     ['jfs-poster-mode',          'jr-poster-mode'],
     ['jfs-poster-overlay',       'jr-poster-overlay'],
     ['jfs-poster-skip-segments', 'jr-poster-skip-segments'],
@@ -237,12 +239,13 @@ function defaultOverlay(): OverlaySettingsDto {
 export function loadStartJobRequest(): StartJobRequest {
   const rows = Math.max(1, Number(localStorage.getItem('jfs-poster-rows') ?? 6))
   const cols = Math.max(1, Number(localStorage.getItem('jfs-poster-cols') ?? 8))
+  const thumbWidth = Math.min(600, Math.max(160, Number(localStorage.getItem('jfs-poster-thumb-width') ?? 320)))
   const mode = (localStorage.getItem('jfs-poster-mode') ?? 'deterministic') as 'deterministic' | 'random'
   const overlay: OverlaySettingsDto = (() => {
     try { return JSON.parse(localStorage.getItem('jfs-poster-overlay') ?? 'null') ?? defaultOverlay() }
     catch { return defaultOverlay() }
   })()
-  return { rows, cols, mode, seed: mode === 'random' ? crypto.randomUUID() : undefined, overlay }
+  return { rows, cols, thumbWidth, mode, seed: mode === 'random' ? crypto.randomUUID() : undefined, overlay }
 }
 
 export type FontScript = 'latin' | 'cjk' | 'emoji' | 'symbol'

@@ -331,7 +331,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
         .ok_or("--output is required for generate")?
         .to_string();
 
-    let rows = args.rows.clamp(1, 10);
+    let rows = args.rows.clamp(1, 20);
     let cols = args.cols.clamp(1, 12);
 
     // Extract media info first (need duration + source dimensions)

@@ -60,6 +60,7 @@ export interface Translations {
   posterCols: string
   posterFrames: string
   posterTooMany: string
+  posterThumbWidth: string
   posterMode: string
   posterDeterministic: string
   posterDeterministicTip: string

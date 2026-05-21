@@ -67,12 +67,12 @@ public class PosterSheetController : ControllerBase
 
         var durationSeconds = item.RunTimeTicks.Value / 10_000_000.0;
         var requiredFrames = req.Rows * req.Cols;
-        var maxFrames = (int)Math.Floor(durationSeconds / 2.0);
+        var maxFrames = (int)Math.Floor(durationSeconds / 1.0);
 
-        // Require at least 2 seconds per frame (min spacing)
+        // Require at least 1 second per frame (min spacing)
         if (requiredFrames > maxFrames)
             return BadRequest(
-                $"Grid too large for video duration. Maximum {maxFrames} frames (2s spacing). Requested: {requiredFrames}.");
+                $"Grid too large for video duration. Maximum {maxFrames} frames (1s spacing). Requested: {requiredFrames}.");
 
         var inputPath = item.Path;
         if (string.IsNullOrEmpty(inputPath))
