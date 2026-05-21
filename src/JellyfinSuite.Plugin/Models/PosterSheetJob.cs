@@ -4,7 +4,7 @@ public enum JobStatus { Queued, Running, Done, Error, Cancelled }
 public enum JobMode { Deterministic, Random }
 public enum ColorTheme { Classic, Dark, Light, Cinematic, Minimal }
 public enum FontFamily { NotoSans, NotoSerif }
-public enum TimestampPosition { InsideBottomLeft, OutsideBottomLeft, InsideBottomCenter, OutsideBottomCenter, InsideBottomRight, OutsideBottomRight }
+public enum TimestampPosition { InsideTopLeft, InsideTopCenter, InsideTopRight, InsideBottomLeft, OutsideBottomLeft, InsideBottomCenter, OutsideBottomCenter, InsideBottomRight, OutsideBottomRight }
 
 public class OverlaySettings
 {
@@ -18,6 +18,9 @@ public class OverlaySettings
     public bool ShowDuration { get; set; } = true;
     public bool ShowSubtitles { get; set; } = true;
     public bool ShowFrameTimestamp { get; set; } = false;
+    public string TimestampFont { get; set; } = "roboto-mono";
+    public bool TimestampBg { get; set; } = true;
+    public bool TimestampShadow { get; set; } = false;
     public string ColorTheme { get; set; } = "classic";
     public string FontFamily { get; set; } = "noto-sans";
     public string BrandingLatinFont { get; set; } = "noto-sans";

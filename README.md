@@ -28,9 +28,10 @@ Unlock by clicking the **Thumbnail** view button 7 times within 5 seconds. Once 
 - **Grid configuration**: Freely adjust rows (1–10) and columns (1–12); short videos automatically show only valid presets to maintain ≥2 s/frame spacing
 - **Modes**: Deterministic (same video always produces the same sheet, cache-eligible) or Random (fresh frame selection each time)
 - **Skip segments**: Skip intro/outro by chapter or custom time range; supports global skip presets shared across all videos; OP/ED auto-detection heuristic
-- **Overlay**: Configurable branding label, video metadata block (filename, file size, resolution & FPS, codec, audio, duration), per-frame timestamp badges at 6 configurable positions
+- **Overlay**: Configurable branding label, video metadata block (filename, file size, resolution & FPS, codec, audio, duration), per-frame timestamp badges at 6 configurable positions; badge size scales proportionally with thumbnail width (~¼ cell width)
+- **Timestamp style**: Choose font (Roboto Mono, Vollkorn old-style numerals, or any uploaded custom font); toggle background badge and shadow/outline effect; shadow color is defined per-theme and automatically adapts between badge-on and floating-on-video modes
 - **Themes**: Classic / Dark / Light / Cinematic / Minimal / Transparent — each with a distinct color palette
-- **Fonts**: Automatic download of Noto Sans, Noto Serif, Roboto, Oswald, Playfair Display, Cinzel; custom font upload (TTF/OTF, auto-detected as Latin or CJK); mixed-script branding label renders Latin and CJK characters with their respective fonts
+- **Fonts**: Automatic download of Noto Sans, Noto Serif, Roboto, Oswald, Playfair Display, Cinzel, Vollkorn; custom font upload (TTF/OTF, auto-detected as Latin or CJK); mixed-script branding label renders Latin and CJK characters with their respective fonts
 - **QR watermark**: GitHub repo QR code embedded in the header with a gradient color scheme
 - **Jellyfin logo**: Semi-transparent logo composited in the header area
 - **Output**: Lossless WebP with alpha channel (transparent theme)

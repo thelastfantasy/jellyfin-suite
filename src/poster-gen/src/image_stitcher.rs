@@ -282,6 +282,9 @@ mod tests {
             show_duration: false,
             show_subtitles: false,
             show_frame_timestamp: false,
+            timestamp_bg: true,
+            timestamp_shadow: false,
+            timestamp_font_scale: 1.0,
             lang: "en".to_string(),
             timestamp_position: crate::image_stitcher::TimestampPosition::InsideBottomLeft,
         }
@@ -434,6 +437,9 @@ mod tests {
             show_duration: false,
             show_subtitles: false,
             show_frame_timestamp: false,
+            timestamp_bg: true,
+            timestamp_shadow: false,
+            timestamp_font_scale: 1.0,
             lang: "en".to_string(),
             timestamp_position: crate::image_stitcher::TimestampPosition::InsideBottomLeft,
         };

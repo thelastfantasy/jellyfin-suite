@@ -31,6 +31,40 @@
 5. 等用户确认后 make update
 ```
 
+## PR 合并前检查（必须遵守）
+
+**执行 `gh pr merge` 之前，必须完成以下两项检查，任何一项未通过即中断合并。**
+
+### 1. README 检查
+
+对比本次 PR 的功能改动（`git diff main...HEAD`），判断是否有面向用户的新特性、行为变更、新配置项：
+- **有** → 更新 `README.md` 和 `README.zh-CN.md`，commit + push 后再合并
+- **无** → 继续
+
+### 2. Workflow 检查
+
+检查 `.github/workflows/` 下的 CI/CD 文件是否需要随本次改动调整：
+- 新的构建产物或目标平台
+- 新的部署步骤或依赖脚本
+- 版本号、触发条件变化
+- **需要** → 更新对应 workflow 文件，commit + push 后再合并
+- **不需要** → 继续
+
+### 操作模板
+
+```bash
+# 先检查哪些文件已改动
+git diff main...HEAD -- README.md README.zh-CN.md .github/workflows/
+
+# 如需补充更新，完成后：
+git add README.md README.zh-CN.md  # 或 .github/workflows/xxx.yml
+git commit -m "docs: update README / workflow for <feature>"
+git push
+
+# 再合并
+gh pr merge --squash --delete-branch
+```
+
 ## 测试命令
 
 **测试应通过 Makefile 运行**（在用户的终端里）：

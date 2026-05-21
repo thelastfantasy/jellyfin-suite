@@ -134,6 +134,18 @@ struct GenerateArgs {
     #[arg(long, default_value_t = crate::image_stitcher::TimestampPosition::InsideBottomLeft)]
     timestamp_position: crate::image_stitcher::TimestampPosition,
 
+    /// Disable timestamp badge background rectangle
+    #[arg(long)]
+    no_timestamp_bg: bool,
+
+    /// Add text shadow/outline effect to timestamp badge
+    #[arg(long)]
+    timestamp_shadow: bool,
+
+    /// Scale factor for timestamp badge font size (default 1.0; use ~1.3 for old-style fonts)
+    #[arg(long, default_value_t = 1.0)]
+    timestamp_font_scale: f32,
+
     /// Skip time segments when sampling frames (repeatable, format: START_MS:END_MS)
     #[arg(long, value_name = "START_MS:END_MS")]
     skip_segment: Vec<String>,
@@ -204,6 +216,18 @@ struct PreviewArgs {
     /// Show per-frame HH:MM:SS badge
     #[arg(long)]
     show_timestamp: bool,
+
+    /// Disable timestamp badge background rectangle
+    #[arg(long)]
+    no_timestamp_bg: bool,
+
+    /// Add text shadow/outline effect to timestamp badge
+    #[arg(long)]
+    timestamp_shadow: bool,
+
+    /// Scale factor for timestamp badge font size (default 1.0; use ~1.3 for old-style fonts)
+    #[arg(long, default_value_t = 1.0)]
+    timestamp_font_scale: f32,
 
     /// Number of rows (1-10)
     #[arg(long, default_value_t = 3)]
@@ -439,6 +463,9 @@ fn run_generate(args: GenerateArgs) -> Result<(), String> {
         show_duration: !args.no_duration,
         show_subtitles: !args.no_subtitles,
         show_frame_timestamp: args.show_timestamp,
+        timestamp_bg: !args.no_timestamp_bg,
+        timestamp_shadow: args.timestamp_shadow,
+        timestamp_font_scale: args.timestamp_font_scale,
         lang: args.lang.clone(),
         timestamp_position: args.timestamp_position.clone(),
     };
@@ -471,6 +498,9 @@ fn run_preview_cmd(args: PreviewArgs) -> Result<(), String> {
         show_duration: !args.no_duration,
         show_subtitles: !args.no_subtitles,
         show_frame_timestamp: args.show_timestamp,
+        timestamp_bg: !args.no_timestamp_bg,
+        timestamp_shadow: args.timestamp_shadow,
+        timestamp_font_scale: args.timestamp_font_scale,
         rows: args.rows,
         cols: args.cols,
         lang: args.lang,

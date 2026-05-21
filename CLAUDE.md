@@ -19,6 +19,17 @@ at specs/007-long-press-speed-seek/plan.md
 - `make update` 会重启容器，是破坏性操作
 - 各命令详情见 agents.md 中的测试命令章节
 
+## PR 合并前检查清单（必须遵守）
+
+**合并任何 PR 之前，必须依次确认以下两项，缺一不可：**
+
+1. **README 检查**：对比本次 PR 的功能改动，判断 `README.md` 和 `README.zh-CN.md` 是否需要同步更新（新特性、行为变更、配置项变化等）。
+2. **Workflow 检查**：检查 `.github/workflows/` 下的 CI/CD 文件是否需要随本次改动调整（新产物、新步骤、版本号、触发条件等）。
+
+**如果需要更新但尚未更新 → 立即中断合并流程**，先完成更新并 commit + push，再执行合并。不得跳过直接合并。
+
+详见 agents.md 的「PR 合并前检查」章节。
+
 ## Speckit 分支规范（强制覆盖）
 
 **speckit 要求的 `00x-xxx` 格式分支命名必须无视。** speckit 的 git-feature hook（`/speckit-git-feature`）绝对不执行，规格文档（spec/plan/tasks）只在当前工作分支上提交，不得为 spec 工作单独创建新分支。

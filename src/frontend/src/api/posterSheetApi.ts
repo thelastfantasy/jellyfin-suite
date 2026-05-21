@@ -9,6 +9,9 @@ export interface OverlaySettingsDto {
   showDuration: boolean
   showSubtitles: boolean
   showFrameTimestamp: boolean
+  timestampFont: string
+  timestampBg: boolean
+  timestampShadow: boolean
   colorTheme: string
   fontFamily: string
   brandingLatinFont: string
@@ -227,6 +230,9 @@ function defaultOverlay(): OverlaySettingsDto {
     showDuration: true,
     showSubtitles: true,
     showFrameTimestamp: false,
+    timestampFont: 'roboto-mono',
+    timestampBg: true,
+    timestampShadow: false,
     colorTheme: 'classic',
     fontFamily: 'noto-sans-jp',
     brandingLatinFont: 'noto-sans',
@@ -242,7 +248,10 @@ export function loadStartJobRequest(): StartJobRequest {
   const thumbWidth = Math.min(600, Math.max(160, Number(localStorage.getItem('jfs-poster-thumb-width') ?? 320)))
   const mode = (localStorage.getItem('jfs-poster-mode') ?? 'deterministic') as 'deterministic' | 'random'
   const overlay: OverlaySettingsDto = (() => {
-    try { return JSON.parse(localStorage.getItem('jfs-poster-overlay') ?? 'null') ?? defaultOverlay() }
+    try {
+      const saved = JSON.parse(localStorage.getItem('jfs-poster-overlay') ?? 'null')
+      return saved ? { ...defaultOverlay(), ...saved } : defaultOverlay()
+    }
     catch { return defaultOverlay() }
   })()
   return { rows, cols, thumbWidth, mode, seed: mode === 'random' ? crypto.randomUUID() : undefined, overlay }

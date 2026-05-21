@@ -26,6 +26,10 @@ const OVERLAY_FONTS = [
 ] as const
 const MODES = ['deterministic', 'random'] as const
 const LANGS = ['en', 'zh', 'ja'] as const
+const TIMESTAMP_FONTS = [
+  { value: 'roboto-mono', label: 'Roboto Mono' },
+  { value: 'vollkorn',    label: 'Vollkorn' },
+] as const
 
 function hasCJK(s: string) {
   return /[一-鿿㐀-䶿豈-﫿぀-ゟ゠-ヿ가-힯]/.test(s)
@@ -51,7 +55,8 @@ function loadSettings() {
     mode: (localStorage.getItem('jfs-poster-mode') ?? 'deterministic') as 'deterministic' | 'random',
     overlay: (() => {
       try {
-        return JSON.parse(localStorage.getItem('jfs-poster-overlay') ?? 'null') ?? defaultOverlay()
+        const saved = JSON.parse(localStorage.getItem('jfs-poster-overlay') ?? 'null')
+        return saved ? { ...defaultOverlay(), ...saved } : defaultOverlay()
       } catch { return defaultOverlay() }
     })(),
   }
@@ -69,6 +74,9 @@ function defaultOverlay(): OverlaySettingsDto {
     showDuration: true,
     showSubtitles: true,
     showFrameTimestamp: false,
+    timestampFont: 'roboto-mono',
+    timestampBg: true,
+    timestampShadow: false,
     colorTheme: 'classic',
     fontFamily: 'noto-sans-jp',
     brandingLatinFont: 'noto-sans',
@@ -456,10 +464,34 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
           <label for="timestamp">{t.posterTimestamp}</label>
         </div>
 
-        {/* Timestamp position — graphical picker */}
+        {/* Timestamp options — font, bg, shadow, position */}
         {overlay.showFrameTimestamp && (
           <div class="jfs-poster-settings__sub-checks">
-            <label class="jfs-poster-settings__label" style="margin-bottom:0.3rem">{t.posterTimestampPos}</label>
+            <div class="jfs-poster-settings__check-row">
+              <span class="jfs-poster-settings__label" style="margin-bottom:0">{t.posterTimestampFont}</span>
+              <div class="jfs-poster-settings__theme-group" style="margin-top:0.25rem">
+                {TIMESTAMP_FONTS.map(f => (
+                  <button
+                    key={f.value}
+                    class={`jfs-poster-settings__theme-btn${overlay.timestampFont === f.value ? ' jfs-poster-settings__theme-btn--active' : ''}`}
+                    onClick={() => updateOverlay({ timestampFont: f.value })}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div class="jfs-poster-settings__check-row" style="margin-top:0.35rem">
+              <input type="checkbox" id="ts-bg" checked={overlay.timestampBg}
+                onChange={e => updateOverlay({ timestampBg: (e.target as HTMLInputElement).checked })} />
+              <label for="ts-bg">{t.posterTimestampBg}</label>
+            </div>
+            <div class="jfs-poster-settings__check-row">
+              <input type="checkbox" id="ts-shadow" checked={overlay.timestampShadow}
+                onChange={e => updateOverlay({ timestampShadow: (e.target as HTMLInputElement).checked })} />
+              <label for="ts-shadow">{t.posterTimestampShadow}</label>
+            </div>
+            <label class="jfs-poster-settings__label" style="margin-bottom:0.3rem;margin-top:0.35rem">{t.posterTimestampPos}</label>
             <TimestampPosPicker
               value={overlay.timestampPosition as TimestampPos}
               onChange={v => updateOverlay({ timestampPosition: v })}

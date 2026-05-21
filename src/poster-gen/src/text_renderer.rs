@@ -93,6 +93,9 @@ pub struct ThemeColors {
     pub qr_module_b: [u8; 3],   // RGB  — data-module colour at bottom (lerped; flat = same as a)
     pub qr_finder_dark: [u8; 3],// RGB  — finder pattern outer/inner ring
     pub qr_finder_light: [u8; 3],// RGB — finder pattern middle ring (should match qr_bubble)
+    // Timestamp effect colours — chosen per-theme for correct contrast in each context
+    pub ts_outline: [u8; 3],    // RGB  — outline/rim when badge_bg is visible
+    pub ts_shadow: [u8; 3],     // RGB  — drop-shadow when no badge_bg (text floats on video)
 }
 
 /// What to render and how — font/theme/grid are handled by Renderer and passed separately.
@@ -107,6 +110,9 @@ pub struct RenderOptions {
     pub show_duration: bool,
     pub show_subtitles: bool,
     pub show_frame_timestamp: bool,
+    pub timestamp_bg: bool,
+    pub timestamp_shadow: bool,
+    pub timestamp_font_scale: f32,
     pub lang: String,
     pub timestamp_position: crate::image_stitcher::TimestampPosition,
 }
@@ -189,9 +195,23 @@ impl Renderer {
             // No header: only render per-frame timestamp badges and return
             if options.show_frame_timestamp && !timestamps.is_empty() {
                 let badge_pad = 4u32;
-                let b_scale = 3u32;
-                let b_ttf = b_scale * 6; // 18px TTF
-                let badge_h = b_ttf + badge_pad * 2; // 26px — text fills badge with even padding
+                let target_text_w = (layout.cell_w / 4).saturating_sub(badge_pad * 2).max(20);
+                let (b_scale, b_ttf_px) = if let Some(f) = ts_font_ref {
+                    const REF_PX: u32 = 18;
+                    let ref_w = measure_text_width_ttf(f, "00:00:00.000", REF_PX).max(1);
+                    let px = ((REF_PX as f32 * target_text_w as f32 / ref_w as f32)
+                        * options.timestamp_font_scale).round() as u32;
+                    (3u32, px.clamp(8, 40))
+                } else {
+                    let s = (target_text_w / 72).clamp(1, 6);
+                    (s, s * 6)
+                };
+                let (ts_above_px, ts_below_px) = if let Some(f) = ts_font_ref {
+                    probe_ts_digit_extent(f, b_ttf_px)
+                } else {
+                    (b_scale * 7, 0)
+                };
+                let badge_h = ts_above_px + ts_below_px + badge_pad * 2;
 
                 for row in 0..layout.rows {
                     for col in 0..layout.cols {
@@ -199,7 +219,11 @@ impl Renderer {
                         if idx >= timestamps.len() { break; }
                         let ts = timestamps[idx];
                         let ts_str = secs_to_hhmmss(ts);
-                        let text_w = measure_text_width(ts_font_ref, &ts_str, b_scale);
+                        let text_w = if let Some(f) = ts_font_ref {
+                            measure_text_width_ttf(f, &ts_str, b_ttf_px)
+                        } else {
+                            ts_str.len() as u32 * (5 + 1) * b_scale
+                        };
                         let badge_w = text_w + badge_pad * 2;
 
                         let (cell_x, cell_y) = layout.cell_origin(col, row);
@@ -207,13 +231,8 @@ impl Renderer {
 
                         if by + badge_h > img_height || bx + badge_w > img_width { continue; }
 
-                        fill_rect_alpha(img, bx, by, badge_w, badge_h, theme.badge_bg);
-                        let ty = if ts_font_ref.is_some() {
-                            by
-                        } else {
-                            by + (badge_h - b_scale * 7) / 2
-                        };
-                        draw_text_scaled(img, &ts_str, bx + badge_pad, ty, b_scale, theme.badge_text, ts_font_ref);
+                        stamp_timestamp_badge(img, &ts_str, bx, by, badge_w, badge_h, badge_pad,
+                            b_scale, b_ttf_px, ts_font_ref, ts_above_px, theme, options);
                     }
                 }
             }
@@ -361,9 +380,23 @@ impl Renderer {
         // Per-frame timestamp badges
         if options.show_frame_timestamp && !timestamps.is_empty() {
             let badge_pad = 4u32;
-            let b_scale = 3u32;
-            let b_ttf = b_scale * 6; // 18px TTF
-            let badge_h = b_ttf + badge_pad * 2; // 26px
+            let target_text_w = (layout.cell_w / 4).saturating_sub(badge_pad * 2).max(20);
+            let (b_scale, b_ttf_px) = if let Some(f) = ts_font_ref {
+                const REF_PX: u32 = 18;
+                let ref_w = measure_text_width_ttf(f, "00:00:00.000", REF_PX).max(1);
+                let px = ((REF_PX as f32 * target_text_w as f32 / ref_w as f32)
+                    * options.timestamp_font_scale).round() as u32;
+                (3u32, px.clamp(8, 40))
+            } else {
+                let s = (target_text_w / 72).clamp(1, 6);
+                (s, s * 6)
+            };
+            let (ts_above_px, ts_below_px) = if let Some(f) = ts_font_ref {
+                probe_ts_digit_extent(f, b_ttf_px)
+            } else {
+                (b_scale * 7, 0)
+            };
+            let badge_h = ts_above_px + ts_below_px + badge_pad * 2;
 
             for row in 0..layout.rows {
                 for col in 0..layout.cols {
@@ -371,7 +404,11 @@ impl Renderer {
                     if idx >= timestamps.len() { break; }
                     let ts = timestamps[idx];
                     let ts_str = secs_to_hhmmss(ts);
-                    let text_w = measure_text_width(ts_font_ref, &ts_str, b_scale);
+                    let text_w = if let Some(f) = ts_font_ref {
+                        measure_text_width_ttf(f, &ts_str, b_ttf_px)
+                    } else {
+                        ts_str.len() as u32 * (5 + 1) * b_scale
+                    };
                     let badge_w = text_w + badge_pad * 2;
 
                     let (cell_x, cell_y) = layout.cell_origin(col, row);
@@ -379,13 +416,8 @@ impl Renderer {
 
                     if by + badge_h > img_height || bx + badge_w > img_width { continue; }
 
-                    fill_rect_alpha(img, bx, by, badge_w, badge_h, theme.badge_bg);
-                    let ty = if ts_font_ref.is_some() {
-                        by  // TTF: baseline = ty + b_ttf, visual text ~[ty, ty+b_ttf]
-                    } else {
-                        by + (badge_h - b_scale * 7) / 2
-                    };
-                    draw_text_scaled(img, &ts_str, bx + badge_pad, ty, b_scale, theme.badge_text, ts_font_ref);
+                    stamp_timestamp_badge(img, &ts_str, bx, by, badge_w, badge_h, badge_pad,
+                        b_scale, b_ttf_px, ts_font_ref, ts_above_px, theme, options);
                 }
             }
         }
@@ -407,6 +439,8 @@ pub fn get_theme(name: &str) -> ThemeColors {
             qr_module_b:      [0, 120, 220],
             qr_finder_dark:   [80, 170, 255],
             qr_finder_light:  [248, 249, 252],
+            ts_outline:       [55, 60, 78],   // dark slate-blue rim, sits between near-black bg and white text
+            ts_shadow:        [8, 8, 12],     // near-black drop shadow for text floating on video
         },
         // Light gray — readability on bright backgrounds
         "light" => ThemeColors {
@@ -422,6 +456,8 @@ pub fn get_theme(name: &str) -> ThemeColors {
             qr_module_b:      [28, 28, 32],
             qr_finder_dark:   [28, 28, 32],
             qr_finder_light:  [250, 250, 252],
+            ts_outline:       [120, 120, 128], // mid-gray outline, between near-black text and light badge
+            ts_shadow:        [175, 175, 182], // light gray shadow helping dark text on dark video
         },
         // Warm amber/gold on near-black — cinematic film look
         "cinematic" => ThemeColors {
@@ -436,6 +472,8 @@ pub fn get_theme(name: &str) -> ThemeColors {
             qr_module_b:      [155, 100, 20],
             qr_finder_dark:   [200, 150, 50],
             qr_finder_light:  [248, 243, 228],
+            ts_outline:       [65, 42, 8],    // dark amber-brown rim, warm mid-tone between bg and gold text
+            ts_shadow:        [8, 4, 0],      // very dark warm shadow
         },
         // Nearly invisible header — minimum chrome, content-first
         "minimal" => ThemeColors {
@@ -450,6 +488,8 @@ pub fn get_theme(name: &str) -> ThemeColors {
             qr_module_b:      [140, 140, 152],
             qr_finder_dark:   [185, 185, 195],
             qr_finder_light:  [248, 248, 250],
+            ts_outline:       [65, 65, 70],   // neutral dark rim
+            ts_shadow:        [0, 0, 0],      // pure black shadow
         },
         // Transparent canvas — QR bubble floats over whatever is composited beneath
         "transparent" => ThemeColors {
@@ -464,6 +504,8 @@ pub fn get_theme(name: &str) -> ThemeColors {
             qr_module_b:      [0, 164, 220],
             qr_finder_dark:   [0, 164, 220],
             qr_finder_light:  [246, 248, 252],
+            ts_outline:       [65, 65, 78],   // dark neutral rim
+            ts_shadow:        [0, 0, 0],      // pure black shadow
         },
         // "classic" and default — Jellyfin slate-blue with brand gradient QR
         _ => ThemeColors {
@@ -478,6 +520,8 @@ pub fn get_theme(name: &str) -> ThemeColors {
             qr_module_b:      [0, 164, 220],
             qr_finder_dark:   [0, 164, 220],
             qr_finder_light:  [246, 248, 252],
+            ts_outline:       [70, 74, 98],   // dark Jellyfin-slate rim, between slate badge and white text
+            ts_shadow:        [12, 13, 18],   // very dark slate shadow
         },
     }
 }
@@ -875,7 +919,101 @@ fn measure_text_width(font: Option<&FontArc>, text: &str, scale: u32) -> u32 {
     }
 }
 
-/// Draw an ASCII string using TTF (if font is Some) or built-in 5×7 pixel font.
+/// Probe the visual y-extent of timestamp characters (digits 0–9, colon, period) at the given
+/// TTF scale. Returns (above_baseline_px, below_baseline_px) from actual glyph bounding boxes.
+/// Used to size the badge height to the real visual height rather than the full typographic em.
+fn probe_ts_digit_extent(font: &FontArc, scale_px: u32) -> (u32, u32) {
+    let scale = PxScale::from(scale_px as f32);
+    let mut min_y: f32 = 0.0;
+    let mut max_y: f32 = 0.0;
+    for ch in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', '.'] {
+        let id = font.glyph_id(ch);
+        if id.0 == 0 { continue; }
+        if let Some(og) = font.outline_glyph(id.with_scale(scale)) {
+            let b = og.px_bounds();
+            if b.min.y < min_y { min_y = b.min.y; }
+            if b.max.y > max_y { max_y = b.max.y; }
+        }
+    }
+    let above = ((-min_y).ceil() as u32).max(1);
+    let below = max_y.ceil() as u32;
+    (above, below)
+}
+
+/// Composite a timestamp badge — background, inner glow, text fill — into a temporary buffer
+/// and stamp it onto `img`. The glow uses badge_text color so it adapts to any theme.
+/// Margin corrects vertical alignment for fonts (like Vollkorn) whose glyphs sit below the
+/// top of the typographic em box.
+fn stamp_timestamp_badge(
+    img: &mut RgbaImage,
+    ts_str: &str,
+    bx: u32, by: u32,
+    badge_w: u32, badge_h: u32,
+    badge_pad: u32,
+    b_scale: u32, b_ttf_px: u32,
+    ts_font_ref: Option<&FontArc>,
+    ts_above_px: u32,
+    theme: &ThemeColors,
+    options: &RenderOptions,
+) {
+    let margin = 12u32;
+    let buf_w = badge_w + margin * 2;
+    let buf_h = badge_h + margin * 2;
+    let mut badge_buf = RgbaImage::new(buf_w, buf_h);
+
+    // draw_text_ttf: baseline = y + ttf_px; glyph visual top = y + ttf_px - above_px.
+    // We want visual top at (margin + badge_pad) inside badge_buf:
+    //   y = margin + badge_pad + above_px - ttf_px
+    let text_x = margin + badge_pad;
+    let text_y = if ts_font_ref.is_some() {
+        (margin as i32 + badge_pad as i32 + ts_above_px as i32 - b_ttf_px as i32).max(0) as u32
+    } else {
+        margin + badge_pad
+    };
+
+    // 1. Badge background.
+    if options.timestamp_bg {
+        fill_rect_alpha(&mut badge_buf, margin, margin, badge_w, badge_h, theme.badge_bg);
+    }
+
+    // 2. Soft outline: render text at 8 surrounding offsets, lightly blur for smooth edges,
+    //    overlay beneath the main text. Color choice depends on whether a badge_bg is drawn:
+    //    ts_outline (sits between badge_bg and badge_text, per-theme) when bg is on;
+    //    ts_shadow (heavier contrast for text floating directly on video) when bg is off.
+    if options.timestamp_shadow {
+        let outline_rgb = if options.timestamp_bg { theme.ts_outline } else { theme.ts_shadow };
+        let stroke_r = ((b_ttf_px as f32 * 0.08).round() as i32).clamp(1, 2);
+        let sigma = stroke_r as f32 * 0.6 + 0.4;
+        let mut shadow_buf = RgbaImage::new(buf_w, buf_h);
+        for dy in [-stroke_r, 0, stroke_r] {
+            for dx in [-stroke_r, 0, stroke_r] {
+                if dx == 0 && dy == 0 { continue; }
+                let sx = (text_x as i32 + dx).max(0) as u32;
+                let sy = (text_y as i32 + dy).max(0) as u32;
+                if let Some(f) = ts_font_ref {
+                    draw_text_ttf(&mut shadow_buf, f, ts_str, sx, sy, b_ttf_px, outline_rgb);
+                } else {
+                    draw_text_scaled(&mut shadow_buf, ts_str, sx, sy, b_scale, outline_rgb, None);
+                }
+            }
+        }
+        let smoothed = image::imageops::blur(&shadow_buf, sigma);
+        image::imageops::overlay(&mut badge_buf, &smoothed, 0, 0);
+    }
+
+    // 3. Text fill on top.
+    if let Some(f) = ts_font_ref {
+        draw_text_ttf(&mut badge_buf, f, ts_str, text_x, text_y, b_ttf_px, theme.badge_text);
+    } else {
+        draw_text_scaled(&mut badge_buf, ts_str, text_x, text_y, b_scale, theme.badge_text, None);
+    }
+
+    // 4. Stamp onto main image.
+    let ox = bx as i64 - margin as i64;
+    let oy = by as i64 - margin as i64;
+    image::imageops::overlay(img, &badge_buf, ox, oy);
+}
+
 fn draw_text_scaled(img: &mut RgbaImage,
     text: &str,
     x: u32,
