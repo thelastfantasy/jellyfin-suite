@@ -27,7 +27,7 @@ Unlock by clicking the **Thumbnail** view button 7 times within 5 seconds. Once 
 
 - **Grid configuration**: Freely adjust rows (1–10) and columns (1–12); short videos automatically show only valid presets to maintain ≥2 s/frame spacing
 - **Modes**: Deterministic (same video always produces the same sheet, cache-eligible) or Random (fresh frame selection each time)
-- **Skip segments**: Skip intro/outro by chapter or custom time range; supports global skip presets shared across all videos; OP/ED auto-detection heuristic
+- **Skip segments**: Skip intro/outro by chapter or custom time range; one-tap quick-add buttons for skipping first/last 60s or 90s; supports global skip presets shared across all videos; OP/ED auto-detection heuristic
 - **Overlay**: Configurable branding label, video metadata block (filename, file size, resolution & FPS, codec, audio, duration), per-frame timestamp badges at 6 configurable positions; badge size scales proportionally with thumbnail width (~¼ cell width)
 - **Timestamp style**: Choose font (Roboto Mono, Vollkorn old-style numerals, or any uploaded custom font); toggle background badge and shadow/outline effect; shadow color is defined per-theme and automatically adapts between badge-on and floating-on-video modes
 - **Themes**: Classic / Dark / Light / Cinematic / Minimal / Transparent — each with a distinct color palette
