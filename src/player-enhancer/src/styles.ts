@@ -125,6 +125,8 @@ const CSS = `
   justify-content: space-between;
   gap: 8px;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
   z-index: 99999;
   transition: opacity 0.3s;
 }

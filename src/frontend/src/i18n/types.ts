@@ -133,6 +133,10 @@ export interface Translations {
   skipEmpty: string
   skipRemove: string
   skipAddSegment: string
+  skipQuickStart60: string
+  skipQuickStart90: string
+  skipQuickEnd60: string
+  skipQuickEnd90: string
   skipClearAll: string
   cancel: string
   skipIgnoreGlobal: string
