@@ -2407,22 +2407,20 @@ a.jfs-card__series-name:hover {
 
 .jfs-skip-quick-btns {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.4rem;
   margin-bottom: 0.75rem;
+  align-self: stretch;
 }
 
 .jfs-skip-quick-btn {
-  flex: 1 1 calc(50% - 0.2rem);
+  flex: 1 1 0;
   min-width: 0;
-  padding: 0.3rem 0.5rem;
+  padding: 0.3rem 0.35rem;
   font-size: 0.78rem;
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
   transition: background 0.15s, color 0.15s;
 }
 .jfs-skip-quick-btn:disabled {
