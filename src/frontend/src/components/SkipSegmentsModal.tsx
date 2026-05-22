@@ -260,6 +260,15 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
     setSegments(prev => [...prev, { startMs: 0, endMs: 0 }])
   }
 
+  function addQuickStart(ms: number) {
+    setSegments(prev => [{ startMs: 0, endMs: ms }, ...prev])
+  }
+
+  function addQuickEnd(ms: number) {
+    if (videoDurationMs == null || videoDurationMs <= 0) return
+    setSegments(prev => [...prev, { startMs: Math.max(0, videoDurationMs - ms), endMs: videoDurationMs }])
+  }
+
   function updateSegment(idx: number, patch: Partial<SkipSegment>) {
     setSegments(prev => prev.map((seg, i) => i === idx ? { ...seg, ...patch } : seg))
   }
@@ -363,6 +372,12 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
             <div class="jfs-skip-segment-list">
               <div class="jfs-skip-hint">
                 {t.skipTimeFormat}
+              </div>
+              <div class="jfs-skip-quick-btns">
+                <button class="jfs-skip-quick-btn jfs-skip-quick-btn--start" onClick={() => addQuickStart(60_000)}>{t.skipQuickStart60}</button>
+                <button class="jfs-skip-quick-btn jfs-skip-quick-btn--start" onClick={() => addQuickStart(90_000)}>{t.skipQuickStart90}</button>
+                <button class="jfs-skip-quick-btn jfs-skip-quick-btn--end" disabled={videoDurationMs == null} onClick={() => addQuickEnd(60_000)}>{t.skipQuickEnd60}</button>
+                <button class="jfs-skip-quick-btn jfs-skip-quick-btn--end" disabled={videoDurationMs == null} onClick={() => addQuickEnd(90_000)}>{t.skipQuickEnd90}</button>
               </div>
               {segments.length === 0 && (
                 <div class="jfs-skip-placeholder">{t.skipEmpty}</div>

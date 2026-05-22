@@ -2405,6 +2405,51 @@ a.jfs-card__series-name:hover {
   padding: 0.5rem 0;
 }
 
+.jfs-skip-quick-btns {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  align-self: stretch;
+}
+
+.jfs-skip-quick-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.3rem 0.35rem;
+  font-size: 0.78rem;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.3;
+  transition: background 0.15s, color 0.15s;
+}
+.jfs-skip-quick-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* 开头按钮：蓝色调 */
+.jfs-skip-quick-btn--start {
+  color: #5bc4f0;
+  background: rgba(0, 164, 220, 0.1);
+  border: 1px solid rgba(0, 164, 220, 0.3);
+}
+.jfs-skip-quick-btn--start:hover:not(:disabled) {
+  background: rgba(0, 164, 220, 0.2);
+  color: #7dd6f7;
+}
+
+/* 结尾按钮：橙色调 */
+.jfs-skip-quick-btn--end {
+  color: #f0a84a;
+  background: rgba(240, 140, 30, 0.1);
+  border: 1px solid rgba(240, 140, 30, 0.3);
+}
+.jfs-skip-quick-btn--end:hover:not(:disabled) {
+  background: rgba(240, 140, 30, 0.2);
+  color: #f7bc6a;
+}
+
 .jfs-skip-segment-list {
   display: flex;
   flex-direction: column;
