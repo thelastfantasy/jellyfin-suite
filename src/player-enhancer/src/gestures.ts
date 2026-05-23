@@ -1,5 +1,6 @@
 import { showRipple, showValueOsd } from './osd-overlay';
-import { isInLongPressZone, cancelPendingLongPress } from './long-press';
+import { cancelPendingLongPress, isLongPressActive } from './long-press';
+import { showTrickplayThumb, hideTrickplayThumb, prefetchFrame } from './trickplay';
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
@@ -7,31 +8,25 @@ function clamp(v: number, min: number, max: number): number {
 
 type Zone = 'left' | 'center' | 'right';
 interface TapState { time: number; zone: Zone }
-interface SwipeState {
-  active: boolean;
+
+type GestureMode = 'idle' | 'pending' | 'seek' | 'swipe';
+
+interface GestureState {
+  mode: GestureMode;
   startX: number;
   startY: number;
-  side: 'left' | 'right';
-  startValue: number;
-  /** null = 尚未判定方向，'vertical' = 纵向锁定，'horizontal' = 横向忽略 */
-  directionLock: 'vertical' | 'horizontal' | null;
+  lastX: number;
+  lastMoveTime: number;
+  // seek state
+  seekAnchorSec: number;
+  seekOffsetSec: number;
+  // swipe state
+  swipeSide: 'left' | 'right';
+  swipeStartValue: number;
 }
 
-/** 判断触摸是否落在 OSD 控件上（按钮/滑块/标签），避免误触发手势 */
-function isOsdControl(target: EventTarget | null): boolean {
-  let el = target as Element | null;
-  while (el && el !== document.body) {
-    const tag = el.tagName;
-    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'LABEL') return true;
-    if (el.classList.contains('osdControls')) return true;
-    if (el.classList.contains('sliderContainer')) return true;
-    // 我们自己注入的控件区域（Firefox 有时报告不同的 target，通过 ancestor 兜底）
-    if (el.classList.contains('jfs-enhancer-screenshot-wrap')) return true;
-    if (el.classList.contains('jfs-enhancer-framestep-wrap')) return true;
-    el = el.parentElement;
-  }
-  return false;
-}
+let _seekOsdEl: HTMLDivElement | null = null;
+let _seekOsdHideTimer: ReturnType<typeof setTimeout> | null = null;
 
 let _seekSeconds = 10;
 
@@ -39,10 +34,65 @@ export function setSeekSeconds(s: number): void {
   _seekSeconds = s;
 }
 
-// Jellyfin 在 videoElement 和 view 元素上监听 dblclick（bubble 阶段）来触发全屏。
-// Firefox 从 double-tap 合成 dblclick 时不受 touchend.preventDefault() 约束，
-// 所以直接在 document capture 阶段永久拦截 dblclick，接管全屏权。
-// 仅在触摸设备上生效；桌面端 dblclick 不受影响。
+function ensureSeekOsd(): HTMLDivElement {
+  if (!_seekOsdEl) {
+    _seekOsdEl = document.createElement('div');
+    _seekOsdEl.className = 'jfs-seek-osd';
+    document.body.appendChild(_seekOsdEl);
+  }
+  return _seekOsdEl;
+}
+
+function showSeekOsd(offsetSec: number, currentSec: number): void {
+  const osd = ensureSeekOsd();
+  if (_seekOsdHideTimer) { clearTimeout(_seekOsdHideTimer); _seekOsdHideTimer = null; }
+  const sign = offsetSec >= 0 ? '+' : '−';
+  const abs = Math.abs(offsetSec);
+  const offsetStr = abs >= 60
+    ? `${Math.floor(abs / 60)}m ${(abs % 60).toFixed(1)}s`
+    : `${abs.toFixed(1)}s`;
+  const h = Math.floor(currentSec / 3600);
+  const m = Math.floor((currentSec % 3600) / 60);
+  const s = Math.floor(currentSec % 60);
+  const ts = h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${m}:${String(s).padStart(2, '0')}`;
+  osd.innerHTML = `<div class="jfs-seek-osd__line1">${sign}${offsetStr}  →  ${ts}</div>`;
+  osd.style.opacity = '1';
+}
+
+function hideSeekOsd(delayMs = 0): void {
+  if (!_seekOsdEl) return;
+  if (_seekOsdHideTimer) clearTimeout(_seekOsdHideTimer);
+  if (delayMs <= 0) {
+    _seekOsdEl.style.opacity = '0';
+    hideTrickplayThumb();
+    _seekOsdHideTimer = null;
+  } else {
+    _seekOsdHideTimer = setTimeout(() => {
+      if (_seekOsdEl) _seekOsdEl.style.opacity = '0';
+      hideTrickplayThumb();
+      _seekOsdHideTimer = null;
+    }, delayMs);
+  }
+}
+
+/** 判断触摸是否落在 OSD 控件上，避免误触发手势 */
+function isOsdControl(target: EventTarget | null): boolean {
+  let el = target as Element | null;
+  while (el && el !== document.body) {
+    const tag = el.tagName;
+    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'LABEL') return true;
+    if (el.classList.contains('osdControls')) return true;
+    if (el.classList.contains('sliderContainer')) return true;
+    if (el.classList.contains('jfs-enhancer-screenshot-wrap')) return true;
+    if (el.classList.contains('jfs-enhancer-framestep-wrap')) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
+
+// Suppress Jellyfin's dblclick handler (fullscreen toggle) on touch devices.
 if (navigator.maxTouchPoints > 0) {
   document.addEventListener('dblclick', (e: Event) => {
     e.stopImmediatePropagation();
@@ -50,24 +100,25 @@ if (navigator.maxTouchPoints > 0) {
   }, { capture: true });
 }
 
-export function initGestures(videoEl: HTMLVideoElement): { activateSwipeTransfer: (touch: Touch) => void } {
-  if (navigator.maxTouchPoints <= 0) return { activateSwipeTransfer: () => {} };
+export function initGestures(videoEl: HTMLVideoElement, getItemId: () => string): void {
+  if (navigator.maxTouchPoints <= 0) return;
 
   let lastTap: TapState = { time: 0, zone: 'center' };
-  const swipe: SwipeState = { active: false, startX: 0, startY: 0, side: 'left', startValue: 1, directionLock: null };
+  const gs: GestureState = {
+    mode: 'idle',
+    startX: 0, startY: 0, lastX: 0, lastMoveTime: 0,
+    seekAnchorSec: 0, seekOffsetSec: 0,
+    swipeSide: 'left', swipeStartValue: 1,
+  };
 
-  // 监听 document.body：videoPlayerContainer 在 OSD overlay 之后，
-  // 用户触摸屏幕时事件目标是 OSD 页面元素，必须在更高层捕获
   const container = document.body;
 
-  // ── Double-tap gesture (capture phase to intercept Jellyfin's tap handler) ──
+  // ── Double-tap seek (capture phase) ──────────────────────────────────────
   container.addEventListener('touchend', (e: TouchEvent) => {
     if (!videoEl.isConnected) return;
     if (isOsdControl(e.target)) return;
-
     const touch = e.changedTouches[0];
     if (!touch) return;
-
     const now = Date.now();
     const x = touch.clientX;
     const W = window.innerWidth;
@@ -77,7 +128,6 @@ export function initGestures(videoEl: HTMLVideoElement): { activateSwipeTransfer
       e.stopImmediatePropagation();
       e.preventDefault();
       cancelPendingLongPress();
-
       if (zone === 'left') {
         videoEl.currentTime = Math.max(0, videoEl.currentTime - _seekSeconds);
         showRipple('left', `-${_seekSeconds}s`);
@@ -88,87 +138,112 @@ export function initGestures(videoEl: HTMLVideoElement): { activateSwipeTransfer
         if (videoEl.paused) videoEl.play().catch(() => {});
         else videoEl.pause();
       }
-
       lastTap = { time: 0, zone: 'center' };
     } else {
       lastTap = { time: now, zone };
     }
   }, { capture: true, passive: false });
 
-  // ── Swipe brightness / volume (passive: false to allow preventDefault) ──
+  // ── Unified touch state machine ───────────────────────────────────────────
   container.addEventListener('touchstart', (e: TouchEvent) => {
     if (!videoEl.isConnected) return;
-    if (e.touches.length !== 1) return;
-    if (isOsdControl(e.target)) return;
-
+    if (e.touches.length !== 1) { gs.mode = 'idle'; return; }
+    if (isOsdControl(e.target)) { gs.mode = 'idle'; return; }
     const touch = e.touches[0];
-    // long-press owns the bottom 1/3 zone — don't initialise swipe there
-    if (isInLongPressZone(touch, videoEl)) return;
-    // exclude top 10% — prevents Android pull-down notification gesture from triggering swipe
-    if (touch.clientY < window.innerHeight * 0.10) return;
+    // Exclude Android pull-down notification zone
+    if (touch.clientY < window.innerHeight * 0.10) { gs.mode = 'idle'; return; }
 
-    const side = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
-
-    // Jellyfin 以立方根缩放显示音量，startValue 记录当前线性音量
-    swipe.active = true;
-    swipe.startX = touch.clientX;
-    swipe.startY = touch.clientY;
-    swipe.side = side;
-    swipe.directionLock = null;
-    swipe.startValue = side === 'left'
+    gs.mode = 'pending';
+    gs.startX = gs.lastX = touch.clientX;
+    gs.startY = touch.clientY;
+    gs.lastMoveTime = Date.now();
+    gs.seekAnchorSec = videoEl.currentTime;
+    gs.seekOffsetSec = 0;
+    gs.swipeSide = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
+    gs.swipeStartValue = gs.swipeSide === 'left'
       ? parseFloat(videoEl.style.filter.replace('brightness(', '').replace(')', '') || '1')
       : videoEl.volume;
   }, { passive: true });
 
   container.addEventListener('touchmove', (e: TouchEvent) => {
-    if (!videoEl.isConnected || !swipe.active || e.touches.length !== 1) return;
+    if (!videoEl.isConnected || gs.mode === 'idle') return;
+    if (e.touches.length !== 1) { gs.mode = 'idle'; return; }
     const touch = e.touches[0];
-    const dx = Math.abs(touch.clientX - swipe.startX);
-    const dy = Math.abs(touch.clientY - swipe.startY);
 
-    if (swipe.directionLock === null && (dx > 10 || dy > 10)) {
-      swipe.directionLock = dy >= dx ? 'vertical' : 'horizontal';
-    }
-    if (swipe.directionLock !== 'vertical') return;
-
-    const deltaY = swipe.startY - touch.clientY;
-    const delta = deltaY / (window.innerHeight * 0.5);
-
-    if (swipe.side === 'left') {
-      const brightness = clamp(swipe.startValue + delta, 0, 2.0);
-      videoEl.style.filter = `brightness(${brightness})`;
-      showValueOsd('brightness', brightness * 100);
-    } else {
-      const volume = clamp(swipe.startValue + delta, 0, 1);
-      videoEl.volume = volume;
-      // 显示与 Jellyfin 音量条一致的立方根百分比
-      showValueOsd('volume', Math.pow(volume, 1 / 3) * 100);
+    if (gs.mode === 'pending') {
+      const dx = touch.clientX - gs.startX;
+      const dy = touch.clientY - gs.startY;
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      const deg = Math.atan2(Math.abs(dy), Math.abs(dx)) * 180 / Math.PI;
+      if (deg < 30) {
+        // Horizontal: seek drag (not during long-press speed mode)
+        if (isLongPressActive()) { gs.mode = 'idle'; return; }
+        gs.mode = 'seek';
+        cancelPendingLongPress();
+        document.body.classList.add('jfs-seeking');
+      } else {
+        gs.mode = 'swipe';
+      }
     }
 
-    e.preventDefault();
+    if (gs.mode === 'seek') {
+      const deltaX = touch.clientX - gs.lastX;
+      gs.lastX = touch.clientX;
+      const now = Date.now();
+      const dt = (now - gs.lastMoveTime) || 1;
+      gs.lastMoveTime = now;
+
+      const dur = isFinite(videoEl.duration) ? videoEl.duration : 0;
+      const sPerVw = Math.min(6, Math.max(1.2, dur * 0.002));
+      gs.seekOffsetSec += (deltaX / window.innerWidth * 100) * sPerVw;
+      // Don't touch videoEl.currentTime here — commit on touchend
+      const targetSec = Math.max(0, Math.min(dur, gs.seekAnchorSec + gs.seekOffsetSec));
+
+      showSeekOsd(gs.seekOffsetSec, targetSec);
+
+      const velPxPerMs = Math.abs(deltaX) / dt;
+      const dir = deltaX > 0 ? 1 : -1;
+      const targetMs = targetSec * 1000;
+      const itemId = getItemId();
+      if (velPxPerMs < 8) {
+        prefetchFrame(targetMs - 500, itemId);
+        prefetchFrame(targetMs,       itemId);
+        prefetchFrame(targetMs + 500, itemId);
+      } else {
+        prefetchFrame(targetMs + dir * 1000, itemId);
+        prefetchFrame(targetMs + dir * 2000, itemId);
+        prefetchFrame(targetMs + dir * 4000, itemId);
+      }
+      showTrickplayThumb(targetMs, itemId, videoEl);
+      return;
+    }
+
+    if (gs.mode === 'swipe') {
+      const deltaY = gs.startY - touch.clientY;
+      const delta = deltaY / (window.innerHeight * 0.5);
+      if (gs.swipeSide === 'left') {
+        const brightness = clamp(gs.swipeStartValue + delta, 0, 2.0);
+        videoEl.style.filter = `brightness(${brightness})`;
+        showValueOsd('brightness', brightness * 100);
+      } else {
+        const volume = clamp(gs.swipeStartValue + delta, 0, 1);
+        videoEl.volume = volume;
+        showValueOsd('volume', Math.pow(volume, 1 / 3) * 100);
+      }
+      e.preventDefault();
+    }
   }, { passive: false });
 
-  container.addEventListener('touchend', () => {
-    swipe.active = false;
-  }, { passive: true });
-
-  container.addEventListener('touchcancel', () => {
-    swipe.active = false;
-  }, { passive: true });
-
-  // Called by long-press.ts when vertical direction is detected in the bottom-1/3 zone,
-  // transferring session ownership to brightness/volume swipe.
-  function activateSwipeTransfer(touch: Touch): void {
-    const side = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
-    swipe.active = true;
-    swipe.startX = touch.clientX;
-    swipe.startY = touch.clientY;
-    swipe.side = side;
-    swipe.directionLock = 'vertical';
-    swipe.startValue = side === 'left'
-      ? parseFloat(videoEl.style.filter.replace('brightness(', '').replace(')', '') || '1')
-      : videoEl.volume;
-  }
-
-  return { activateSwipeTransfer };
+  const onEnd = (): void => {
+    if (gs.mode === 'seek') {
+      // Commit the seek on finger lift
+      const dur = isFinite(videoEl.duration) ? videoEl.duration : 0;
+      videoEl.currentTime = Math.max(0, Math.min(dur, gs.seekAnchorSec + gs.seekOffsetSec));
+      hideSeekOsd(800);
+      document.body.classList.remove('jfs-seeking');
+    }
+    gs.mode = 'idle';
+  };
+  container.addEventListener('touchend',    onEnd, { passive: true });
+  container.addEventListener('touchcancel', onEnd, { passive: true });
 }

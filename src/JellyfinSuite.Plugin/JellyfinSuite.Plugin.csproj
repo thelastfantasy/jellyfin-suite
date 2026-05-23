@@ -36,6 +36,9 @@
     <Content Include="poster-gen-win-x64.exe" Condition="Exists('poster-gen-win-x64.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="seek-preview-linux-x64" Condition="Exists('seek-preview-linux-x64')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <Target Name="CopyToJellyfin" AfterTargets="Build" Condition="'$(JELLYFIN_PLUGINS_PATH)' != ''">

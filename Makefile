@@ -1,8 +1,8 @@
 SHELL := bash
 export PATH := /c/Program Files/nodejs:$(PATH)
 
-.PHONY: build-frontend build-plugin build-poster-gen build-poster-gen-win build update clean \
-        test test-rust test-frontend test-csharp workflow-test workflow-test-release
+.PHONY: build-frontend build-plugin build-poster-gen build-poster-gen-win build-seek-preview \
+        build update clean test test-rust test-frontend test-csharp workflow-test workflow-test-release
 
 build-frontend:
 	cd src/frontend && npm run build
@@ -20,6 +20,30 @@ build-poster-gen:
 	cp src/poster-gen/target/release/poster-gen \
 		src/JellyfinSuite.Plugin/poster-gen-linux-x64
 
+# Build seek-preview Linux binary via Docker.
+# Uses Ubuntu 24.04 + ppa:ubuntuhandbook1/ffmpeg7 to get FFmpeg 7.x dev headers,
+# matching the jellyfin-ffmpeg7 runtime (.so.61) in the Jellyfin container.
+# Rust toolchain is cached in a named Docker volume (seek-cargo-home) across builds.
+build-seek-preview:
+	docker volume create seek-cargo-home > /dev/null 2>&1 || true
+	docker volume create seek-rustup-home > /dev/null 2>&1 || true
+	MSYS_NO_PATHCONV=1 docker run --rm \
+		-v "$$(cygpath -m $(CURDIR))/src/seek-preview:/workspace" \
+		-v seek-cargo-home:/root/.cargo \
+		-v seek-rustup-home:/root/.rustup \
+		-w /workspace \
+		ubuntu:24.04 \
+		sh -c "DEBIAN_FRONTEND=noninteractive && \
+		       apt-get update -qq && \
+		       apt-get install -y -qq curl build-essential pkg-config ca-certificates software-properties-common clang && \
+		       add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7 2>/dev/null && apt-get update -qq && \
+		       apt-get install -y -qq libavcodec-dev libavformat-dev libavutil-dev libswscale-dev && \
+		       [ -f /root/.cargo/bin/rustup ] || (curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal 2>/dev/null) && \
+		       /root/.cargo/bin/rustup default stable 2>/dev/null || true && \
+		       /root/.cargo/bin/cargo build --release"
+	cp src/seek-preview/target/release/seek-preview \
+		src/JellyfinSuite.Plugin/seek-preview-linux-x64
+
 # Build Windows Rust binary natively (run on Windows where cargo targets Windows by default)
 build-poster-gen-win:
 	cd src/poster-gen && cargo build --release
@@ -29,13 +53,15 @@ build-poster-gen-win:
 build-plugin:
 	dotnet build src/JellyfinSuite.Plugin -c Debug --output build/plugin
 
-build: build-frontend build-enhancer build-plugin
+build: build-frontend build-enhancer build-plugin build-seek-preview
 
 update: build-poster-gen build
 	MSYS_NO_PATHCONV=1 docker cp build/plugin/JellyfinSuite.Plugin.dll \
 		jellyfin-dev:/config/plugins/JellyfinSuite/JellyfinSuite.Plugin.dll
 	MSYS_NO_PATHCONV=1 docker cp build/plugin/poster-gen-linux-x64 \
 		jellyfin-dev:/config/plugins/JellyfinSuite/poster-gen-linux-x64
+	MSYS_NO_PATHCONV=1 docker cp src/JellyfinSuite.Plugin/seek-preview-linux-x64 \
+		jellyfin-dev:/config/plugins/JellyfinSuite/seek-preview-linux-x64
 	MSYS_NO_PATHCONV=1 docker cp src/JellyfinSuite.Plugin/meta.json \
 		jellyfin-dev:/config/plugins/JellyfinSuite/meta.json
 	docker restart jellyfin-dev
@@ -48,6 +74,11 @@ update: build-poster-gen build
 
 test-rust:
 	cd src/poster-gen && cargo test
+	@if [ "$$(uname -s 2>/dev/null)" = "Linux" ]; then \
+		cd src/seek-preview && cargo test; \
+	else \
+		echo "[seek-preview] Skipping tests (Linux-only)"; \
+	fi
 
 test-frontend:
 	cd src/frontend && bun test ../../tests/frontend/

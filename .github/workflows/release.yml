@@ -36,7 +36,15 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src/poster-gen
+          workspaces: |
+            src/poster-gen
+            src/seek-preview
+
+      - name: Install FFmpeg 7.x dev libs
+        run: |
+          sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
+          sudo apt-get update
+          sudo apt-get install -y pkg-config clang libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -80,6 +88,10 @@ jobs:
         working-directory: src/player-enhancer
         run: npm run build
 
+      - name: Build seek-preview (Linux x64)
+        working-directory: src/seek-preview
+        run: cargo build --release
+
       - name: Install cross
         run: cargo install cross --locked
 
@@ -98,11 +110,13 @@ jobs:
             -p:Version=${{ steps.version.outputs.ver4 }} \
             -o publish/
 
-      - name: Copy poster-gen binaries to publish dir
+      - name: Copy Rust binaries to publish dir
         run: |
           cp src/poster-gen/target/x86_64-unknown-linux-gnu/release/poster-gen publish/poster-gen-linux-x64
           chmod +x publish/poster-gen-linux-x64
           cp src/poster-gen/target/x86_64-pc-windows-gnu/release/poster-gen.exe publish/poster-gen-win-x64.exe
+          cp src/seek-preview/target/release/seek-preview publish/seek-preview-linux-x64
+          chmod +x publish/seek-preview-linux-x64
 
       - name: Prepare meta.json files
         run: |
@@ -161,7 +175,7 @@ jobs:
           # Base zip — download-on-demand variant
           ZIPNAME="jellyfin-suite_${VER4}.zip"
           cd publish
-          zip "../${ZIPNAME}" JellyfinSuite.Plugin.dll meta.json poster-gen-linux-x64 poster-gen-win-x64.exe
+          zip "../${ZIPNAME}" JellyfinSuite.Plugin.dll meta.json poster-gen-linux-x64 poster-gen-win-x64.exe seek-preview-linux-x64
           cd ..
           CHECKSUM="$(md5sum "${ZIPNAME}" | awk '{print $1}')"
           echo "zipname=$ZIPNAME" >> $GITHUB_OUTPUT
@@ -174,6 +188,7 @@ jobs:
           cp publish/JellyfinSuite.Plugin.dll publish-bundled/
           cp publish/poster-gen-linux-x64 publish-bundled/
           cp publish/poster-gen-win-x64.exe publish-bundled/
+          cp publish/seek-preview-linux-x64 publish-bundled/
           cp publish/fonts/* publish-bundled/fonts/
           cp publish/meta-bundled.json publish-bundled/meta.json
           cd publish-bundled

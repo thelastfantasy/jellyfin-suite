@@ -109,7 +109,7 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
             key={p.v}
             class={`jfs-tspicker__btn${value === p.v ? ' jfs-tspicker__btn--active' : ''}`}
             style={p.style}
-            onClick={() => onChange(p.v)}
+            onClick={(e) => { onChange(p.v); (e.currentTarget as HTMLButtonElement).blur(); }}
             title={p.v}
           >00:00</button>
         ))}
@@ -120,7 +120,7 @@ function TimestampPosPicker({ value, onChange }: { value: TimestampPos; onChange
           key={p.v}
           class={`jfs-tspicker__btn${value === p.v ? ' jfs-tspicker__btn--active' : ''}`}
           style={{...p.style, position: 'absolute'}}
-          onClick={() => onChange(p.v)}
+          onClick={(e) => { onChange(p.v); (e.currentTarget as HTMLButtonElement).blur(); }}
           title={p.v}
         >00:00</button>
       ))}
@@ -283,7 +283,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
               <button
                 key={`${r}x${c}`}
                 class={`jfs-poster-settings__preset-btn${rows === r && cols === c ? ' jfs-poster-settings__preset-btn--active' : ''}`}
-                onClick={() => { updateRows(r); updateCols(c) }}
+                onClick={(e) => { updateRows(r); updateCols(c); (e.currentTarget as HTMLButtonElement).blur(); }}
               >
                 {r}x{c}
               </button>
@@ -326,7 +326,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             <button
               key={m}
               class={`jfs-poster-settings__theme-btn${mode === m ? ' jfs-poster-settings__theme-btn--active' : ''}`}
-              onClick={() => updateMode(m)}
+              onClick={(e) => { updateMode(m); (e.currentTarget as HTMLButtonElement).blur(); }}
               title={m === 'deterministic' ? t.posterDeterministicTip : t.posterRandomTip}
             >
               {m === 'deterministic' ? t.posterDeterministic : t.posterRandom}
@@ -400,7 +400,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
                       disabled={headless}
                       class={`jfs-poster-settings__font-btn${'custom' in f && f.custom ? ' jfs-poster-settings__font-btn--custom' : ''}${overlay.brandingLatinFont === f.value ? ' jfs-poster-settings__font-btn--active' : ''}`}
                       style={'style' in f ? (f as { style: string }).style : ''}
-                      onClick={() => updateOverlay({ brandingLatinFont: f.value })}
+                      onClick={(e) => { updateOverlay({ brandingLatinFont: f.value }); (e.currentTarget as HTMLButtonElement).blur(); }}
                     >
                       {f.label}
                     </button>
@@ -419,7 +419,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
                       key={f.value}
                       disabled={headless}
                       class={`jfs-poster-settings__font-btn${'custom' in f && f.custom ? ' jfs-poster-settings__font-btn--custom' : ''}${overlay.brandingCjkFont === f.value ? ' jfs-poster-settings__font-btn--active' : ''}`}
-                      onClick={() => updateOverlay({ brandingCjkFont: f.value })}
+                      onClick={(e) => { updateOverlay({ brandingCjkFont: f.value }); (e.currentTarget as HTMLButtonElement).blur(); }}
                     >
                       {f.label}
                     </button>
@@ -474,7 +474,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
                   <button
                     key={f.value}
                     class={`jfs-poster-settings__theme-btn${overlay.timestampFont === f.value ? ' jfs-poster-settings__theme-btn--active' : ''}`}
-                    onClick={() => updateOverlay({ timestampFont: f.value })}
+                    onClick={(e) => { updateOverlay({ timestampFont: f.value }); (e.currentTarget as HTMLButtonElement).blur(); }}
                   >
                     {f.label}
                   </button>
@@ -508,7 +508,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             <button
               key={theme}
               class={`jfs-poster-settings__theme-btn${overlay.colorTheme === theme ? ' jfs-poster-settings__theme-btn--active' : ''}`}
-              onClick={() => updateOverlay({ colorTheme: theme })}
+              onClick={(e) => { updateOverlay({ colorTheme: theme }); (e.currentTarget as HTMLButtonElement).blur(); }}
             >
               {theme.charAt(0).toUpperCase() + theme.slice(1)}
             </button>
@@ -524,7 +524,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             <button
               key={f.value}
               class={`jfs-poster-settings__font-btn${'custom' in f && f.custom ? ' jfs-poster-settings__font-btn--custom' : ''}${overlay.fontFamily === f.value ? ' jfs-poster-settings__font-btn--active' : ''}`}
-              onClick={() => updateOverlay({ fontFamily: f.value })}
+              onClick={(e) => { updateOverlay({ fontFamily: f.value }); (e.currentTarget as HTMLButtonElement).blur(); }}
             >
               {f.label}
             </button>
@@ -540,7 +540,7 @@ export function PosterSheetSettingsPanel({ videoDuration, onGenerate, settingsOn
             <button
               key={lang}
               class={`jfs-poster-settings__theme-btn${overlay.lang === lang ? ' jfs-poster-settings__theme-btn--active' : ''}`}
-              onClick={() => updateOverlay({ lang })}
+              onClick={(e) => { updateOverlay({ lang }); (e.currentTarget as HTMLButtonElement).blur(); }}
             >
               {lang === 'en' ? t.posterLangEn : lang === 'zh' ? t.posterLangZh : t.posterLangJa}
             </button>

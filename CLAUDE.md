@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/007-long-press-speed-seek/plan.md
+at specs/008-trickplay-seek-preview/plan.md
 <!-- SPECKIT END -->
 
 ## 部署工作流程（必须遵守）
@@ -53,6 +53,7 @@ at specs/007-long-press-speed-seek/plan.md
 
 ## Shell 规范
 
-- **所有 CLI 操作（npm、cargo、dotnet、make 等）一律用 bash**，不得使用 PowerShell
+- **所有 CLI 操作（npm、cargo、dotnet、make 等）一律用 bash**，不得使用 PowerShell skill
+- **speckit skill 内的脚本调用也必须用 bash**，包括 `setup-tasks.ps1`、`setup-plan.ps1` 等均用 bash 工具执行（`bash .specify/scripts/...`），严禁使用 PowerShell skill
 - 文件操作（Read/Write/Edit）使用 Windows 路径格式：`D:\Dev\...`
 - bash 内路径使用 Unix 格式：`/d/Dev/...`
