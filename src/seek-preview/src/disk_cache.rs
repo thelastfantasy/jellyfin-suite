@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const CACHE_DIR: &str = "/tmp/seek-preview";
 const INDEX_FILE: &str = "/tmp/seek-preview/index.txt";
-pub const CAP_BYTES: u64 = 256 * 1024 * 1024; // 256 MB
+pub const CAP_BYTES: u64 = 512 * 1024 * 1024; // 512 MB
 // After cleanup, trim to this fraction of cap to avoid rapid re-triggers.
 const TRIM_RATIO: f64 = 0.75;
 

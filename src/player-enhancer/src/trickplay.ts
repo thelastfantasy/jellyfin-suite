@@ -150,15 +150,22 @@ export function hideTrickplayThumb(): void {
   _pendingKey = null;
 }
 
-// Proactively prefetch frames at every 30s interval across the full duration.
-// Requests are staggered at INTERVAL_STEP_MS apart to avoid flooding.
+// Proactively prefetch frames at every 30s interval, radiating outward from
+// startMs (the resume point) so nearby frames are warmed up first.
 const INTERVAL_STEP_MS = 400;
-export function startIntervalPrefetch(itemId: string, durationMs: number): void {
+export function startIntervalPrefetch(itemId: string, durationMs: number, startMs = 0): void {
   if (!itemId || durationMs <= 0) return;
-  const BUCKET = 30_000; // every 30s
-  const count = Math.floor(durationMs / BUCKET);
-  for (let i = 0; i <= count; i++) {
-    const posMs = i * BUCKET;
-    setTimeout(() => prefetchFrame(posMs, itemId), i * INTERVAL_STEP_MS);
+  const BUCKET = 30_000;
+  const origin = Math.round(startMs / BUCKET) * BUCKET;
+  const maxCount = Math.floor(durationMs / BUCKET);
+  const ordered: number[] = [origin];
+  for (let i = 1; i <= maxCount; i++) {
+    const fwd = origin + i * BUCKET;
+    const bwd = origin - i * BUCKET;
+    if (fwd <= durationMs) ordered.push(fwd);
+    if (bwd >= 0) ordered.push(bwd);
   }
+  ordered.forEach((posMs, i) => {
+    setTimeout(() => prefetchFrame(posMs, itemId), i * INTERVAL_STEP_MS);
+  });
 }
