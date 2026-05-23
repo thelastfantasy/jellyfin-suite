@@ -3,7 +3,7 @@ import { createFrameStepButtons, stepFrames } from './framestepper';
 import { takeScreenshot } from './screenshot';
 import { initGestures, setSeekSeconds } from './gestures';
 import { initLongPress } from './long-press';
-import { initTrickplay, startIntervalPrefetch } from './trickplay';
+import { initTrickplay } from './trickplay';
 import { t } from './i18n';
 import { ICON_SCREENSHOT } from './icons';
 
@@ -93,13 +93,6 @@ function tryInject(): void {
     initGestures(videoEl, getItemId);
     initLongPress(videoEl, () => _speedRate);
     void initTrickplay(getItemId(), videoEl);
-    // Trigger interval prefetch once duration is known
-    videoEl.addEventListener('loadedmetadata', () => {
-      const id = getItemId();
-      if (id && isFinite(videoEl.duration) && videoEl.duration > 0) {
-        startIntervalPrefetch(id, videoEl.duration * 1000, videoEl.currentTime * 1000);
-      }
-    }, { once: true });
   }
 
   // Ensure root marker exists (idempotent)
