@@ -15,6 +15,9 @@ public sealed class SeekPreviewService : IDisposable
 {
     private const string BinaryName = "seek-preview-linux-x64";
 
+    /// <summary>Disk cache root written by the Rust daemon. C# polls this for SSE readiness.</summary>
+    public const string CacheDirectory = "/tmp/seek-preview";
+
     private readonly ILogger<SeekPreviewService> _logger;
 
     private readonly string _socketPath;
@@ -51,11 +54,9 @@ public sealed class SeekPreviewService : IDisposable
 
         try
         {
-            // Kill stale socket file
             if (File.Exists(_socketPath))
                 File.Delete(_socketPath);
 
-            // Ensure the binary is executable — .NET's ZipArchive does not preserve Unix permissions.
             try { File.SetUnixFileMode(_binaryPath, UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute); }
             catch { /* non-Unix or permission denied — proceed anyway */ }
 
@@ -65,8 +66,6 @@ public sealed class SeekPreviewService : IDisposable
                 RedirectStandardError = true,
             };
 
-            // jellyfin-ffmpeg installs its .so files under /usr/lib/jellyfin-ffmpeg/lib/,
-            // which is not on the default ldconfig path.
             psi.Environment["LD_LIBRARY_PATH"] = "/usr/lib/jellyfin-ffmpeg/lib";
 
             _process = System.Diagnostics.Process.Start(psi);
@@ -76,7 +75,6 @@ public sealed class SeekPreviewService : IDisposable
                 return;
             }
 
-            // Pipe stderr to Jellyfin log
             _ = Task.Run(async () =>
             {
                 string? line;
@@ -84,7 +82,6 @@ public sealed class SeekPreviewService : IDisposable
                     _logger.LogDebug("[seek-preview] {Line}", line);
             }, ct);
 
-            // Wait for socket file to appear (max 5 s)
             for (var i = 0; i < 50 && !File.Exists(_socketPath); i++)
                 await Task.Delay(100, ct);
 
@@ -99,7 +96,6 @@ public sealed class SeekPreviewService : IDisposable
 
             _logger.LogInformation("[SeekPreview] Daemon ready at {Path}", _socketPath);
 
-            // Auto-restart on exit
             _ = Task.Run(async () =>
             {
                 await _process.WaitForExitAsync(CancellationToken.None);
@@ -122,11 +118,9 @@ public sealed class SeekPreviewService : IDisposable
         return sock;
     }
 
-    /// <summary>
-    /// Fetches a JPEG frame for the given file at pos_ms. Returns null on failure.
-    /// </summary>
+    /// <summary>Fetches a JPEG frame for the given item at pos_ms. Returns null on failure.</summary>
     public async Task<byte[]?> FetchAsync(
-        string filePath, long posMs, int width, CancellationToken ct = default)
+        string filePath, long posMs, int width, Guid itemId, CancellationToken ct = default)
     {
         if (_fetchSocket == null) return null;
 
@@ -134,7 +128,7 @@ public sealed class SeekPreviewService : IDisposable
         try
         {
             var id = Interlocked.Increment(ref _nextRequestId);
-            await SendRequestAsync(_fetchSocket, 0x01, id, posMs, width, filePath, ct);
+            await SendRequestAsync(_fetchSocket, 0x01, id, posMs, width, filePath, itemId, ct);
             return await ReceiveResponseAsync(_fetchSocket, ct);
         }
         catch (Exception ex)
@@ -148,10 +142,8 @@ public sealed class SeekPreviewService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Sends a prefetch hint. Fire-and-forget — never blocks the caller.
-    /// </summary>
-    public void Prefetch(string filePath, long posMs, int width)
+    /// <summary>Sends a prefetch hint. Fire-and-forget — never blocks the caller.</summary>
+    public void Prefetch(string filePath, long posMs, int width, Guid itemId)
     {
         if (_prefetchSocket == null) return;
 
@@ -162,8 +154,7 @@ public sealed class SeekPreviewService : IDisposable
             {
                 var id = Interlocked.Increment(ref _nextRequestId);
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-                await SendRequestAsync(_prefetchSocket, 0x02, id, posMs, width, filePath, cts.Token);
-                // Read and discard the ACK (jpeg_len = 0)
+                await SendRequestAsync(_prefetchSocket, 0x02, id, posMs, width, filePath, itemId, cts.Token);
                 var buf = new byte[8];
                 _ = await ReceiveBytesAsync(_prefetchSocket, buf, cts.Token);
             }
@@ -181,17 +172,19 @@ public sealed class SeekPreviewService : IDisposable
     private static async Task SendRequestAsync(
         Socket sock,
         byte priority, uint requestId, long posMs, int width,
-        string filePath, CancellationToken ct)
+        string filePath, Guid itemId, CancellationToken ct)
     {
         var pathBytes = System.Text.Encoding.UTF8.GetBytes(filePath);
-        // 1 + 4 + 8 + 4 + 4 + N
-        var buf = new byte[21 + pathBytes.Length];
+        var itemIdBytes = System.Text.Encoding.ASCII.GetBytes(itemId.ToString("N")); // always 32 bytes
+        // 1 + 4 + 8 + 4 + 4 + N + 32
+        var buf = new byte[21 + pathBytes.Length + 32];
         buf[0] = priority;
         BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(1), requestId);
         BinaryPrimitives.WriteInt64LittleEndian(buf.AsSpan(5), posMs);
         BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(13), width);
         BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(17), (uint)pathBytes.Length);
         pathBytes.CopyTo(buf, 21);
+        itemIdBytes.CopyTo(buf, 21 + pathBytes.Length);
         await sock.SendAsync(buf, SocketFlags.None, ct);
     }
 

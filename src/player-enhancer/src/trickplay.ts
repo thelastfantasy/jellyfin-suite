@@ -15,6 +15,9 @@ const _loadedKeys = new Set<string>();
 const _prefetchSent = new Map<string, number>();
 const PREFETCH_DEDUP_MS = 200;
 
+// SSE connection for ready-frame notifications (one per active video)
+let _readyStreamEs: EventSource | null = null;
+
 function getRawToken(): string {
   const ac = (window as any).ApiClient;
   if (!ac) return '';
@@ -28,7 +31,9 @@ function getServerAddress(): string {
 }
 
 export async function initTrickplay(itemId: string, _videoEl: HTMLVideoElement): Promise<void> {
-  ensureMeta(itemId);
+  const meta = ensureMeta(itemId);
+  if (!meta || !itemId) return;
+  openReadyStream(itemId, meta);
 }
 
 function ensureMeta(itemId: string): SeekPreviewMeta | undefined {
@@ -39,6 +44,34 @@ function ensureMeta(itemId: string): SeekPreviewMeta | undefined {
     if (base) _cache.set(itemId, { base, token });
   }
   return _cache.get(itemId);
+}
+
+function openReadyStream(itemId: string, meta: SeekPreviewMeta): void {
+  // Close previous stream when switching videos
+  if (_readyStreamEs) {
+    _readyStreamEs.close();
+    _readyStreamEs = null;
+  }
+
+  const url = `${meta.base}/JellyfinSuite/SeekPreview/${itemId}/ready-stream?api_key=${meta.token}`;
+  const es = new EventSource(url);
+  _readyStreamEs = es;
+
+  es.onmessage = (e) => {
+    const posMs = Number(e.data);
+    if (!isFinite(posMs)) return;
+    const key = `${itemId}:${posMs}`;
+    if (_loadedKeys.has(key)) return;
+    // Silently preload the fetch URL into the browser cache and mark as loaded.
+    const img = new Image();
+    img.onload = () => _loadedKeys.add(key);
+    img.src = makeUrl(meta, itemId, posMs);
+  };
+
+  es.onerror = () => {
+    es.close();
+    if (_readyStreamEs === es) _readyStreamEs = null;
+  };
 }
 
 function ensureThumbEl(): { wrap: HTMLDivElement; img: HTMLImageElement } {
@@ -69,7 +102,6 @@ export function showTrickplayThumb(
 
   const { wrap, img: thumbImg } = ensureThumbEl();
 
-  // Size is controlled by CSS (max-width: 33dvw; max-height: 22dvh)
   const rect = videoEl.getBoundingClientRect();
   const osd = document.querySelector<HTMLElement>('.jfs-seek-osd');
   if (osd) {
@@ -84,7 +116,6 @@ export function showTrickplayThumb(
   const aligned = Math.floor(posMs / 500) * 500;
   const exactKey = `${itemId}:${aligned}`;
 
-  // Already targeting this frame — just ensure visible
   if (_pendingKey === exactKey) {
     wrap.style.display = 'block';
     return;
@@ -93,7 +124,6 @@ export function showTrickplayThumb(
 
   const exactUrl = makeUrl(meta, itemId, aligned);
 
-  // Exact frame already in browser cache — show immediately without flash
   if (_loadedKeys.has(exactKey)) {
     thumbImg.src = exactUrl;
     wrap.style.display = 'block';
@@ -101,7 +131,6 @@ export function showTrickplayThumb(
   }
 
   // Fuzzy match: show nearest already-loaded frame as placeholder while exact loads.
-  // Searching outward in 500ms steps up to ±6s, nearest first.
   const FUZZY_RANGE = 6000;
   for (let d = 500; d <= FUZZY_RANGE; d += 500) {
     if (_loadedKeys.has(`${itemId}:${aligned - d}`)) {
@@ -116,7 +145,6 @@ export function showTrickplayThumb(
     }
   }
 
-  // Preload exact frame; swap atomically when ready, suppressing broken-image icon.
   const preload = new Image();
   preload.onload = () => {
     _loadedKeys.add(exactKey);
@@ -146,12 +174,9 @@ export function hideTrickplayThumb(): void {
   if (_thumbWrap) {
     _thumbWrap.style.display = 'none';
   }
-  // Clear pending key so any in-flight preload won't re-show the element
   _pendingKey = null;
 }
 
-// Proactively prefetch frames at every 30s interval, radiating outward from
-// startMs (the resume point) so nearby frames are warmed up first.
 const INTERVAL_STEP_MS = 400;
 export function startIntervalPrefetch(itemId: string, durationMs: number, startMs = 0): void {
   if (!itemId || durationMs <= 0) return;

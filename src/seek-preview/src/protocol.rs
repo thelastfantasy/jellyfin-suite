@@ -9,6 +9,9 @@ pub struct Request {
     pub pos_ms: i64,
     pub width: u32,
     pub path: PathBuf,
+    /// Jellyfin item ID, 32-char hex (UUID "N" format). Used as the disk-cache directory name
+    /// so C# can check frame readiness via File.Exists without replicating the hash logic.
+    pub item_id: String,
 }
 
 pub async fn read_req(stream: &mut UnixStream) -> Result<Request> {
@@ -20,7 +23,10 @@ pub async fn read_req(stream: &mut UnixStream) -> Result<Request> {
     let mut path_bytes = vec![0u8; path_len];
     stream.read_exact(&mut path_bytes).await?;
     let path_str = String::from_utf8(path_bytes)?;
-    Ok(Request { priority, request_id, pos_ms, width, path: PathBuf::from(path_str) })
+    let mut id_bytes = [0u8; 32];
+    stream.read_exact(&mut id_bytes).await?;
+    let item_id = String::from_utf8(id_bytes.to_vec())?;
+    Ok(Request { priority, request_id, pos_ms, width, path: PathBuf::from(path_str), item_id })
 }
 
 pub async fn write_response(stream: &mut UnixStream, id: u32, data: &[u8]) -> Result<()> {
