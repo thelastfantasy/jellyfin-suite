@@ -105,6 +105,8 @@ public class SeekPreviewController : ControllerBase
             return;
         }
 
+        await _seekPreview.EnsureStartedAsync(cancellationToken);
+
         // Build the set of all 30-second-aligned positions for this video.
         var pending = new HashSet<long>();
         for (var ms = 0L; ms <= durationMs; ms += 30_000)
@@ -114,7 +116,13 @@ public class SeekPreviewController : ControllerBase
         Response.Headers["Cache-Control"] = "no-cache, no-store";
         Response.Headers["X-Accel-Buffering"] = "no";
 
+        var filePath = item.Path;
         var cacheDir = Path.Combine(SeekPreviewService.CacheDirectory, itemId.ToString("N"));
+
+        // Kick off all prefetch requests immediately so the Rust daemon can saturate its
+        // decode slots (up to MAX_CONCURRENT_DECODES) without waiting for the client.
+        foreach (var ms in pending)
+            _seekPreview.Prefetch(filePath, ms, DefaultWidth, itemId);
 
         while (pending.Count > 0 && !cancellationToken.IsCancellationRequested)
         {
@@ -145,6 +153,11 @@ public class SeekPreviewController : ControllerBase
 
             if (pending.Count > 0)
             {
+                // Re-issue prefetch for frames still not on disk — the Rust daemon may have
+                // dropped earlier requests when all decode slots were busy.
+                foreach (var ms in pending)
+                    _seekPreview.Prefetch(filePath, ms, DefaultWidth, itemId);
+
                 try { await Task.Delay(500, cancellationToken); }
                 catch (OperationCanceledException) { return; }
             }

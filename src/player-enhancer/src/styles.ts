@@ -367,9 +367,10 @@ body.jfs-seeking .upNextContainer {
   border-radius: 6px;
   object-fit: contain;
   background-color: #000;
-  /* 1/5 viewport width; 120px floor so it stays readable on narrow phone screens */
-  max-width: clamp(120px, 20dvw, 280px);
-  max-height: clamp(80px, 14dvh, 180px);
+  /* Force 1/5 viewport width regardless of image natural size (HiDPI devices return
+     320px physical pixels which maps to only ~160 CSS px at DPR 2). */
+  width: clamp(120px, 20dvw, 320px);
+  height: auto;
 }
 `;
 

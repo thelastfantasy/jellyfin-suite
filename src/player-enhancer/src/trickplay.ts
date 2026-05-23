@@ -62,10 +62,7 @@ function openReadyStream(itemId: string, meta: SeekPreviewMeta): void {
     if (!isFinite(posMs)) return;
     const key = `${itemId}:${posMs}`;
     if (_loadedKeys.has(key)) return;
-    // Silently preload the fetch URL into the browser cache and mark as loaded.
-    const img = new Image();
-    img.onload = () => _loadedKeys.add(key);
-    img.src = makeUrl(meta, itemId, posMs);
+    _loadedKeys.add(key);
   };
 
   es.onerror = () => {
@@ -117,7 +114,6 @@ export function showTrickplayThumb(
   const exactKey = `${itemId}:${aligned}`;
 
   if (_pendingKey === exactKey) {
-    wrap.style.display = 'block';
     return;
   }
   _pendingKey = exactKey;
@@ -131,7 +127,8 @@ export function showTrickplayThumb(
   }
 
   // Fuzzy match: show nearest already-loaded frame as placeholder while exact loads.
-  const FUZZY_RANGE = 6000;
+  // Range must cover half the 30s-aligned interval (15000ms) so no gap is left uncovered.
+  const FUZZY_RANGE = 15000;
   for (let d = 500; d <= FUZZY_RANGE; d += 500) {
     if (_loadedKeys.has(`${itemId}:${aligned - d}`)) {
       thumbImg.src = makeUrl(meta, itemId, aligned - d);
@@ -175,22 +172,4 @@ export function hideTrickplayThumb(): void {
     _thumbWrap.style.display = 'none';
   }
   _pendingKey = null;
-}
-
-const INTERVAL_STEP_MS = 400;
-export function startIntervalPrefetch(itemId: string, durationMs: number, startMs = 0): void {
-  if (!itemId || durationMs <= 0) return;
-  const BUCKET = 30_000;
-  const origin = Math.round(startMs / BUCKET) * BUCKET;
-  const maxCount = Math.floor(durationMs / BUCKET);
-  const ordered: number[] = [origin];
-  for (let i = 1; i <= maxCount; i++) {
-    const fwd = origin + i * BUCKET;
-    const bwd = origin - i * BUCKET;
-    if (fwd <= durationMs) ordered.push(fwd);
-    if (bwd >= 0) ordered.push(bwd);
-  }
-  ordered.forEach((posMs, i) => {
-    setTimeout(() => prefetchFrame(posMs, itemId), i * INTERVAL_STEP_MS);
-  });
 }
