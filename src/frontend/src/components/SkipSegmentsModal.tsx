@@ -348,7 +348,7 @@ export function SkipSegmentsModal({ onClose, onConfirm, itemId, videoDurationMs 
                     <button
                       key={idx}
                       class={`jfs-skip-chapter-item${isChapterSkipped(idx) ? ' jfs-skip-chapter-item--active' : ''}`}
-                      onClick={() => toggleChapter(idx)}
+                      onClick={(e) => { toggleChapter(idx); (e.currentTarget as HTMLButtonElement).blur(); }}
                     >
                       <span class="jfs-skip-chapter-name">
                         {ch.name}

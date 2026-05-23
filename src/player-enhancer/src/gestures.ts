@@ -194,7 +194,7 @@ export function initGestures(videoEl: HTMLVideoElement, getItemId: () => string)
       gs.lastMoveTime = now;
 
       const dur = isFinite(videoEl.duration) ? videoEl.duration : 0;
-      const sPerVw = Math.max(0.1, Math.min(10, dur * 0.001));
+      const sPerVw = Math.min(6, Math.max(1.2, dur * 0.002));
       gs.seekOffsetSec += (deltaX / window.innerWidth * 100) * sPerVw;
       // Don't touch videoEl.currentTime here — commit on touchend
       const targetSec = Math.max(0, Math.min(dur, gs.seekAnchorSec + gs.seekOffsetSec));
