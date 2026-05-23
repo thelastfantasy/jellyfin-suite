@@ -47,6 +47,7 @@ Automatically injected into the Jellyfin web player. No configuration needed.
 - **Mobile double-tap seek**: Double-tap left third to seek back, right third to seek forward, center third to toggle play/pause; seek duration configurable in the plugin management panel (default 10 s, touch devices only)
 - **Mobile swipe controls**: Swipe up/down on the left half to adjust brightness (0–200%), right half for volume (0–100%); OSD percentage indicator shown during gesture (touch devices only)
 - **Mobile long-press speed-up**: Long-press the bottom third of the screen during playback to accelerate to a configurable speed (1.25×–4×, default 2×) with haptic feedback and OSD; drag horizontally while holding to seek in real time at 1× speed; release the drag to resume speed automatically; speed rate configurable in the plugin management panel (touch devices only)
+- **Mobile trickplay seek-preview**: Drag horizontally on the video during playback to seek; a frame thumbnail from Jellyfin's trickplay index is displayed above the seek OSD in real time, letting you confirm the target frame before release; seek commits on finger-lift; falls back gracefully if trickplay data is unavailable (touch devices only)
 
 ---
 
