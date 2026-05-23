@@ -61,6 +61,7 @@ tests/JellyfinRecents.Tests/obj/
 
 # Rust
 src/poster-gen/target/
+src/seek-preview/target/
 
 # poster-gen 编译产物（运行时从 Docker 构建，不入仓库）
 src/poster-gen/poster-gen-linux-x64
@@ -69,6 +70,9 @@ src/JellyfinRecents.Plugin/poster-gen-linux-x64
 src/JellyfinSuite.Plugin/poster-gen-linux-x64
 src/JellyfinRecents.Plugin/poster-gen-win-x64.exe
 src/JellyfinSuite.Plugin/poster-gen-win-x64.exe
+
+# seek-preview 编译产物
+src/JellyfinSuite.Plugin/seek-preview-linux-x64
 
 # Vite 构建缓存
 src/frontend/.vite/

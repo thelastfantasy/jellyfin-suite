@@ -1601,12 +1601,15 @@ a.jfs-card__series-name:hover {
   padding: 0.25rem 0.6rem;
   font-size: 0.85rem;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .jfs-poster-settings__preset-btn--active {
   background: var(--theme-highlight-foreground-color, #00a4dc);
   border-color: transparent;
   color: #fff;
 }
+.jfs-poster-settings__preset-btn:focus:not(:focus-visible) { outline: none; }
+.jfs-poster-settings__preset-btn--active:focus { background: var(--theme-highlight-foreground-color, #00a4dc); outline: none; }
 .jfs-poster-settings__radio-group { display: flex; gap: 1rem; }
 .jfs-poster-settings__radio {
   display: flex;
@@ -1656,6 +1659,7 @@ a.jfs-card__series-name:hover {
   display: flex;
   align-items: center;
   gap: 0.3rem;
+  -webkit-tap-highlight-color: transparent;
 }
 .jfs-poster-settings__theme-btn input,
 .jfs-poster-settings__font-btn input { display: none; }
@@ -1665,6 +1669,10 @@ a.jfs-card__series-name:hover {
   border-color: transparent;
   color: #fff;
 }
+.jfs-poster-settings__theme-btn:focus:not(:focus-visible),
+.jfs-poster-settings__font-btn:focus:not(:focus-visible) { outline: none; }
+.jfs-poster-settings__theme-btn--active:focus,
+.jfs-poster-settings__font-btn--active:focus { background: var(--theme-highlight-foreground-color, #00a4dc); outline: none; }
 .jfs-poster-settings__font-btn--custom {
   border-color: rgba(255, 180, 50, 0.5);
   color: #ffb432;
@@ -2211,6 +2219,7 @@ a.jfs-card__series-name:hover {
   min-width: 28px;
   text-align: center;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) {
   .jfs-tspicker__btn:hover {
@@ -2223,6 +2232,8 @@ a.jfs-card__series-name:hover {
   border-color: transparent;
   color: #fff;
 }
+.jfs-tspicker__btn:focus:not(:focus-visible) { outline: none; }
+.jfs-tspicker__btn--active:focus { background: var(--theme-highlight-foreground-color, #00a4dc); outline: none; }
 
 /* ── Card: Skip Segments Button (below poster-btn) ───────────────────────── */
 
@@ -2372,6 +2383,7 @@ a.jfs-card__series-name:hover {
   color: rgba(255,255,255,0.75);
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   text-align: left;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (hover: hover) {
@@ -2383,6 +2395,8 @@ a.jfs-card__series-name:hover {
   border-color: transparent;
   color: #fff;
 }
+.jfs-skip-chapter-item:focus:not(:focus-visible) { outline: none; }
+.jfs-skip-chapter-item--active:focus { background: var(--theme-highlight-foreground-color, #00a4dc); outline: none; }
 
 .jfs-skip-chapter-name { font-weight: 500; }
 .jfs-skip-chapter-guess { font-size: 0.72rem; font-weight: 400; color: #f87; opacity: 0.9; }

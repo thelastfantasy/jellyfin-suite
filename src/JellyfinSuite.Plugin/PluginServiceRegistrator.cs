@@ -45,6 +45,14 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // 播放器增强：启动时幂等追加 enhancer URL 到 web/config.json
         serviceCollection.AddHostedService<PlayerEnhancerEntryPoint>();
 
+        // SeekPreviewService: 单例，管理 seek-preview Rust daemon 进程和 Unix socket 连接
+        serviceCollection.AddSingleton<SeekPreviewService>(sp =>
+        {
+            var appPaths = applicationHost.Resolve<MediaBrowser.Common.Configuration.IApplicationPaths>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SeekPreviewService>>();
+            return new SeekPreviewService(appPaths, logger);
+        });
+
         // FontAcquisitionService: 先注册为 Singleton（供 Controller/JobService 注入），
         // 再用同一实例注册为 IHostedService（触发 StartAsync/StopAsync 生命周期）
         serviceCollection.AddSingleton<FontAcquisitionService>(sp =>

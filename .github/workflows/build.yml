@@ -19,7 +19,15 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src/poster-gen
+          workspaces: |
+            src/poster-gen
+            src/seek-preview
+
+      - name: Install FFmpeg 7.x dev libs
+        run: |
+          sudo add-apt-repository -y ppa:ubuntuhandbook1/ffmpeg7
+          sudo apt-get update
+          sudo apt-get install -y pkg-config clang libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

@@ -285,9 +285,9 @@ const CSS = `
 
 .jfs-speed-osd {
   position: fixed;
-  top: 15%;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background: rgba(0, 0, 0, 0.65);
   color: #fff;
   border-radius: 12px;
@@ -312,6 +312,64 @@ const CSS = `
   opacity: 0.85;
   line-height: 1.3;
   margin-top: 2px;
+}
+
+/* Hide Jellyfin OSD during drag-seek so it doesn't pop up when video is paused */
+body.jfs-seeking .videoOsdBottom,
+body.jfs-seeking .videoOsdTop,
+body.jfs-seeking .upNextContainer {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.jfs-seek-osd {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 20px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 99999;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.jfs-seek-osd__line1 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.jfs-speed-osd__thumb-wrap {
+  position: fixed;
+  left: 50%;
+  z-index: 99999;
+  pointer-events: none;
+  /* top and transform set dynamically */
+  padding: 5px;
+  background: rgba(10, 10, 10, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
+  display: none;
+}
+
+.jfs-speed-osd__thumb-img {
+  display: block;
+  border-radius: 6px;
+  object-fit: contain;
+  background-color: #000;
+  /* 1/5 viewport width; 120px floor so it stays readable on narrow phone screens */
+  max-width: clamp(120px, 20dvw, 280px);
+  max-height: clamp(80px, 14dvh, 180px);
 }
 `;
 

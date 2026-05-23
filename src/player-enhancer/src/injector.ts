@@ -3,6 +3,7 @@ import { createFrameStepButtons, stepFrames } from './framestepper';
 import { takeScreenshot } from './screenshot';
 import { initGestures, setSeekSeconds } from './gestures';
 import { initLongPress } from './long-press';
+import { initTrickplay, startIntervalPrefetch } from './trickplay';
 import { t } from './i18n';
 import { ICON_SCREENSHOT } from './icons';
 
@@ -39,8 +40,17 @@ function extractItemIdFromUrl(url: string): string {
   return extractItemIdFromSearch(url.slice(qIndex + 1));
 }
 
+// Jellyfin video src: /Videos/{itemId}/master.m3u8?...
+function extractItemIdFromVideoSrc(src: string): string {
+  const m = src.match(/\/Videos\/([0-9a-f-]{32,36})\//i);
+  return m?.[1] ?? '';
+}
+
 function getItemId(): string {
-  return extractItemIdFromUrl(window.location.href) || _cachedItemId;
+  return extractItemIdFromUrl(window.location.href)
+    || extractItemIdFromUrl(window.location.hash)
+    || (_currentVideoEl ? extractItemIdFromVideoSrc(_currentVideoEl.src) : '')
+    || _cachedItemId;
 }
 
 export function initInjector(): void {
@@ -80,8 +90,16 @@ function tryInject(): void {
   if (videoEl !== _currentVideoEl) {
     if (_currentVideoEl) _currentVideoEl.style.filter = '';
     _currentVideoEl = videoEl;
-    const { activateSwipeTransfer } = initGestures(videoEl);
-    initLongPress(videoEl, () => _speedRate, activateSwipeTransfer);
+    initGestures(videoEl, getItemId);
+    initLongPress(videoEl, () => _speedRate);
+    void initTrickplay(getItemId(), videoEl);
+    // Trigger interval prefetch once duration is known
+    videoEl.addEventListener('loadedmetadata', () => {
+      const id = getItemId();
+      if (id && isFinite(videoEl.duration) && videoEl.duration > 0) {
+        startIntervalPrefetch(id, videoEl.duration * 1000);
+      }
+    }, { once: true });
   }
 
   // Ensure root marker exists (idempotent)
