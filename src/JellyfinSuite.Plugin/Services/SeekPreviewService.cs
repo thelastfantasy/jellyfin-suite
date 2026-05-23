@@ -15,7 +15,6 @@ public sealed class SeekPreviewService : IDisposable
 {
     private const string BinaryName = "seek-preview-linux-x64";
 
-    private readonly IApplicationPaths _appPaths;
     private readonly ILogger<SeekPreviewService> _logger;
 
     private readonly string _socketPath;
@@ -36,10 +35,10 @@ public sealed class SeekPreviewService : IDisposable
 
     public SeekPreviewService(IApplicationPaths appPaths, ILogger<SeekPreviewService> logger)
     {
-        _appPaths = appPaths;
         _logger = logger;
         _socketPath = Path.Combine(appPaths.DataPath, "jfs-seek-preview.sock");
-        _binaryPath = Path.Combine(appPaths.PluginsPath, "JellyfinSuite", BinaryName);
+        var dir = Path.GetDirectoryName(typeof(SeekPreviewService).Assembly.Location)!;
+        _binaryPath = Path.Combine(dir, BinaryName);
     }
 
     public bool IsAvailable => RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
@@ -55,6 +54,10 @@ public sealed class SeekPreviewService : IDisposable
             // Kill stale socket file
             if (File.Exists(_socketPath))
                 File.Delete(_socketPath);
+
+            // Ensure the binary is executable — .NET's ZipArchive does not preserve Unix permissions.
+            try { File.SetUnixFileMode(_binaryPath, UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute); }
+            catch { /* non-Unix or permission denied — proceed anyway */ }
 
             var psi = new System.Diagnostics.ProcessStartInfo(_binaryPath, _socketPath)
             {

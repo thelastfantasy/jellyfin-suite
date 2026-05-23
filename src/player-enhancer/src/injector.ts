@@ -97,7 +97,7 @@ function tryInject(): void {
     videoEl.addEventListener('loadedmetadata', () => {
       const id = getItemId();
       if (id && isFinite(videoEl.duration) && videoEl.duration > 0) {
-        startIntervalPrefetch(id, videoEl.duration * 1000);
+        startIntervalPrefetch(id, videoEl.duration * 1000, videoEl.currentTime * 1000);
       }
     }, { once: true });
   }
