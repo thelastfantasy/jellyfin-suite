@@ -202,18 +202,14 @@ export function initGestures(videoEl: HTMLVideoElement, getItemId: () => string)
       showSeekOsd(gs.seekOffsetSec, targetSec);
 
       const velPxPerMs = Math.abs(deltaX) / dt;
-      const dir = deltaX > 0 ? 1 : -1;
       const targetMs = targetSec * 1000;
       const itemId = getItemId();
       if (velPxPerMs < 8) {
         prefetchFrame(targetMs - 500, itemId);
         prefetchFrame(targetMs,       itemId);
         prefetchFrame(targetMs + 500, itemId);
-      } else {
-        prefetchFrame(targetMs + dir * 1000, itemId);
-        prefetchFrame(targetMs + dir * 2000, itemId);
-        prefetchFrame(targetMs + dir * 4000, itemId);
       }
+      // High-speed drag: skip prefetch to avoid flooding the daemon with large-file decodes
       showTrickplayThumb(targetMs, itemId, videoEl);
       return;
     }

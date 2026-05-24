@@ -25,6 +25,9 @@ public sealed class SeekPreviewService : IDisposable
 
     private Process? _process;
 
+    // Guards EnsureStartedAsync against concurrent daemon launches
+    private readonly SemaphoreSlim _startLock = new(1, 1);
+
     // FETCH connection: one request at a time, protected by semaphore
     private Socket? _fetchSocket;
     private readonly SemaphoreSlim _fetchLock = new(1, 1);
@@ -50,17 +53,19 @@ public sealed class SeekPreviewService : IDisposable
     public async Task EnsureStartedAsync(CancellationToken ct = default)
     {
         if (!IsAvailable) return;
-        if (_process is { HasExited: false }) return;
+        if (_process is { HasExited: false }) return;  // fast path
 
+        await _startLock.WaitAsync(ct);
         try
         {
+            if (_process is { HasExited: false }) return;  // double-check inside lock
             if (File.Exists(_socketPath))
                 File.Delete(_socketPath);
 
             try { File.SetUnixFileMode(_binaryPath, UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute); }
             catch { /* non-Unix or permission denied — proceed anyway */ }
 
-            var psi = new System.Diagnostics.ProcessStartInfo(_binaryPath, _socketPath)
+            var psi = new System.Diagnostics.ProcessStartInfo("nice", $"-n 10 \"{_binaryPath}\" \"{_socketPath}\"")
             {
                 UseShellExecute = false,
                 RedirectStandardError = true,
@@ -79,7 +84,7 @@ public sealed class SeekPreviewService : IDisposable
             {
                 string? line;
                 while ((line = await _process.StandardError.ReadLineAsync()) != null)
-                    _logger.LogDebug("[seek-preview] {Line}", line);
+                    _logger.LogInformation("{Line}", line);
             }, ct);
 
             for (var i = 0; i < 50 && !File.Exists(_socketPath); i++)
@@ -107,6 +112,10 @@ public sealed class SeekPreviewService : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "[SeekPreview] Failed to start daemon");
+        }
+        finally
+        {
+            _startLock.Release();
         }
     }
 
@@ -221,6 +230,7 @@ public sealed class SeekPreviewService : IDisposable
 
         try { _fetchSocket?.Dispose(); } catch { }
         try { _prefetchSocket?.Dispose(); } catch { }
+        _startLock.Dispose();
         _fetchLock.Dispose();
         _prefetchConnLock.Dispose();
 

@@ -92,7 +92,7 @@ function tryInject(): void {
     _currentVideoEl = videoEl;
     initGestures(videoEl, getItemId);
     initLongPress(videoEl, () => _speedRate);
-    void initTrickplay(getItemId(), videoEl);
+    initTrickplay(getItemId, videoEl);
   }
 
   // Ensure root marker exists (idempotent)

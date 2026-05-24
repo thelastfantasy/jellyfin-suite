@@ -4,12 +4,15 @@ use crate::protocol::{read_req, write_ack, write_response};
 use lru::LruCache;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::net::UnixStream;
 use tokio::sync::{Mutex, Semaphore};
 
 const PRIORITY_FETCH: u8 = 0x01;
 const CACHE_CAP: usize = 20;
 const MAX_CONCURRENT_DECODES: usize = 6;
+// PREFETCH is capped at N-1, always leaving one slot for interactive FETCH.
+const MAX_CONCURRENT_PREFETCH: usize = MAX_CONCURRENT_DECODES - 1;
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) struct CacheKey {
@@ -23,7 +26,10 @@ pub struct State {
     pub cache: Mutex<LruCache<CacheKey, JpegData>>,
     pub disk: Arc<DiskCache>,
     active_item_id: Mutex<Option<String>>,
+    /// Total decode pool (FETCH + PREFETCH together).
     decode_sem: Arc<Semaphore>,
+    /// Additional cap for PREFETCH only — keeps one slot permanently free for FETCH.
+    prefetch_sem: Arc<Semaphore>,
 }
 
 impl State {
@@ -33,6 +39,7 @@ impl State {
             disk,
             active_item_id: Mutex::new(None),
             decode_sem: Arc::new(Semaphore::new(MAX_CONCURRENT_DECODES)),
+            prefetch_sem: Arc::new(Semaphore::new(MAX_CONCURRENT_PREFETCH)),
         })
     }
 }
@@ -82,9 +89,14 @@ pub async fn handle_conn(mut stream: UnixStream, state: Arc<State>) {
                 match tokio::task::spawn_blocking(move || -> anyhow::Result<Vec<u8>> {
                     let _permit = permit;
                     if let Some(bytes) = disk.read(&item_id, &path, aligned_pos) {
+                        eprintln!("[seek-preview] FETCH  hit  {}ms ({} B)", aligned_pos, bytes.len());
                         return Ok(bytes);
                     }
+                    let t = Instant::now();
                     let bytes = decode_and_encode(&path, aligned_pos, width)?;
+                    let elapsed = t.elapsed();
+                    eprintln!("[seek-preview] FETCH  decode {}ms → {:.0}ms ({} B)",
+                        aligned_pos, elapsed.as_secs_f64() * 1000.0, bytes.len());
                     disk.write(&item_id, &path, aligned_pos, &bytes);
                     Ok(bytes)
                 })
@@ -112,6 +124,11 @@ pub async fn handle_conn(mut stream: UnixStream, state: Arc<State>) {
             let _ = write_ack(&mut stream, req.request_id).await;
             let already_on_disk = state.disk.exists(&req.item_id, &req.path, aligned_pos);
             if cached.is_none() && !already_on_disk {
+                // Acquire prefetch slot first (caps at MAX_CONCURRENT_PREFETCH),
+                // then a decode slot — guarantees FETCH always has at least one free.
+                let Ok(prefetch_permit) = state.prefetch_sem.clone().try_acquire_owned() else {
+                    continue;
+                };
                 let Ok(permit) = state.decode_sem.clone().try_acquire_owned() else {
                     continue;
                 };
@@ -122,8 +139,13 @@ pub async fn handle_conn(mut stream: UnixStream, state: Arc<State>) {
                 let k2 = key.clone();
                 tokio::spawn(async move {
                     match tokio::task::spawn_blocking(move || -> anyhow::Result<Vec<u8>> {
+                        let _prefetch_permit = prefetch_permit;
                         let _permit = permit;
+                        let t = Instant::now();
                         let bytes = decode_and_encode(&path, aligned_pos, width)?;
+                        let elapsed = t.elapsed();
+                        eprintln!("[seek-preview] PREFETCH {}ms → {:.0}ms ({} B)",
+                            aligned_pos, elapsed.as_secs_f64() * 1000.0, bytes.len());
                         disk.write(&item_id, &path, aligned_pos, &bytes);
                         Ok(bytes)
                     })
