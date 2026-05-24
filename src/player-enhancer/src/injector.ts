@@ -11,6 +11,9 @@ const ROOT_ID = 'jfs-enhancer-root';
 
 let _currentVideoEl: HTMLVideoElement | null = null;
 let _cachedItemId = '';
+// URL-based item ID captured when the video element switches; cleared once video src catches up.
+// Prevents stale currentSrc from leaking the previous video's item ID during transition.
+let _pendingItemId = '';
 let _speedRate = 2.0;
 
 async function loadGestureConfig(): Promise<void> {
@@ -47,9 +50,22 @@ function extractItemIdFromVideoSrc(src: string): string {
 }
 
 function getItemId(): string {
-  // Prefer video source ID — always the exact episode/item being played.
-  // URL may contain a parent series/season ID in some navigation paths.
-  return (_currentVideoEl ? extractItemIdFromVideoSrc(_currentVideoEl.currentSrc || _currentVideoEl.src) : '')
+  const videoId = _currentVideoEl
+    ? extractItemIdFromVideoSrc(_currentVideoEl.currentSrc || _currentVideoEl.src)
+    : '';
+
+  // Transition mode: video element just switched but currentSrc still holds the old stream.
+  // Return the URL-captured pending ID until video src catches up.
+  if (_pendingItemId) {
+    if (videoId === _pendingItemId) {
+      _pendingItemId = ''; // video src confirmed — transition complete
+    } else {
+      return _pendingItemId;
+    }
+  }
+
+  // Steady state: prefer videoId (avoids parent series/season ID that URL can carry)
+  return videoId
     || extractItemIdFromUrl(window.location.href)
     || extractItemIdFromUrl(window.location.hash)
     || _cachedItemId;
@@ -92,6 +108,10 @@ function tryInject(): void {
   if (videoEl !== _currentVideoEl) {
     if (_currentVideoEl) _currentVideoEl.style.filter = '';
     _currentVideoEl = videoEl;
+    // Capture URL item ID now: currentSrc may still hold the old stream during transition
+    _pendingItemId = extractItemIdFromUrl(window.location.href)
+      || extractItemIdFromUrl(window.location.hash)
+      || '';
     initGestures(videoEl, getItemId);
     initLongPress(videoEl, () => _speedRate);
     initTrickplay(getItemId, videoEl);
