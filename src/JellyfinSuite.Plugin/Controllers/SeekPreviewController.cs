@@ -58,7 +58,6 @@ public class SeekPreviewController : ControllerBase
             return NotFound();
 
         var filePath = item.Path;
-        _logger.LogInformation("[SeekPreview] GetFrame {ItemId} → {FilePath}", itemId, filePath);
         if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
             return NotFound();
 
@@ -68,9 +67,18 @@ public class SeekPreviewController : ControllerBase
             return Ok();
         }
 
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var jpeg = await _seekPreview.FetchAsync(filePath, positionMs, width, itemId, cancellationToken);
+        sw.Stop();
+
         if (jpeg == null || jpeg.Length == 0)
             return StatusCode(StatusCodes.Status503ServiceUnavailable, "frame decode failed");
+
+        var cachePath = Path.Combine(SeekPreviewService.CacheDirectory,
+            itemId.ToString("N"), $"{positionMs / 500 * 500}.jpg");
+        _logger.LogInformation(
+            "[SeekPreview] {FileName} {PosMs}ms → {Size}B in {Ms}ms | {CachePath}",
+            Path.GetFileName(filePath), positionMs, jpeg.Length, sw.ElapsedMilliseconds, cachePath);
 
         return File(jpeg, "image/jpeg");
     }

@@ -53,12 +53,22 @@ public sealed class SeekPreviewService : IDisposable
     public async Task EnsureStartedAsync(CancellationToken ct = default)
     {
         if (!IsAvailable) return;
-        if (_process is { HasExited: false }) return;  // fast path
+        // Fast path: daemon running AND both sockets healthy.
+        if (_process is { HasExited: false } && _fetchSocket != null && _prefetchSocket != null) return;
 
         await _startLock.WaitAsync(ct);
         try
         {
-            if (_process is { HasExited: false }) return;  // double-check inside lock
+            if (_process is { HasExited: false })
+            {
+                // Daemon is still running but one or both sockets were reset after an error.
+                // Reconnect them without restarting the daemon.
+                if (_fetchSocket == null)
+                    _fetchSocket = await ConnectUnixSocketAsync(ct);
+                if (_prefetchSocket == null)
+                    _prefetchSocket = await ConnectUnixSocketAsync(ct);
+                return;
+            }
             if (File.Exists(_socketPath))
                 File.Delete(_socketPath);
 
@@ -138,11 +148,18 @@ public sealed class SeekPreviewService : IDisposable
         {
             var id = Interlocked.Increment(ref _nextRequestId);
             await SendRequestAsync(_fetchSocket, 0x01, id, posMs, width, filePath, itemId, ct);
-            return await ReceiveResponseAsync(_fetchSocket, ct);
+            return await ReceiveResponseAsync(_fetchSocket, id, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "[SeekPreview] FetchAsync error");
+            // If the request was cancelled after the Rust daemon already processed it and sent a
+            // response, that response is now stuck in the socket buffer. The next call would read
+            // the wrong frame. Dispose and null the socket so EnsureStartedAsync reconnects fresh.
+            try { _fetchSocket?.Dispose(); } catch { }
+            _fetchSocket = null;
+
+            if (ex is OperationCanceledException) throw;
+            _logger.LogDebug(ex, "[SeekPreview] FetchAsync error — socket reset");
             return null;
         }
         finally
@@ -169,7 +186,10 @@ public sealed class SeekPreviewService : IDisposable
             }
             catch
             {
-                // Prefetch is best-effort — swallow all errors
+                // Prefetch is best-effort. On error, reset the socket so the buffer
+                // doesn't accumulate stale ACKs that would desync subsequent requests.
+                try { _prefetchSocket?.Dispose(); } catch { }
+                _prefetchSocket = null;
             }
             finally
             {
@@ -197,12 +217,16 @@ public sealed class SeekPreviewService : IDisposable
         await sock.SendAsync(buf, SocketFlags.None, ct);
     }
 
-    private static async Task<byte[]?> ReceiveResponseAsync(Socket sock, CancellationToken ct)
+    private static async Task<byte[]?> ReceiveResponseAsync(Socket sock, uint expectedId, CancellationToken ct)
     {
         var header = new byte[8];
         if (!await ReceiveBytesAsync(sock, header, ct)) return null;
 
-        // var _requestId = BinaryPrimitives.ReadUInt32LittleEndian(header);
+        var responseId = BinaryPrimitives.ReadUInt32LittleEndian(header);
+        if (responseId != expectedId)
+            throw new InvalidOperationException(
+                $"[SeekPreview] socket desync: expected request_id={expectedId}, got={responseId} — socket reset");
+
         var jpegLen = BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(4));
         if (jpegLen == 0) return null;
 
