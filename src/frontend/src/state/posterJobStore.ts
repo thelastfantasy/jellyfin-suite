@@ -16,8 +16,8 @@ function notify(): void {
   window.dispatchEvent(new CustomEvent('jfs-poster-jobs-changed'))
 }
 
-export function addJob(jobId: string, itemId: string, itemTitle: string): void {
-  _jobs.set(jobId, { jobId, itemId, itemTitle, status: 'running', progress: 0, total: 0, addedAt: Date.now() })
+export function addJob(jobId: string, itemId: string, itemTitle: string, addedAt?: number): void {
+  _jobs.set(jobId, { jobId, itemId, itemTitle, status: 'running', progress: 0, total: 0, addedAt: addedAt ?? Date.now() })
   notify()
 }
 

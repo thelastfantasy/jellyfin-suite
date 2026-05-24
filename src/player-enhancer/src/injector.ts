@@ -47,9 +47,11 @@ function extractItemIdFromVideoSrc(src: string): string {
 }
 
 function getItemId(): string {
-  return extractItemIdFromUrl(window.location.href)
+  // Prefer video source ID — always the exact episode/item being played.
+  // URL may contain a parent series/season ID in some navigation paths.
+  return (_currentVideoEl ? extractItemIdFromVideoSrc(_currentVideoEl.currentSrc || _currentVideoEl.src) : '')
+    || extractItemIdFromUrl(window.location.href)
     || extractItemIdFromUrl(window.location.hash)
-    || (_currentVideoEl ? extractItemIdFromVideoSrc(_currentVideoEl.src) : '')
     || _cachedItemId;
 }
 

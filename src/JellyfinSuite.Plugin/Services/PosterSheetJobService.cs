@@ -113,7 +113,7 @@ public class PosterSheetJobService : IDisposable
         => _jobs.TryGetValue(jobId, out var job) ? job : null;
 
     public IEnumerable<PosterSheetJob> GetAllJobs()
-        => _jobs.Values;
+        => _jobs.Values.OrderBy(j => j.CreatedAt);
 
     public string? GetActiveJobIdForItem(string itemId)
         => _activeJobIdByItemId.TryGetValue(itemId, out var id) ? id : null;

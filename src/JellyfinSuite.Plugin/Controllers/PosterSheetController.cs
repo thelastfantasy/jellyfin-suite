@@ -100,6 +100,7 @@ public class PosterSheetController : ControllerBase
             Total = job.Total,
             Error = job.Error,
             MediaInfo = job.MediaInfo,
+            CreatedAt = new DateTimeOffset(job.CreatedAt, TimeSpan.Zero).ToUnixTimeMilliseconds(),
         });
         return Ok(dtos);
     }

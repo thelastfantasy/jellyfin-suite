@@ -10,6 +10,8 @@ public class PosterSheetStatusDto
     public int Total { get; set; }
     public string? Error { get; set; }
     public MediaInfoDto? MediaInfo { get; set; }
+    /// <summary>Unix milliseconds (UTC) when the job was created. Used by clients for stable cross-device ordering.</summary>
+    public long CreatedAt { get; set; }
 }
 
 public class StartJobResponseDto

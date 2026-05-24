@@ -153,9 +153,6 @@ export function showTrickplayThumb(
   const aligned = Math.floor(posMs / 500) * 500;
   const exactKey = `${itemId}:${aligned}`;
 
-  if (_pendingKey === exactKey) {
-    return;
-  }
   _pendingKey = exactKey;
 
   const exactUrl = makeUrl(meta, itemId, aligned);

@@ -52,14 +52,26 @@ export function Lightbox({ src, alt = '', onClose, onDownload, onDelete }: Props
     return Math.min(view.clientWidth / w, view.clientHeight / h, 1)
   }, [])
 
-  // Keyboard dismiss
+  // Keyboard dismiss + Android back-gesture intercept
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
+
+    // Push a history entry so Android's back gesture pops it (closing the lightbox)
+    // instead of navigating away. Use window.top so it works inside same-origin iframes.
+    const win = (() => { try { return (window.top && window.top !== window) ? window.top : window } catch { return window } })()
+    win.history.pushState({ jfsLightbox: true }, '')
+    let closedByBack = false
+    const onPop = () => { closedByBack = true; onClose() }
+    win.addEventListener('popstate', onPop)
+
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      win.removeEventListener('popstate', onPop)
+      // Normal close (button): pop the state we pushed to keep history clean.
+      if (!closedByBack && win.history.state?.jfsLightbox) win.history.back()
     }
   }, [onClose])
 
