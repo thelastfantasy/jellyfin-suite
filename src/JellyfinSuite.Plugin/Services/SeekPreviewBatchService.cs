@@ -17,7 +17,7 @@ namespace Jellyfin.Plugin.JellyfinSuite.Services;
 public sealed class SeekPreviewBatchService : BackgroundService
 {
     private const long NearRangeMs = 3 * 60_000L;
-    private const int PrefetchBatchSize = 1; // matches Rust MAX_CONCURRENT_PREFETCH
+    private const int PrefetchBatchSize = 4; // Rust side has a bounded queue with 2 workers
     private const int PollIntervalMs = 500;
     private const int DefaultWidth = 320;
 

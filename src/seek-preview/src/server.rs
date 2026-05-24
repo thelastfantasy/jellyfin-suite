@@ -2,17 +2,20 @@ use crate::decoder::decode_and_encode;
 use crate::disk_cache::DiskCache;
 use crate::protocol::{read_req, write_ack, write_response};
 use lru::LruCache;
+use std::collections::HashSet;
 use std::num::NonZeroUsize;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::net::UnixStream;
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::{mpsc, Mutex, Semaphore};
 
 const PRIORITY_FETCH: u8 = 0x01;
 const CACHE_CAP: usize = 20;
-const MAX_CONCURRENT_DECODES: usize = 2;
-// PREFETCH is capped at N-1, always leaving one slot for interactive FETCH.
-const MAX_CONCURRENT_PREFETCH: usize = MAX_CONCURRENT_DECODES - 1;
+/// Bounded channel cap — try_send drops silently when full (C# will re-enqueue on next tick).
+const PREFETCH_QUEUE_CAP: usize = 64;
+/// Number of concurrent background prefetch workers (each runs one spawn_blocking at a time).
+pub const PREFETCH_WORKERS: usize = 2;
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) struct CacheKey {
@@ -22,25 +25,97 @@ pub(crate) struct CacheKey {
 
 pub type JpegData = Arc<Vec<u8>>;
 
+struct PrefetchJob {
+    item_id: String,
+    path: PathBuf,
+    aligned_pos: i64,
+    width: u32,
+    key: CacheKey,
+}
+
 pub struct State {
     pub cache: Mutex<LruCache<CacheKey, JpegData>>,
     pub disk: Arc<DiskCache>,
     active_item_id: Mutex<Option<String>>,
-    /// Total decode pool (FETCH + PREFETCH together).
+    /// Limits concurrent interactive FETCH decodes (C# already serialises via _fetchLock, cap=1 is defensive).
     decode_sem: Arc<Semaphore>,
-    /// Additional cap for PREFETCH only — keeps one slot permanently free for FETCH.
-    prefetch_sem: Arc<Semaphore>,
+    /// PREFETCH queue — background workers process sequentially per worker.
+    prefetch_tx: mpsc::Sender<PrefetchJob>,
+    /// Tracks frames currently being decoded to prevent duplicate work across workers.
+    in_progress: Mutex<HashSet<(String, i64)>>,
 }
 
 impl State {
     pub fn new(disk: Arc<DiskCache>) -> Arc<Self> {
-        Arc::new(Self {
+        let (tx, rx) = mpsc::channel(PREFETCH_QUEUE_CAP);
+        let state = Arc::new(Self {
             cache: Mutex::new(LruCache::new(NonZeroUsize::new(CACHE_CAP).unwrap())),
             disk,
             active_item_id: Mutex::new(None),
-            decode_sem: Arc::new(Semaphore::new(MAX_CONCURRENT_DECODES)),
-            prefetch_sem: Arc::new(Semaphore::new(MAX_CONCURRENT_PREFETCH)),
+            decode_sem: Arc::new(Semaphore::new(1)),
+            prefetch_tx: tx,
+            in_progress: Mutex::new(HashSet::new()),
+        });
+        let rx = Arc::new(Mutex::new(rx));
+        for _ in 0..PREFETCH_WORKERS {
+            tokio::spawn(prefetch_worker(rx.clone(), state.clone()));
+        }
+        state
+    }
+}
+
+async fn prefetch_worker(rx: Arc<Mutex<mpsc::Receiver<PrefetchJob>>>, state: Arc<State>) {
+    loop {
+        let job = match rx.lock().await.recv().await {
+            Some(j) => j,
+            None => break,
+        };
+        // Skip if already cached in RAM, on disk, or currently being decoded by another worker.
+        {
+            let c = state.cache.lock().await;
+            if c.peek(&job.key).is_some() {
+                continue;
+            }
+        }
+        if state.disk.exists(&job.item_id, &job.path, job.aligned_pos) {
+            continue;
+        }
+        let progress_key = (job.item_id.clone(), job.aligned_pos);
+        {
+            let mut ip = state.in_progress.lock().await;
+            if !ip.insert(progress_key.clone()) {
+                continue; // another worker already has this frame
+            }
+        }
+
+        let disk = state.disk.clone();
+        let item_id = job.item_id.clone();
+        let path = job.path.clone();
+        let aligned_pos = job.aligned_pos;
+        let width = job.width;
+        let key = job.key.clone();
+
+        match tokio::task::spawn_blocking(move || -> anyhow::Result<Vec<u8>> {
+            let t = Instant::now();
+            let bytes = decode_and_encode(&path, aligned_pos, width)?;
+            eprintln!(
+                "[seek-preview] PREFETCH {}ms → {:.0}ms ({} B)",
+                aligned_pos,
+                t.elapsed().as_secs_f64() * 1000.0,
+                bytes.len()
+            );
+            disk.write(&item_id, &path, aligned_pos, &bytes);
+            Ok(bytes)
         })
+        .await
+        {
+            Ok(Ok(bytes)) => {
+                state.cache.lock().await.put(key, Arc::new(bytes));
+            }
+            Ok(Err(e)) => eprintln!("[seek-preview] prefetch decode error: {e}"),
+            Err(e) => eprintln!("[seek-preview] prefetch task error: {e}"),
+        }
+        state.in_progress.lock().await.remove(&progress_key);
     }
 }
 
@@ -94,9 +169,12 @@ pub async fn handle_conn(mut stream: UnixStream, state: Arc<State>) {
                     }
                     let t = Instant::now();
                     let bytes = decode_and_encode(&path, aligned_pos, width)?;
-                    let elapsed = t.elapsed();
-                    eprintln!("[seek-preview] FETCH  decode {}ms → {:.0}ms ({} B)",
-                        aligned_pos, elapsed.as_secs_f64() * 1000.0, bytes.len());
+                    eprintln!(
+                        "[seek-preview] FETCH  decode {}ms → {:.0}ms ({} B)",
+                        aligned_pos,
+                        t.elapsed().as_secs_f64() * 1000.0,
+                        bytes.len()
+                    );
                     disk.write(&item_id, &path, aligned_pos, &bytes);
                     Ok(bytes)
                 })
@@ -121,42 +199,16 @@ pub async fn handle_conn(mut stream: UnixStream, state: Arc<State>) {
             };
             let _ = write_response(&mut stream, req.request_id, &jpeg).await;
         } else {
+            // PREFETCH: ACK immediately, enqueue for background worker.
+            // try_send drops silently when queue is full — C# re-enqueues on next tick.
             let _ = write_ack(&mut stream, req.request_id).await;
-            let already_on_disk = state.disk.exists(&req.item_id, &req.path, aligned_pos);
-            if cached.is_none() && !already_on_disk {
-                // Acquire prefetch slot first (caps at MAX_CONCURRENT_PREFETCH),
-                // then a decode slot — guarantees FETCH always has at least one free.
-                let Ok(prefetch_permit) = state.prefetch_sem.clone().try_acquire_owned() else {
-                    continue;
-                };
-                let Ok(permit) = state.decode_sem.clone().try_acquire_owned() else {
-                    continue;
-                };
-                let item_id = req.item_id.clone();
-                let path = req.path.clone();
-                let disk = state.disk.clone();
-                let s2 = state.clone();
-                let k2 = key.clone();
-                tokio::spawn(async move {
-                    match tokio::task::spawn_blocking(move || -> anyhow::Result<Vec<u8>> {
-                        let _prefetch_permit = prefetch_permit;
-                        let _permit = permit;
-                        let t = Instant::now();
-                        let bytes = decode_and_encode(&path, aligned_pos, width)?;
-                        let elapsed = t.elapsed();
-                        eprintln!("[seek-preview] PREFETCH {}ms → {:.0}ms ({} B)",
-                            aligned_pos, elapsed.as_secs_f64() * 1000.0, bytes.len());
-                        disk.write(&item_id, &path, aligned_pos, &bytes);
-                        Ok(bytes)
-                    })
-                    .await
-                    {
-                        Ok(Ok(bytes)) => {
-                            s2.cache.lock().await.put(k2, Arc::new(bytes));
-                        }
-                        Ok(Err(e)) => eprintln!("[seek-preview] prefetch decode error: {e}"),
-                        Err(e) => eprintln!("[seek-preview] prefetch task error: {e}"),
-                    }
+            if cached.is_none() && !state.disk.exists(&req.item_id, &req.path, aligned_pos) {
+                let _ = state.prefetch_tx.try_send(PrefetchJob {
+                    item_id: req.item_id,
+                    path: req.path,
+                    aligned_pos,
+                    width,
+                    key,
                 });
             }
         }
