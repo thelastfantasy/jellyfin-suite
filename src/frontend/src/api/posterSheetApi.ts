@@ -156,6 +156,7 @@ export interface JobListItemDto {
   progress: number
   total: number
   error: string | null
+  createdAt: number
 }
 
 export async function listJobs(): Promise<JobListItemDto[]> {
@@ -171,6 +172,7 @@ export async function listJobs(): Promise<JobListItemDto[]> {
       progress: d.progress ?? d.Progress ?? 0,
       total: d.total ?? d.Total ?? 0,
       error: d.error ?? d.Error ?? null,
+      createdAt: d.createdAt ?? d.CreatedAt ?? 0,
     }))
   } catch {
     return []

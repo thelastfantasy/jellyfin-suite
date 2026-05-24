@@ -81,6 +81,7 @@ public class PosterSheetJobService : IDisposable
                 SkipSegments = req.SkipSegments,
                 Status = JobStatus.Done,
                 Progress = req.Rows * req.Cols,
+                CreatedAt = cached.CreatedAt,
             };
             _jobs[hit.Id] = hit;
             _activeJobIdByItemId[itemId] = hit.Id;
@@ -113,7 +114,7 @@ public class PosterSheetJobService : IDisposable
         => _jobs.TryGetValue(jobId, out var job) ? job : null;
 
     public IEnumerable<PosterSheetJob> GetAllJobs()
-        => _jobs.Values;
+        => _jobs.Values.OrderBy(j => j.CreatedAt);
 
     public string? GetActiveJobIdForItem(string itemId)
         => _activeJobIdByItemId.TryGetValue(itemId, out var id) ? id : null;
@@ -186,6 +187,7 @@ public class PosterSheetJobService : IDisposable
     private async Task RunJobAsync(PosterSheetJob job, string inputPath)
     {
         job.Status = JobStatus.Running;
+        var startedAt = DateTime.UtcNow;
         try
         {
             var binaryPath = GetBinaryPath();
@@ -269,7 +271,7 @@ public class PosterSheetJobService : IDisposable
                 _cacheIndex.Set(job.CacheKey, new PosterCacheEntry
                 {
                     OutputPath = job.OutputPath!,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = startedAt,
                 });
             }
         }

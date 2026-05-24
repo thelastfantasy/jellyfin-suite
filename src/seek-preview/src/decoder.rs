@@ -26,8 +26,8 @@ pub fn decode_and_encode(path: &PathBuf, pos_ms: i64, target_width: u32) -> Resu
 
     let thread_count = std::thread::available_parallelism()
         .map(|n| n.get())
-        .unwrap_or(4)
-        .min(4);
+        .unwrap_or(2)
+        .min(2);
 
     let mut decoder = {
         let mut ctx = codec_ctx;
@@ -100,13 +100,32 @@ fn encode_jpeg(frame: &ffmpeg_next::frame::Video, target_width: u32) -> Result<V
         let src = frame.as_ptr();
 
         let src_fmt: AVPixelFormat = std::mem::transmute((*src).format);
+
+        // Map deprecated YUVJ* formats to their non-deprecated equivalents.
+        // YUVJ* encode "full range" implicitly in the format name, which swscale warns about.
+        // We replace them with the proper YUV* format and propagate range via sws_setColorspaceDetails.
+        let src_is_full_range = matches!(
+            src_fmt,
+            AVPixelFormat::AV_PIX_FMT_YUVJ420P
+                | AVPixelFormat::AV_PIX_FMT_YUVJ422P
+                | AVPixelFormat::AV_PIX_FMT_YUVJ444P
+                | AVPixelFormat::AV_PIX_FMT_YUVJ440P
+        ) || (*src).color_range == AVColorRange::AVCOL_RANGE_JPEG;
+        let src_fmt_nd = match src_fmt {
+            AVPixelFormat::AV_PIX_FMT_YUVJ420P => AVPixelFormat::AV_PIX_FMT_YUV420P,
+            AVPixelFormat::AV_PIX_FMT_YUVJ422P => AVPixelFormat::AV_PIX_FMT_YUV422P,
+            AVPixelFormat::AV_PIX_FMT_YUVJ444P => AVPixelFormat::AV_PIX_FMT_YUV444P,
+            AVPixelFormat::AV_PIX_FMT_YUVJ440P => AVPixelFormat::AV_PIX_FMT_YUV440P,
+            other => other,
+        };
+
         let sws = sws_getContext(
             (*src).width,
             (*src).height,
-            src_fmt,
+            src_fmt_nd,
             w,
             h,
-            AVPixelFormat::AV_PIX_FMT_YUVJ420P,
+            AVPixelFormat::AV_PIX_FMT_YUV420P,
             SWS_BILINEAR as i32,
             ptr::null_mut(),
             ptr::null_mut(),
@@ -116,12 +135,27 @@ fn encode_jpeg(frame: &ffmpeg_next::frame::Video, target_width: u32) -> Result<V
             anyhow::bail!("sws_getContext failed");
         }
 
+        // Tell swscale the actual color ranges so conversion stays correct.
+        // Output is always full range (JPEG). Input range depends on source format metadata.
+        let coeffs = sws_getCoefficients(SWS_CS_DEFAULT as i32);
+        sws_setColorspaceDetails(
+            sws,
+            coeffs,
+            if src_is_full_range { 1 } else { 0 },
+            coeffs,
+            1, // JPEG output is always full range
+            0,
+            1 << 16,
+            1 << 16,
+        );
+
         let mut dst = av_frame_alloc();
         if dst.is_null() {
             sws_freeContext(sws);
             anyhow::bail!("av_frame_alloc failed");
         }
-        (*dst).format = AVPixelFormat::AV_PIX_FMT_YUVJ420P as i32;
+        (*dst).format = AVPixelFormat::AV_PIX_FMT_YUV420P as i32;
+        (*dst).color_range = AVColorRange::AVCOL_RANGE_JPEG; // full range for JPEG output
         (*dst).width = w;
         (*dst).height = h;
         if av_frame_get_buffer(dst, 0) < 0 {

@@ -153,9 +153,6 @@ export function showTrickplayThumb(
   const aligned = Math.floor(posMs / 500) * 500;
   const exactKey = `${itemId}:${aligned}`;
 
-  if (_pendingKey === exactKey) {
-    return;
-  }
   _pendingKey = exactKey;
 
   const exactUrl = makeUrl(meta, itemId, aligned);
@@ -169,18 +166,23 @@ export function showTrickplayThumb(
   // Fuzzy match: show nearest already-loaded frame as placeholder while exact loads.
   // Range must cover half the 30s-aligned interval (15000ms) so no gap is left uncovered.
   const FUZZY_RANGE = 15000;
+  let fuzzyFound = false;
   for (let d = 500; d <= FUZZY_RANGE; d += 500) {
     if (_loadedKeys.has(`${itemId}:${aligned - d}`)) {
       thumbImg.src = makeUrl(meta, itemId, aligned - d);
       wrap.style.display = 'block';
+      fuzzyFound = true;
       break;
     }
     if (_loadedKeys.has(`${itemId}:${aligned + d}`)) {
       thumbImg.src = makeUrl(meta, itemId, aligned + d);
       wrap.style.display = 'block';
+      fuzzyFound = true;
       break;
     }
   }
+  // No nearby frame available — hide stale content rather than show a wrong thumbnail
+  if (!fuzzyFound) wrap.style.display = 'none';
 
   if (_fetchInFlight) return;
   _fetchInFlight = true;

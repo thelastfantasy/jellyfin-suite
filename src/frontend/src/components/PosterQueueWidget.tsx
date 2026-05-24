@@ -21,7 +21,7 @@ export function PosterQueueWidget() {
       const localIds = new Set(getJobs().map(j => j.jobId))
       for (const sj of serverJobs) {
         if (localIds.has(sj.jobId)) continue
-        addJob(sj.jobId, sj.itemId, sj.itemTitle)
+        addJob(sj.jobId, sj.itemId, sj.itemTitle, sj.createdAt || undefined)
         updateJob(sj.jobId, {
           status: sj.status === 'queued' ? 'running' : sj.status,
           progress: sj.progress,

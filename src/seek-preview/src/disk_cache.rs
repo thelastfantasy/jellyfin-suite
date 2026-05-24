@@ -65,16 +65,31 @@ impl DiskCache {
                 _ => {}
             }
         }
-        std::fs::read(frame_path(item_id, aligned_ms)).ok()
+        match std::fs::read(frame_path(item_id, aligned_ms)) {
+            Ok(bytes) => Some(bytes),
+            Err(_) => {
+                // File was deleted externally while index still had an entry — clean it up.
+                let mut idx = self.index.lock().unwrap();
+                let key = (item_id.to_owned(), aligned_ms);
+                if let Some(e) = idx.entries.remove(&key) {
+                    idx.total_bytes = idx.total_bytes.saturating_sub(e.size);
+                }
+                None
+            }
+        }
     }
 
-    /// Check whether a frame is cached (index lookup only, no file I/O).
+    /// Check whether a frame is cached (index + file-system check).
     pub fn exists(&self, item_id: &str, video_path: &Path, aligned_ms: i64) -> bool {
         let current_mtime = video_mtime(video_path);
-        let idx = self.index.lock().unwrap();
-        idx.entries.get(&(item_id.to_owned(), aligned_ms))
-            .map(|e| e.video_mtime == current_mtime)
-            .unwrap_or(false)
+        let in_index = {
+            let idx = self.index.lock().unwrap();
+            idx.entries.get(&(item_id.to_owned(), aligned_ms))
+                .map(|e| e.video_mtime == current_mtime)
+                .unwrap_or(false)
+        };
+        // Verify the file actually exists — it may have been deleted while the daemon was running.
+        in_index && frame_path(item_id, aligned_ms).exists()
     }
 
     /// Write a frame to disk; updates index and triggers cleanup if over cap.
@@ -82,9 +97,17 @@ impl DiskCache {
         let p = frame_path(item_id, aligned_ms);
 
         {
-            let idx = self.index.lock().unwrap();
-            if idx.entries.contains_key(&(item_id.to_owned(), aligned_ms)) {
-                return;
+            let mut idx = self.index.lock().unwrap();
+            let key = (item_id.to_owned(), aligned_ms);
+            if idx.entries.contains_key(&key) {
+                if p.exists() {
+                    return; // Already written — nothing to do.
+                }
+                // Index entry exists but file was deleted externally — remove stale entry
+                // so the write proceeds below.
+                if let Some(e) = idx.entries.remove(&key) {
+                    idx.total_bytes = idx.total_bytes.saturating_sub(e.size);
+                }
             }
         }
 

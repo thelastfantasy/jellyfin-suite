@@ -58,6 +58,7 @@ public class SeekPreviewController : ControllerBase
             return NotFound();
 
         var filePath = item.Path;
+        _logger.LogInformation("[SeekPreview] GetFrame {ItemId} → {FilePath}", itemId, filePath);
         if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
             return NotFound();
 
@@ -114,6 +115,8 @@ public class SeekPreviewController : ControllerBase
 
         var itemIdStr = itemId.ToString("N");
         var filePath = item.Path;
+
+        _logger.LogInformation("[SeekPreview] ReadyStream {ItemId} → {FilePath}", itemId, filePath);
 
         // Register with batch service: set priority center and enqueue pending frames.
         // Batch continues even after this SSE stream disconnects.
