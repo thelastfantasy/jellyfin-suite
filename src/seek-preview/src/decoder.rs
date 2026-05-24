@@ -26,8 +26,8 @@ pub fn decode_and_encode(path: &PathBuf, pos_ms: i64, target_width: u32) -> Resu
 
     let thread_count = std::thread::available_parallelism()
         .map(|n| n.get())
-        .unwrap_or(4)
-        .min(4);
+        .unwrap_or(2)
+        .min(2);
 
     let mut decoder = {
         let mut ctx = codec_ctx;

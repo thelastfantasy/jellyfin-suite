@@ -10,7 +10,7 @@ use tokio::sync::{Mutex, Semaphore};
 
 const PRIORITY_FETCH: u8 = 0x01;
 const CACHE_CAP: usize = 20;
-const MAX_CONCURRENT_DECODES: usize = 6;
+const MAX_CONCURRENT_DECODES: usize = 2;
 // PREFETCH is capped at N-1, always leaving one slot for interactive FETCH.
 const MAX_CONCURRENT_PREFETCH: usize = MAX_CONCURRENT_DECODES - 1;
 
