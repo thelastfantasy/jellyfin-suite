@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.JellyfinSuite;
 
@@ -49,9 +50,21 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<SeekPreviewService>(sp =>
         {
             var appPaths = applicationHost.Resolve<MediaBrowser.Common.Configuration.IApplicationPaths>();
-            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SeekPreviewService>>();
+            var logger = sp.GetRequiredService<ILogger<SeekPreviewService>>();
             return new SeekPreviewService(appPaths, logger);
         });
+
+        // SeekPreviewBatchService: 持久后台任务队列，跨视频优先级管理，SSE 断开后继续运行
+        serviceCollection.AddSingleton<SeekPreviewBatchService>(sp =>
+        {
+            var seekPreview = sp.GetRequiredService<SeekPreviewService>();
+            var logger = sp.GetRequiredService<ILogger<SeekPreviewBatchService>>();
+            return new SeekPreviewBatchService(seekPreview, logger);
+        });
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<SeekPreviewBatchService>());
+
+        // 播放进度事件：实时更新 seek-preview 优先级中心（/Sessions/Playing/Progress 触发）
+        serviceCollection.AddTransient<IEventConsumer<PlaybackProgressEventArgs>, SeekPreviewProgressConsumer>();
 
         // FontAcquisitionService: 先注册为 Singleton（供 Controller/JobService 注入），
         // 再用同一实例注册为 IHostedService（触发 StartAsync/StopAsync 生命周期）

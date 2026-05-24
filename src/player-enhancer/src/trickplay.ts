@@ -17,6 +17,13 @@ const PREFETCH_DEDUP_MS = 200;
 
 // SSE connection for ready-frame notifications (one per active video)
 let _readyStreamEs: EventSource | null = null;
+let _readyStreamItemId: string | null = null;
+
+// Limit concurrent FETCH requests to 1 to avoid overwhelming the daemon on large files
+let _fetchInFlight = false;
+
+// Retry timer for SSE open attempts
+let _initRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
 function getRawToken(): string {
   const ac = (window as any).ApiClient;
@@ -30,10 +37,34 @@ function getServerAddress(): string {
   return (typeof ac.serverAddress === 'function' ? ac.serverAddress() : ac._serverAddress) ?? '';
 }
 
-export async function initTrickplay(itemId: string, _videoEl: HTMLVideoElement): Promise<void> {
-  const meta = ensureMeta(itemId);
-  if (!meta || !itemId) return;
-  openReadyStream(itemId, meta);
+export function initTrickplay(getItemId: () => string, videoEl: HTMLVideoElement): void {
+  // Cancel any pending retry for a previous video.
+  if (_initRetryTimer) { clearTimeout(_initRetryTimer); _initRetryTimer = null; }
+
+  const RETRY_DELAYS = [0, 1000, 2000, 3000];
+  let attempt = 0;
+
+  const tryOpen = (): void => {
+    if (attempt >= RETRY_DELAYS.length) return;
+    const delay = RETRY_DELAYS[attempt++];
+    if (delay === 0) {
+      doOpen();
+    } else {
+      _initRetryTimer = setTimeout(() => { _initRetryTimer = null; doOpen(); }, delay);
+    }
+  };
+
+  const doOpen = (): void => {
+    const id = getItemId();
+    const meta = ensureMeta(id);
+    if (meta && id) {
+      openReadyStream(id, meta, videoEl);
+    } else {
+      tryOpen();
+    }
+  };
+
+  tryOpen();
 }
 
 function ensureMeta(itemId: string): SeekPreviewMeta | undefined {
@@ -46,28 +77,34 @@ function ensureMeta(itemId: string): SeekPreviewMeta | undefined {
   return _cache.get(itemId);
 }
 
-function openReadyStream(itemId: string, meta: SeekPreviewMeta): void {
+function openReadyStream(itemId: string, meta: SeekPreviewMeta, videoEl: HTMLVideoElement): void {
   // Close previous stream when switching videos
   if (_readyStreamEs) {
     _readyStreamEs.close();
     _readyStreamEs = null;
+    _readyStreamItemId = null;
   }
 
-  const url = `${meta.base}/JellyfinSuite/SeekPreview/${itemId}/ready-stream?api_key=${meta.token}`;
+  const posMs = Math.floor((videoEl.currentTime || 0) * 1000);
+  const url = `${meta.base}/JellyfinSuite/SeekPreview/${itemId}/ready-stream?positionMs=${posMs}&api_key=${meta.token}`;
   const es = new EventSource(url);
   _readyStreamEs = es;
+  _readyStreamItemId = itemId;
 
   es.onmessage = (e) => {
     const posMs = Number(e.data);
     if (!isFinite(posMs)) return;
     const key = `${itemId}:${posMs}`;
     if (_loadedKeys.has(key)) return;
-    _loadedKeys.add(key);
+    // Proactively load into browser HTTP cache so drag-seek is instant.
+    const img = new Image();
+    img.onload = () => _loadedKeys.add(key);
+    img.src = makeUrl(meta, itemId, posMs);
   };
 
   es.onerror = () => {
     es.close();
-    if (_readyStreamEs === es) _readyStreamEs = null;
+    if (_readyStreamEs === es) { _readyStreamEs = null; _readyStreamItemId = null; }
   };
 }
 
@@ -96,6 +133,9 @@ export function showTrickplayThumb(
 ): void {
   const meta = ensureMeta(itemId);
   if (!meta) return;
+
+  // Last-resort fallback: if initTrickplay's retries all failed, open SSE now.
+  if (!_readyStreamEs || _readyStreamItemId !== itemId) openReadyStream(itemId, meta, videoEl);
 
   const { wrap, img: thumbImg } = ensureThumbEl();
 
@@ -142,14 +182,18 @@ export function showTrickplayThumb(
     }
   }
 
+  if (_fetchInFlight) return;
+  _fetchInFlight = true;
   const preload = new Image();
   preload.onload = () => {
+    _fetchInFlight = false;
     _loadedKeys.add(exactKey);
     if (_thumbImg && _pendingKey === exactKey) {
       _thumbImg.src = exactUrl;
       _thumbWrap!.style.display = 'block';
     }
   };
+  preload.onerror = () => { _fetchInFlight = false; };
   preload.src = exactUrl;
 }
 
