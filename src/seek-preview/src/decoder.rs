@@ -110,7 +110,7 @@ fn encode_jpeg(frame: &ffmpeg_next::frame::Video, target_width: u32) -> Result<V
                 | AVPixelFormat::AV_PIX_FMT_YUVJ422P
                 | AVPixelFormat::AV_PIX_FMT_YUVJ444P
                 | AVPixelFormat::AV_PIX_FMT_YUVJ440P
-        ) || (*src).color_range == 2; // AVCOL_RANGE_JPEG = 2
+        ) || (*src).color_range == AVColorRange::AVCOL_RANGE_JPEG;
         let src_fmt_nd = match src_fmt {
             AVPixelFormat::AV_PIX_FMT_YUVJ420P => AVPixelFormat::AV_PIX_FMT_YUV420P,
             AVPixelFormat::AV_PIX_FMT_YUVJ422P => AVPixelFormat::AV_PIX_FMT_YUV422P,
@@ -155,7 +155,7 @@ fn encode_jpeg(frame: &ffmpeg_next::frame::Video, target_width: u32) -> Result<V
             anyhow::bail!("av_frame_alloc failed");
         }
         (*dst).format = AVPixelFormat::AV_PIX_FMT_YUV420P as i32;
-        (*dst).color_range = 2; // AVCOL_RANGE_JPEG — full range for JPEG output
+        (*dst).color_range = AVColorRange::AVCOL_RANGE_JPEG; // full range for JPEG output
         (*dst).width = w;
         (*dst).height = h;
         if av_frame_get_buffer(dst, 0) < 0 {
