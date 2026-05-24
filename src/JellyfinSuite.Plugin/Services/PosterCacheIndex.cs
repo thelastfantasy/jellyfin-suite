@@ -9,7 +9,7 @@ internal sealed class PosterCacheEntry
     public string OutputPath { get; set; } = string.Empty;
 
     [JsonPropertyName("createdAt")]
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } // when poster generation started (used for queue sort order)
 }
 
 /// <summary>
