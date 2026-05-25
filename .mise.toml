@@ -11,6 +11,10 @@ run = "make build"
 description = "在 Docker 中构建 Rust Linux 二进制"
 run = "make build-poster-gen"
 
+[tasks.build-seek-preview]
+description = "在 Docker 中编译 seek-preview Linux 二进制（含 FFmpeg 7 dev 库）"
+run = "make build-seek-preview"
+
 [tasks.update]
 description = "构建并部署到本地 Jellyfin 开发容器"
 run = "make update"

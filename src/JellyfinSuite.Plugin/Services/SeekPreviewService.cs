@@ -16,7 +16,7 @@ public sealed class SeekPreviewService : IDisposable
     private const string BinaryName = "seek-preview-linux-x64";
 
     /// <summary>Disk cache root written by the Rust daemon. C# polls this for SSE readiness.</summary>
-    public const string CacheDirectory = "/tmp/seek-preview";
+    public static string CacheDirectory => Path.Combine(Path.GetTempPath(), "seek-preview");
 
     private readonly ILogger<SeekPreviewService> _logger;
 
