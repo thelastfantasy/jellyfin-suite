@@ -104,14 +104,14 @@ public class PlayerEnhancerController : ControllerBase
     }
 
     /// <summary>
-    /// Returns gesture/player config for the current user.
-    /// Authenticated requests (api_key in URL or Authorization header) return user-specific settings.
-    /// Anonymous requests return plugin-level defaults.
+    /// Returns player config for the current user.
+    /// Authenticated requests (api_key or Authorization header) return user-specific settings.
+    /// Anonymous requests return plugin-level defaults so the player works before login.
     /// </summary>
-    [HttpGet("GestureConfig")]
+    [HttpGet("Config")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(GestureConfigDto), StatusCodes.Status200OK)]
-    public ActionResult<GestureConfigDto> GetGestureConfig()
+    public ActionResult<GestureConfigDto> GetConfig()
     {
         var userId = GetCurrentUserId();
         if (userId != null)
@@ -135,11 +135,11 @@ public class PlayerEnhancerController : ControllerBase
         });
     }
 
-    /// <summary>Saves gesture/player config for the authenticated user. Any authenticated user may call this.</summary>
-    [HttpPatch("GestureConfig")]
+    /// <summary>Saves player config for the authenticated user.</summary>
+    [HttpPatch("Config")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public ActionResult SetGestureConfig([FromBody] GestureConfigDto dto)
+    public ActionResult SetConfig([FromBody] GestureConfigDto dto)
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();

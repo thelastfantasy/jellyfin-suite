@@ -18,25 +18,29 @@ let _speedRate = 2.0;
 let _trickplayEnabled = true;
 
 async function loadGestureConfig(): Promise<void> {
+  // Jellyfin initializes ApiClient asynchronously from localStorage; poll until the
+  // access token is available (up to 5s) so we fetch user-specific settings, not defaults.
+  let ac = (window as any).ApiClient;
+  let token: string = (typeof ac?.accessToken === 'function' ? ac.accessToken() : ac?._accessToken) ?? '';
+  for (let i = 0; i < 10 && !token; i++) {
+    await new Promise<void>(r => setTimeout(r, 500));
+    ac = (window as any).ApiClient;
+    token = (typeof ac?.accessToken === 'function' ? ac.accessToken() : ac?._accessToken) ?? '';
+  }
+  if (!token) return; // still no token → keep defaults
   try {
-    const ac = (window as any).ApiClient;
-    const token: string = typeof ac?.accessToken === 'function' ? ac.accessToken() : (ac?._accessToken ?? '');
-    const url = token
-      ? `/JellyfinSuite/PlayerEnhancer/GestureConfig?api_key=${encodeURIComponent(token)}`
-      : '/JellyfinSuite/PlayerEnhancer/GestureConfig';
-    const res = await fetch(url);
-    if (res.ok) {
-      const cfg = await res.json() as { trickplayEnabled?: boolean; seekSeconds?: number; speedRate?: number };
-      if (typeof cfg.trickplayEnabled === 'boolean') {
-        _trickplayEnabled = cfg.trickplayEnabled;
-        setTrickplayEnabled(_trickplayEnabled);
-      }
-      if (typeof cfg.seekSeconds === 'number' && cfg.seekSeconds > 0) {
-        setSeekSeconds(cfg.seekSeconds);
-      }
-      if (typeof cfg.speedRate === 'number' && cfg.speedRate >= 1.25) {
-        _speedRate = cfg.speedRate;
-      }
+    const res = await fetch(`/JellyfinSuite/PlayerEnhancer/Config?api_key=${encodeURIComponent(token)}`);
+    if (!res.ok) return;
+    const cfg = await res.json() as { trickplayEnabled?: boolean; seekSeconds?: number; speedRate?: number };
+    if (typeof cfg.trickplayEnabled === 'boolean') {
+      _trickplayEnabled = cfg.trickplayEnabled;
+      setTrickplayEnabled(_trickplayEnabled);
+    }
+    if (typeof cfg.seekSeconds === 'number' && cfg.seekSeconds > 0) {
+      setSeekSeconds(cfg.seekSeconds);
+    }
+    if (typeof cfg.speedRate === 'number' && cfg.speedRate >= 1.25) {
+      _speedRate = cfg.speedRate;
     }
   } catch {
     // keep default
