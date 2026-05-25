@@ -153,4 +153,5 @@ export const zh: Translations = {
   enhancerSpeedUnit: 'x',
   enhancerIndexHtmlNote: '⚠ 需要 Jellyfin Web 目录下 index.html 的写入权限。插件启动时会自动在此文件中注入 <script> 标签以加载增强脚本；升级 Jellyfin 后需重新点击「重新注入」。',
   enhancerBrowserNote: 'ℹ 部分功能受浏览器限制：截图功能在 Firefox Android 版中不可用（硬件解码限制）；触摸手势（滑动亮度/音量、双击快进）仅在触屏设备上生效。',
+  enhancerTrickplayLabel: '拖动进度条时显示缩略图预览',
 }

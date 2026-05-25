@@ -10,6 +10,9 @@ let _pendingKey: string | null = null;
 
 // Frames confirmed loaded into the browser cache (`${itemId}:${alignedMs}`)
 const _loadedKeys = new Set<string>();
+// Keep Image objects alive so frames stay in the browser's memory cache (not just HTTP cache),
+// making thumbImg.src switches synchronously complete instead of requiring a cache round-trip.
+const _warmImages = new Map<string, HTMLImageElement>();
 
 // Deduplicate prefetch: track recently-sent aligned keys to avoid flooding the server.
 const _prefetchSent = new Map<string, number>();
@@ -24,6 +27,20 @@ let _fetchInFlight = false;
 
 // Retry timer for SSE open attempts
 let _initRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
+let _globalEnabled = true;
+
+export function setTrickplayEnabled(enabled: boolean): void {
+  _globalEnabled = enabled;
+  if (!enabled) {
+    hideTrickplayThumb();
+    if (_readyStreamEs) {
+      _readyStreamEs.close();
+      _readyStreamEs = null;
+      _readyStreamItemId = null;
+    }
+  }
+}
 
 function getRawToken(): string {
   const ac = (window as any).ApiClient;
@@ -78,11 +95,13 @@ function ensureMeta(itemId: string): SeekPreviewMeta | undefined {
 }
 
 function openReadyStream(itemId: string, meta: SeekPreviewMeta, videoEl: HTMLVideoElement): void {
-  // Close previous stream when switching videos
+  // Close previous stream and release memory-cached images when switching videos
   if (_readyStreamEs) {
     _readyStreamEs.close();
     _readyStreamEs = null;
     _readyStreamItemId = null;
+    _loadedKeys.clear();
+    _warmImages.clear();
   }
 
   const posMs = Math.floor((videoEl.currentTime || 0) * 1000);
@@ -96,9 +115,9 @@ function openReadyStream(itemId: string, meta: SeekPreviewMeta, videoEl: HTMLVid
     if (!isFinite(posMs)) return;
     const key = `${itemId}:${posMs}`;
     if (_loadedKeys.has(key)) return;
-    // Proactively load into browser HTTP cache so drag-seek is instant.
+    // Load and keep alive in memory cache — thumbImg.src switches will be synchronously complete.
     const img = new Image();
-    img.onload = () => _loadedKeys.add(key);
+    img.onload = () => { _loadedKeys.add(key); _warmImages.set(key, img); };
     img.src = makeUrl(meta, itemId, posMs);
   };
 
@@ -106,6 +125,17 @@ function openReadyStream(itemId: string, meta: SeekPreviewMeta, videoEl: HTMLVid
     es.close();
     if (_readyStreamEs === es) { _readyStreamEs = null; _readyStreamItemId = null; }
   };
+}
+
+// Set thumbImg.src without hiding the wrap — keeps old pixels visible while new image loads.
+// Only call wrap.style.display = 'none' when there is genuinely no candidate to show.
+function applyThumb(wrap: HTMLDivElement, thumbImg: HTMLImageElement, url: string): void {
+  thumbImg.src = url;
+  if (thumbImg.complete && thumbImg.naturalWidth > 0) {
+    wrap.style.display = 'block';
+  } else {
+    thumbImg.onload = () => { wrap.style.display = 'block'; };
+  }
 }
 
 function ensureThumbEl(): { wrap: HTMLDivElement; img: HTMLImageElement } {
@@ -130,7 +160,10 @@ export function showTrickplayThumb(
   posMs: number,
   itemId: string,
   videoEl: HTMLVideoElement,
+  alignMs: number = 100,
+  direction: 1 | -1 | 0 = 0,
 ): void {
+  if (!_globalEnabled) return;
   const meta = ensureMeta(itemId);
   if (!meta) return;
 
@@ -150,7 +183,7 @@ export function showTrickplayThumb(
     wrap.style.transform = 'translate(-50%, -50%)';
   }
 
-  const aligned = Math.floor(posMs / 500) * 500;
+  const aligned = Math.floor(posMs / alignMs) * alignMs;
   const exactKey = `${itemId}:${aligned}`;
 
   _pendingKey = exactKey;
@@ -158,33 +191,43 @@ export function showTrickplayThumb(
   const exactUrl = makeUrl(meta, itemId, aligned);
 
   if (_loadedKeys.has(exactKey)) {
-    thumbImg.src = exactUrl;
-    if (thumbImg.complete && thumbImg.naturalWidth > 0) {
-      wrap.style.display = 'block';
-    } else {
-      wrap.style.display = 'none';
-      thumbImg.onload = () => { wrap.style.display = 'block'; };
-    }
+    applyThumb(wrap, thumbImg, exactUrl);
     return;
   }
 
-  // Fuzzy match: show nearest already-loaded frame as placeholder while exact loads.
+  // Fuzzy match: show nearest already-loaded frame, preferring the drag direction.
   const FUZZY_RANGE = 15000;
   let fuzzyFound = false;
   for (let d = 500; d <= FUZZY_RANGE; d += 500) {
-    if (_loadedKeys.has(`${itemId}:${aligned - d}`)) {
-      thumbImg.src = makeUrl(meta, itemId, aligned - d);
-      if (thumbImg.complete && thumbImg.naturalWidth > 0) wrap.style.display = 'block';
-      else { wrap.style.display = 'none'; thumbImg.onload = () => { wrap.style.display = 'block'; }; }
+    const fwd = aligned + d;
+    const bwd = aligned - d;
+    const first  = direction >= 0 ? fwd : bwd;
+    const second = direction >= 0 ? bwd : fwd;
+    if (_loadedKeys.has(`${itemId}:${first}`)) {
+      applyThumb(wrap, thumbImg, makeUrl(meta, itemId, first));
       fuzzyFound = true;
       break;
     }
-    if (_loadedKeys.has(`${itemId}:${aligned + d}`)) {
-      thumbImg.src = makeUrl(meta, itemId, aligned + d);
-      if (thumbImg.complete && thumbImg.naturalWidth > 0) wrap.style.display = 'block';
-      else { wrap.style.display = 'none'; thumbImg.onload = () => { wrap.style.display = 'block'; }; }
+    if (_loadedKeys.has(`${itemId}:${second}`)) {
+      applyThumb(wrap, thumbImg, makeUrl(meta, itemId, second));
       fuzzyFound = true;
       break;
+    }
+  }
+  // 500ms steps can't reliably hit 30s-aligned boundaries. Do a direct O(1) check
+  // for the nearest 30s thumbnail, also preferring the drag direction.
+  if (!fuzzyFound) {
+    const lower30 = Math.floor(aligned / 30000) * 30000;
+    const upper30 = lower30 + 30000;
+    const candidates = direction > 0 ? [upper30, lower30]
+      : direction < 0 ? [lower30, upper30]
+      : (aligned - lower30 <= upper30 - aligned ? [lower30, upper30] : [upper30, lower30]);
+    for (const c of candidates) {
+      if (c >= 0 && _loadedKeys.has(`${itemId}:${c}`)) {
+        applyThumb(wrap, thumbImg, makeUrl(meta, itemId, c));
+        fuzzyFound = true;
+        break;
+      }
     }
   }
   if (!fuzzyFound) wrap.style.display = 'none';
@@ -207,7 +250,7 @@ export function showTrickplayThumb(
 export function prefetchFrame(posMs: number, itemId: string): void {
   const meta = ensureMeta(itemId);
   if (!meta || posMs < 0) return;
-  const aligned = Math.floor(posMs / 500) * 500;
+  const aligned = Math.floor(posMs / 100) * 100;
   const key = `${itemId}:${aligned}`;
   if (_loadedKeys.has(key)) return;
   const now = Date.now();

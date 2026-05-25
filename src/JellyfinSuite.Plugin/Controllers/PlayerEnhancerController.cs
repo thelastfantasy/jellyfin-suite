@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using System.Text.Json.Serialization;
+using Jellyfin.Plugin.JellyfinSuite.Services;
 using MediaBrowser.Common.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -9,21 +11,39 @@ namespace Jellyfin.Plugin.JellyfinSuite.Controllers;
 
 [ApiController]
 [Route("JellyfinSuite/PlayerEnhancer")]
-[Authorize(Policy = "RequiresElevation")]
+[Authorize]
 public class PlayerEnhancerController : ControllerBase
 {
     private readonly IApplicationPaths _appPaths;
     private readonly ILogger<PlayerEnhancerController> _logger;
+    private readonly UserSettingsService _userSettings;
 
     public PlayerEnhancerController(
         IApplicationPaths appPaths,
-        ILogger<PlayerEnhancerController> logger)
+        ILogger<PlayerEnhancerController> logger,
+        UserSettingsService userSettings)
     {
         _appPaths = appPaths;
         _logger = logger;
+        _userSettings = userSettings;
+    }
+
+    /// <summary>
+    /// Returns the Jellyfin user ID from JWT claims, or null for anonymous/system-key requests.
+    /// Jellyfin's auth middleware always populates HttpContext.User even for [AllowAnonymous] endpoints.
+    /// </summary>
+    private string? GetCurrentUserId()
+    {
+        if (User.Identity?.IsAuthenticated != true) return null;
+        var raw = User.FindFirst("Jellyfin-UserId")?.Value
+               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(raw, out var id) && id != Guid.Empty
+            ? id.ToString("N")
+            : null;
     }
 
     [HttpGet("Status")]
+    [Authorize(Policy = "RequiresElevation")]
     [ProducesResponseType(typeof(EnhancerStatusDto), StatusCodes.Status200OK)]
     public ActionResult<EnhancerStatusDto> GetStatus()
     {
@@ -31,13 +51,11 @@ public class PlayerEnhancerController : ControllerBase
         var injected = System.IO.File.Exists(indexPath) &&
             System.IO.File.ReadAllText(indexPath).Contains("/web/configurationpage?name=JellyfinSuitePlayerEnhancer");
 
-        return Ok(new EnhancerStatusDto
-        {
-            AutoInjectEnabled = injected,
-        });
+        return Ok(new EnhancerStatusDto { AutoInjectEnabled = injected });
     }
 
     [HttpPost("Inject")]
+    [Authorize(Policy = "RequiresElevation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public ActionResult Inject()
@@ -63,6 +81,7 @@ public class PlayerEnhancerController : ControllerBase
     }
 
     [HttpDelete("Inject")]
+    [Authorize(Policy = "RequiresElevation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public ActionResult Remove()
@@ -84,26 +103,53 @@ public class PlayerEnhancerController : ControllerBase
         }
     }
 
-    [HttpGet("GestureConfig")]
+    /// <summary>
+    /// Returns player config for the current user.
+    /// Authenticated requests (api_key or Authorization header) return user-specific settings.
+    /// Anonymous requests return plugin-level defaults so the player works before login.
+    /// </summary>
+    [HttpGet("Config")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(GestureConfigDto), StatusCodes.Status200OK)]
-    public ActionResult<GestureConfigDto> GetGestureConfig()
+    public ActionResult<GestureConfigDto> GetConfig()
     {
+        var userId = GetCurrentUserId();
+        if (userId != null)
+        {
+            var s = _userSettings.Get(userId);
+            return Ok(new GestureConfigDto
+            {
+                TrickplayEnabled = s.TrickplayEnabled,
+                SeekSeconds = s.SeekSeconds,
+                SpeedRate = s.SpeedRate,
+            });
+        }
+
+        // Anonymous/system-key: return plugin-level defaults
+        var cfg = Plugin.Instance?.Configuration;
         return Ok(new GestureConfigDto
         {
-            SeekSeconds = Plugin.Instance?.Configuration.SeekSeconds ?? 10,
-            SpeedRate   = Plugin.Instance?.Configuration.SpeedRate   ?? 2.0,
+            TrickplayEnabled = true,
+            SeekSeconds = cfg?.SeekSeconds ?? 10,
+            SpeedRate = cfg?.SpeedRate ?? 2.0,
         });
     }
 
-    [HttpPatch("GestureConfig")]
+    /// <summary>Saves player config for the authenticated user.</summary>
+    [HttpPatch("Config")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public ActionResult SetGestureConfig([FromBody] GestureConfigDto dto)
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public ActionResult SetConfig([FromBody] GestureConfigDto dto)
     {
-        var config = Plugin.Instance!.Configuration;
-        config.SeekSeconds = Math.Clamp(dto.SeekSeconds, 0.5, 30.0);
-        config.SpeedRate   = Math.Clamp(dto.SpeedRate,   1.25, 4.0);
-        Plugin.Instance.SaveConfiguration();
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        _userSettings.Save(userId, new UserPlayerSettings
+        {
+            TrickplayEnabled = dto.TrickplayEnabled,
+            SeekSeconds = Math.Clamp(dto.SeekSeconds, 0.5, 30.0),
+            SpeedRate = Math.Clamp(dto.SpeedRate, 1.25, 4.0),
+        });
         return NoContent();
     }
 }
@@ -116,6 +162,9 @@ public sealed class EnhancerStatusDto
 
 public sealed class GestureConfigDto
 {
+    [JsonPropertyName("trickplayEnabled")]
+    public bool TrickplayEnabled { get; set; } = true;
+
     [JsonPropertyName("seekSeconds")]
     public double SeekSeconds { get; set; }
 

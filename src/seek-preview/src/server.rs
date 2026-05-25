@@ -140,7 +140,7 @@ pub async fn handle_conn(mut stream: UnixStream, state: Arc<State>) {
 
         let key = CacheKey {
             item_id: req.item_id.clone(),
-            pos_ms_aligned: req.pos_ms / 500 * 500,
+            pos_ms_aligned: req.pos_ms / 100 * 100,
         };
         let aligned_pos = key.pos_ms_aligned;
         let width = req.width;

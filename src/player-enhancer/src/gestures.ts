@@ -11,6 +11,24 @@ interface TapState { time: number; zone: Zone }
 
 type GestureMode = 'idle' | 'pending' | 'seek' | 'swipe';
 
+// Dead zone scales with screen width: larger screen = tablet = more hand jitter.
+// ~0.4% of screen width, clamped to [2, 8] px.
+function thumbDeadZonePx(): number {
+  return Math.max(2, Math.min(8, Math.round(window.innerWidth * 0.004)));
+}
+
+// Maps drag velocity to thumbnail alignment granularity.
+// Faster drag → coarser alignment (fewer unique requests); slower → finer (sub-500ms precision).
+function computeAlignMs(velPxPerMs: number, dur: number): number {
+  const sPerVw = Math.min(6, Math.max(1.2, dur * 0.002));
+  const videoVelSecPerSec = velPxPerMs * 1000 * sPerVw * 100 / window.innerWidth;
+  if (videoVelSecPerSec > 30) return 5000;
+  if (videoVelSecPerSec > 10) return 2000;
+  if (videoVelSecPerSec >  3) return 1000;
+  if (videoVelSecPerSec >  1) return 500;
+  return 100;
+}
+
 interface GestureState {
   mode: GestureMode;
   startX: number;
@@ -20,6 +38,9 @@ interface GestureState {
   // seek state
   seekAnchorSec: number;
   seekOffsetSec: number;
+  lastThumbX: number;          // clientX when thumbnail was last updated
+  lastThumbAlignedMs: number;  // aligned posMs of last shown thumbnail
+  lastThumbMoveTime: number;   // timestamp when finger last moved past dead zone
   // swipe state
   swipeSide: 'left' | 'right';
   swipeStartValue: number;
@@ -107,7 +128,7 @@ export function initGestures(videoEl: HTMLVideoElement, getItemId: () => string)
   const gs: GestureState = {
     mode: 'idle',
     startX: 0, startY: 0, lastX: 0, lastMoveTime: 0,
-    seekAnchorSec: 0, seekOffsetSec: 0,
+    seekAnchorSec: 0, seekOffsetSec: 0, lastThumbX: 0, lastThumbAlignedMs: -1, lastThumbMoveTime: 0,
     swipeSide: 'left', swipeStartValue: 1,
   };
 
@@ -159,6 +180,8 @@ export function initGestures(videoEl: HTMLVideoElement, getItemId: () => string)
     gs.lastMoveTime = Date.now();
     gs.seekAnchorSec = videoEl.currentTime;
     gs.seekOffsetSec = 0;
+    gs.lastThumbX = touch.clientX;
+    gs.lastThumbAlignedMs = -1;
     gs.swipeSide = touch.clientX < window.innerWidth / 2 ? 'left' : 'right';
     gs.swipeStartValue = gs.swipeSide === 'left'
       ? parseFloat(videoEl.style.filter.replace('brightness(', '').replace(')', '') || '1')
@@ -204,13 +227,28 @@ export function initGestures(videoEl: HTMLVideoElement, getItemId: () => string)
       const velPxPerMs = Math.abs(deltaX) / dt;
       const targetMs = targetSec * 1000;
       const itemId = getItemId();
-      if (velPxPerMs < 8) {
-        prefetchFrame(targetMs - 500, itemId);
-        prefetchFrame(targetMs,       itemId);
-        prefetchFrame(targetMs + 500, itemId);
+      const exactAlignedMs = Math.round(targetMs / 100) * 100;
+      if (Math.abs(touch.clientX - gs.lastThumbX) >= thumbDeadZonePx()) {
+        // Finger moved past dead zone — use velocity-adaptive alignment.
+        gs.lastThumbX = touch.clientX;
+        gs.lastThumbMoveTime = now;
+        const alignMs = computeAlignMs(velPxPerMs, dur);
+        const shownMs = Math.floor(targetMs / alignMs) * alignMs;
+        if (velPxPerMs < 8) {
+          prefetchFrame(targetMs - alignMs, itemId);
+          prefetchFrame(targetMs,           itemId);
+          prefetchFrame(targetMs + alignMs, itemId);
+        }
+        const dir = deltaX > 0 ? 1 : -1;
+        showTrickplayThumb(shownMs, itemId, videoEl, alignMs, dir);
+        gs.lastThumbAlignedMs = shownMs;
+        console.log(`[seek] drag-thumb: ${shownMs}.jpg (align=${alignMs}ms)`);
+      } else if (now - gs.lastThumbMoveTime >= 150 && exactAlignedMs !== gs.lastThumbAlignedMs) {
+        // Finger has been in dead zone for 150ms+ — genuinely paused, snap to 100ms.
+        showTrickplayThumb(exactAlignedMs, itemId, videoEl, 100);
+        gs.lastThumbAlignedMs = exactAlignedMs;
+        console.log(`[seek] stop-thumb: ${exactAlignedMs}.jpg`);
       }
-      // High-speed drag: skip prefetch to avoid flooding the daemon with large-file decodes
-      showTrickplayThumb(targetMs, itemId, videoEl);
       return;
     }
 
@@ -232,9 +270,14 @@ export function initGestures(videoEl: HTMLVideoElement, getItemId: () => string)
 
   const onEnd = (): void => {
     if (gs.mode === 'seek') {
-      // Commit the seek on finger lift
       const dur = isFinite(videoEl.duration) ? videoEl.duration : 0;
-      videoEl.currentTime = Math.max(0, Math.min(dur, gs.seekAnchorSec + gs.seekOffsetSec));
+      const rawSec = gs.seekAnchorSec + gs.seekOffsetSec;
+      // Snap to 100ms — matches Rust's minimum alignment granularity.
+      const snappedSec = Math.round(rawSec * 10) / 10;
+      const committedSec = Math.max(0, Math.min(dur, snappedSec));
+      const committedMs = Math.round(committedSec * 1000);
+      videoEl.currentTime = committedSec;
+      console.log(`[seek] touchend: ${committedMs}ms → last-thumb: ${gs.lastThumbAlignedMs}.jpg`);
       hideSeekOsd(800);
       document.body.classList.remove('jfs-seeking');
     }
