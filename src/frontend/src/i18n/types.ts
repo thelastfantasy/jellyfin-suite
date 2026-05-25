@@ -164,4 +164,5 @@ export interface Translations {
   enhancerSpeedUnit: string
   enhancerIndexHtmlNote: string
   enhancerBrowserNote: string
+  enhancerTrickplayLabel: string
 }

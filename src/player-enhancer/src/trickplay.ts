@@ -28,6 +28,20 @@ let _fetchInFlight = false;
 // Retry timer for SSE open attempts
 let _initRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
+let _globalEnabled = true;
+
+export function setTrickplayEnabled(enabled: boolean): void {
+  _globalEnabled = enabled;
+  if (!enabled) {
+    hideTrickplayThumb();
+    if (_readyStreamEs) {
+      _readyStreamEs.close();
+      _readyStreamEs = null;
+      _readyStreamItemId = null;
+    }
+  }
+}
+
 function getRawToken(): string {
   const ac = (window as any).ApiClient;
   if (!ac) return '';
@@ -149,6 +163,7 @@ export function showTrickplayThumb(
   alignMs: number = 100,
   direction: 1 | -1 | 0 = 0,
 ): void {
+  if (!_globalEnabled) return;
   const meta = ensureMeta(itemId);
   if (!meta) return;
 

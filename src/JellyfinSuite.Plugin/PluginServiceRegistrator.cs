@@ -85,6 +85,13 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
             return new PosterSheetJobService(appPaths, logger, fontSvc);
         });
 
+        // UserSettingsService: 存储每用户的播放器设置（跨设备）
+        serviceCollection.AddSingleton<UserSettingsService>(sp =>
+        {
+            var appPaths = applicationHost.Resolve<MediaBrowser.Common.Configuration.IApplicationPaths>();
+            return new UserSettingsService(appPaths);
+        });
+
         // 注入 IHttpContextAccessor 供 i18n 读取浏览器语言
         serviceCollection.AddHttpContextAccessor();
         serviceCollection.AddSingleton<IStartupFilter, TaskStringsInitializer>();

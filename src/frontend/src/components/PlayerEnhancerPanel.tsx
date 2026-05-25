@@ -21,6 +21,7 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
   const [hint, setHint] = useState<Hint>(null)
   const [seekSeconds, setSeekSeconds] = useState(10)
   const [speedRate, setSpeedRate] = useState(2.0)
+  const [trickplayEnabled, setTrickplayEnabled] = useState(true)
   const [seekSaved, setSeekSaved] = useState(false)
 
   useEffect(() => {
@@ -28,7 +29,11 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
       .then((s) => setEnabled(s.autoInjectEnabled))
       .catch(() => setEnabled(false))
     getGestureConfig()
-      .then((cfg) => { setSeekSeconds(cfg.seekSeconds); setSpeedRate(cfg.speedRate ?? 2.0) })
+      .then((cfg) => {
+        setTrickplayEnabled(cfg.trickplayEnabled ?? true)
+        setSeekSeconds(cfg.seekSeconds)
+        setSpeedRate(cfg.speedRate ?? 2.0)
+      })
       .catch(() => {})
   }, [])
 
@@ -62,9 +67,10 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
 
   async function handleSeekSave() {
     try {
-      await setGestureConfig({ seekSeconds, speedRate })
+      await setGestureConfig({ trickplayEnabled, seekSeconds, speedRate })
       window.dispatchEvent(new CustomEvent('jfs:seekSecondsChanged', { detail: { seconds: seekSeconds } }))
       window.dispatchEvent(new CustomEvent('jfs:speedRateChanged', { detail: { rate: speedRate } }))
+      window.dispatchEvent(new CustomEvent('jfs:trickplayEnabledChanged', { detail: { enabled: trickplayEnabled } }))
       setSeekSaved(true)
       setTimeout(() => setSeekSaved(false), 2000)
     } catch {
@@ -95,6 +101,17 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
         {hint === 'reload' && <p class="jfs-enhancer-panel__hint jfs-enhancer-panel__hint--ok">{t.enhancerReloadHint}</p>}
         {hint === 'error' && <p class="jfs-enhancer-panel__hint jfs-enhancer-panel__hint--err">{t.enhancerErrorHint}</p>}
 
+        <div class="jfs-enhancer-panel__seek-row">
+          <label class="jfs-enhancer-panel__seek-label">{t.enhancerTrickplayLabel}</label>
+          <div class="jfs-enhancer-panel__seek-input-wrap">
+            <input
+              type="checkbox"
+              class="jfs-enhancer-panel__checkbox"
+              checked={trickplayEnabled}
+              onChange={(e) => setTrickplayEnabled((e.target as HTMLInputElement).checked)}
+            />
+          </div>
+        </div>
         <div class="jfs-enhancer-panel__seek-row">
           <label class="jfs-enhancer-panel__seek-label">{t.enhancerSeekLabel}</label>
           <div class="jfs-enhancer-panel__seek-input-wrap">

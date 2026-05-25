@@ -3,6 +3,7 @@ export interface EnhancerStatus {
 }
 
 export interface GestureConfig {
+  trickplayEnabled: boolean
   seekSeconds: number  // 0.5 – 30
   speedRate: number    // 1.25 – 4.0
 }

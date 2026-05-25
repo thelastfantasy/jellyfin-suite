@@ -3,7 +3,7 @@ import { createFrameStepButtons, stepFrames } from './framestepper';
 import { takeScreenshot } from './screenshot';
 import { initGestures, setSeekSeconds } from './gestures';
 import { initLongPress } from './long-press';
-import { initTrickplay } from './trickplay';
+import { initTrickplay, setTrickplayEnabled } from './trickplay';
 import { t } from './i18n';
 import { ICON_SCREENSHOT } from './icons';
 
@@ -15,12 +15,22 @@ let _cachedItemId = '';
 // Prevents stale currentSrc from leaking the previous video's item ID during transition.
 let _pendingItemId = '';
 let _speedRate = 2.0;
+let _trickplayEnabled = true;
 
 async function loadGestureConfig(): Promise<void> {
   try {
-    const res = await fetch('/JellyfinSuite/PlayerEnhancer/GestureConfig');
+    const ac = (window as any).ApiClient;
+    const token: string = typeof ac?.accessToken === 'function' ? ac.accessToken() : (ac?._accessToken ?? '');
+    const url = token
+      ? `/JellyfinSuite/PlayerEnhancer/GestureConfig?api_key=${encodeURIComponent(token)}`
+      : '/JellyfinSuite/PlayerEnhancer/GestureConfig';
+    const res = await fetch(url);
     if (res.ok) {
-      const cfg = await res.json() as { seekSeconds?: number; speedRate?: number };
+      const cfg = await res.json() as { trickplayEnabled?: boolean; seekSeconds?: number; speedRate?: number };
+      if (typeof cfg.trickplayEnabled === 'boolean') {
+        _trickplayEnabled = cfg.trickplayEnabled;
+        setTrickplayEnabled(_trickplayEnabled);
+      }
       if (typeof cfg.seekSeconds === 'number' && cfg.seekSeconds > 0) {
         setSeekSeconds(cfg.seekSeconds);
       }
@@ -82,6 +92,13 @@ export function initInjector(): void {
     const { rate } = (e as CustomEvent<{ rate: number }>).detail;
     if (typeof rate === 'number' && rate >= 1.25) _speedRate = rate;
   });
+  window.addEventListener('jfs:trickplayEnabledChanged', (e: Event) => {
+    const { enabled } = (e as CustomEvent<{ enabled: boolean }>).detail;
+    if (typeof enabled !== 'boolean') return;
+    _trickplayEnabled = enabled;
+    setTrickplayEnabled(enabled);
+    if (enabled && _currentVideoEl) initTrickplay(getItemId, _currentVideoEl);
+  });
 
   // Jellyfin uses @remix-run/router with history.pushState — no hashchange fires.
   // Intercept pushState to capture item ID before the URL changes.
@@ -114,7 +131,7 @@ function tryInject(): void {
       || '';
     initGestures(videoEl, getItemId);
     initLongPress(videoEl, () => _speedRate);
-    initTrickplay(getItemId, videoEl);
+    if (_trickplayEnabled) initTrickplay(getItemId, videoEl);
   }
 
   // Ensure root marker exists (idempotent)
