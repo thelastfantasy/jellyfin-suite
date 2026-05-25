@@ -52,6 +52,44 @@ pub fn render_logo_at(canvas: &mut RgbaImage, x: u32, y: u32, size: u32, opacity
     }
 }
 
+/// Render the Jellyfin logo tinted to a solid `color`, preserving SVG alpha as the blend mask.
+/// Used for the QR center badge where the logo should match the gradient color.
+pub fn render_logo_tinted(canvas: &mut RgbaImage, x: u32, y: u32, size: u32, color: [u8; 3]) {
+    if size == 0 { return; }
+    let opt = resvg::usvg::Options::default();
+    let tree = match resvg::usvg::Tree::from_str(LOGO_SVG, &opt) {
+        Ok(t) => t,
+        Err(_) => return,
+    };
+    let svg_size = tree.size();
+    let logo_w = size;
+    let logo_h = (size as f64 * svg_size.height() as f64 / svg_size.width() as f64) as u32;
+    let mut pixmap = tiny_skia::Pixmap::new(logo_w.max(1), logo_h.max(1)).unwrap();
+    let transform = tiny_skia::Transform::from_scale(
+        logo_w as f32 / svg_size.width() as f32,
+        logo_h as f32 / svg_size.height() as f32,
+    );
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+    let canvas_w = canvas.width();
+    let canvas_h = canvas.height();
+    for py in 0..logo_h {
+        for px in 0..logo_w {
+            let cx = x + px;
+            let cy = y + py;
+            if cx >= canvas_w || cy >= canvas_h { continue; }
+            let rgba = pixmap.pixel(px, py).unwrap_or(tiny_skia::PremultipliedColorU8::TRANSPARENT);
+            let a = rgba.alpha() as f32 / 255.0;
+            if a <= 0.01 { continue; }
+            let pixel = canvas.get_pixel_mut(cx, cy);
+            let ch = pixel.0.as_mut_slice();
+            ch[0] = (ch[0] as f32 * (1.0 - a) + color[0] as f32 * a).round() as u8;
+            ch[1] = (ch[1] as f32 * (1.0 - a) + color[1] as f32 * a).round() as u8;
+            ch[2] = (ch[2] as f32 * (1.0 - a) + color[2] as f32 * a).round() as u8;
+            ch[3] = 255;
+        }
+    }
+}
+
 pub fn render_logo(canvas: &mut RgbaImage, canvas_w: u32, canvas_h: u32) {
     let logo_w = canvas_w * 2 / 3;
     if logo_w == 0 { return; }
