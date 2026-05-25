@@ -74,8 +74,9 @@ public class SeekPreviewController : ControllerBase
         if (jpeg == null || jpeg.Length == 0)
             return StatusCode(StatusCodes.Status503ServiceUnavailable, "frame decode failed");
 
-        var cachePath = Path.Combine(SeekPreviewService.CacheDirectory,
-            itemId.ToString("N"), $"{positionMs / 500 * 500}.jpg");
+        var alignedMs = positionMs / 100 * 100;
+        var cachePath = Path.Combine(SeekPreviewService.CacheDirectory, itemId.ToString("N"), $"{alignedMs}.jpg");
+        Response.Headers.Append("X-Frame-File", cachePath);
         _logger.LogInformation(
             "[SeekPreview] {FileName} {PosMs}ms → {Size}B in {Ms}ms | {CachePath}",
             Path.GetFileName(filePath), positionMs, jpeg.Length, sw.ElapsedMilliseconds, cachePath);
