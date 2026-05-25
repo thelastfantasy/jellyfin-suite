@@ -1,7 +1,7 @@
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Jellyfin.Plugin.JellyfinSuite.Services;
 using MediaBrowser.Common.Configuration;
-using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,30 +17,29 @@ public class PlayerEnhancerController : ControllerBase
     private readonly IApplicationPaths _appPaths;
     private readonly ILogger<PlayerEnhancerController> _logger;
     private readonly UserSettingsService _userSettings;
-    private readonly IAuthorizationContext _authContext;
 
     public PlayerEnhancerController(
         IApplicationPaths appPaths,
         ILogger<PlayerEnhancerController> logger,
-        UserSettingsService userSettings,
-        IAuthorizationContext authContext)
+        UserSettingsService userSettings)
     {
         _appPaths = appPaths;
         _logger = logger;
         _userSettings = userSettings;
-        _authContext = authContext;
     }
 
-    /// <summary>Returns the Jellyfin user ID for the current request, or null if anonymous/system key.</summary>
-    private async Task<string?> GetCurrentUserIdAsync()
+    /// <summary>
+    /// Returns the Jellyfin user ID from JWT claims, or null for anonymous/system-key requests.
+    /// Jellyfin's auth middleware always populates HttpContext.User even for [AllowAnonymous] endpoints.
+    /// </summary>
+    private string? GetCurrentUserId()
     {
-        try
-        {
-            var info = await _authContext.GetAuthorizationInfo(HttpContext);
-            var id = info.UserId;
-            return id == Guid.Empty ? null : id.ToString("N");
-        }
-        catch { return null; }
+        if (User.Identity?.IsAuthenticated != true) return null;
+        var raw = User.FindFirst("Jellyfin-UserId")?.Value
+               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(raw, out var id) && id != Guid.Empty
+            ? id.ToString("N")
+            : null;
     }
 
     [HttpGet("Status")]
@@ -106,14 +105,15 @@ public class PlayerEnhancerController : ControllerBase
 
     /// <summary>
     /// Returns gesture/player config for the current user.
-    /// Pass ?api_key= to receive user-specific settings; anonymous requests get plugin defaults.
+    /// Authenticated requests (api_key in URL or Authorization header) return user-specific settings.
+    /// Anonymous requests return plugin-level defaults.
     /// </summary>
     [HttpGet("GestureConfig")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(GestureConfigDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<GestureConfigDto>> GetGestureConfig()
+    public ActionResult<GestureConfigDto> GetGestureConfig()
     {
-        var userId = await GetCurrentUserIdAsync();
+        var userId = GetCurrentUserId();
         if (userId != null)
         {
             var s = _userSettings.Get(userId);
@@ -135,15 +135,13 @@ public class PlayerEnhancerController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Saves gesture/player config for the authenticated user. Any authenticated user may call this.
-    /// </summary>
+    /// <summary>Saves gesture/player config for the authenticated user. Any authenticated user may call this.</summary>
     [HttpPatch("GestureConfig")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> SetGestureConfig([FromBody] GestureConfigDto dto)
+    public ActionResult SetGestureConfig([FromBody] GestureConfigDto dto)
     {
-        var userId = await GetCurrentUserIdAsync();
+        var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
 
         _userSettings.Save(userId, new UserPlayerSettings

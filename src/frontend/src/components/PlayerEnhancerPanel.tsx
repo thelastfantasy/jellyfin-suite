@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { useLocale } from '../i18n/context'
 import {
   getEnhancerStatus,
@@ -22,7 +22,14 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
   const [seekSeconds, setSeekSeconds] = useState(10)
   const [speedRate, setSpeedRate] = useState(2.0)
   const [trickplayEnabled, setTrickplayEnabled] = useState(true)
-  const [seekSaved, setSeekSaved] = useState(false)
+
+  // Keep refs so auto-save callbacks always see latest values
+  const seekRef = useRef(seekSeconds)
+  const speedRef = useRef(speedRate)
+  const trickRef = useRef(trickplayEnabled)
+  seekRef.current = seekSeconds
+  speedRef.current = speedRate
+  trickRef.current = trickplayEnabled
 
   useEffect(() => {
     getEnhancerStatus()
@@ -36,6 +43,23 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
       })
       .catch(() => {})
   }, [])
+
+  async function saveConfig(patch: Partial<{ trickplayEnabled: boolean; seekSeconds: number; speedRate: number }>) {
+    const cfg = {
+      trickplayEnabled: trickRef.current,
+      seekSeconds: seekRef.current,
+      speedRate: speedRef.current,
+      ...patch,
+    }
+    try {
+      await setGestureConfig(cfg)
+      window.dispatchEvent(new CustomEvent('jfs:seekSecondsChanged', { detail: { seconds: cfg.seekSeconds } }))
+      window.dispatchEvent(new CustomEvent('jfs:speedRateChanged', { detail: { rate: cfg.speedRate } }))
+      window.dispatchEvent(new CustomEvent('jfs:trickplayEnabledChanged', { detail: { enabled: cfg.trickplayEnabled } }))
+    } catch {
+      // best-effort
+    }
+  }
 
   async function handleInject() {
     setBusy(true)
@@ -62,19 +86,6 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
       setHint('error')
     } finally {
       setBusy(false)
-    }
-  }
-
-  async function handleSeekSave() {
-    try {
-      await setGestureConfig({ trickplayEnabled, seekSeconds, speedRate })
-      window.dispatchEvent(new CustomEvent('jfs:seekSecondsChanged', { detail: { seconds: seekSeconds } }))
-      window.dispatchEvent(new CustomEvent('jfs:speedRateChanged', { detail: { rate: speedRate } }))
-      window.dispatchEvent(new CustomEvent('jfs:trickplayEnabledChanged', { detail: { enabled: trickplayEnabled } }))
-      setSeekSaved(true)
-      setTimeout(() => setSeekSaved(false), 2000)
-    } catch {
-      // ignore
     }
   }
 
@@ -108,7 +119,11 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
               type="checkbox"
               class="jfs-enhancer-panel__checkbox"
               checked={trickplayEnabled}
-              onChange={(e) => setTrickplayEnabled((e.target as HTMLInputElement).checked)}
+              onChange={(e) => {
+                const val = (e.target as HTMLInputElement).checked
+                setTrickplayEnabled(val)
+                saveConfig({ trickplayEnabled: val })
+              }}
             />
           </div>
         </div>
@@ -127,6 +142,7 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
                 const v = parseFloat((e.target as HTMLInputElement).value)
                 setSeekSeconds(isNaN(v) ? 10 : Math.min(30, Math.max(0.5, v)))
               }}
+              onBlur={() => saveConfig({ seekSeconds })}
             />
             <span class="jfs-enhancer-panel__seek-unit">{t.enhancerSeekUnit}</span>
           </div>
@@ -146,11 +162,9 @@ export function PlayerEnhancerPanel({ onClose }: Props) {
                 const v = parseFloat((e.target as HTMLInputElement).value)
                 setSpeedRate(isNaN(v) ? 2.0 : Math.min(4, Math.max(1.25, v)))
               }}
+              onBlur={() => saveConfig({ speedRate })}
             />
             <span class="jfs-enhancer-panel__seek-unit">{t.enhancerSpeedUnit}</span>
-            <button class="jfs-btn" onClick={handleSeekSave}>
-              {seekSaved ? '✓' : t.enhancerSeekSave}
-            </button>
           </div>
         </div>
       </div>
