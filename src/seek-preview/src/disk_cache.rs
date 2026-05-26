@@ -3,9 +3,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const CACHE_DIR: &str = "/tmp/seek-preview";
-const INDEX_FILE: &str = "/tmp/seek-preview/index.txt";
 pub const CAP_BYTES: u64 = 512 * 1024 * 1024; // 512 MB
+
+fn cache_dir() -> PathBuf { std::env::temp_dir().join("seek-preview") }
+fn index_file() -> PathBuf { cache_dir().join("index.txt") }
 const TRIM_RATIO: f64 = 0.75;
 
 // ── index ────────────────────────────────────────────────────────────────────
@@ -30,7 +31,7 @@ pub struct DiskCache {
 
 impl DiskCache {
     pub fn new() -> Arc<Self> {
-        let _ = std::fs::create_dir_all(CACHE_DIR);
+        let _ = std::fs::create_dir_all(cache_dir());
         sweep_legacy_dirs();
         let index = load_index().unwrap_or_else(|_| rebuild_index());
         eprintln!(
@@ -164,7 +165,7 @@ impl DiskCache {
             }
         }
 
-        if let Ok(dirs) = std::fs::read_dir(CACHE_DIR) {
+        if let Ok(dirs) = std::fs::read_dir(cache_dir()) {
             for entry in dirs.flatten() {
                 let p = entry.path();
                 if p.is_dir() {
@@ -187,7 +188,7 @@ impl DiskCache {
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 fn frame_path(item_id: &str, aligned_ms: i64) -> PathBuf {
-    PathBuf::from(CACHE_DIR).join(item_id).join(format!("{aligned_ms}.jpg"))
+    cache_dir().join(item_id).join(format!("{aligned_ms}.jpg"))
 }
 
 fn now_secs() -> u64 {
@@ -206,7 +207,7 @@ fn video_mtime(path: &Path) -> u64 {
 /// Remove directories left by the old path-hash scheme (16-char hex names).
 /// Called once at startup before loading the index.
 fn sweep_legacy_dirs() {
-    let Ok(dirs) = std::fs::read_dir(CACHE_DIR) else { return };
+    let Ok(dirs) = std::fs::read_dir(cache_dir()) else { return };
     let mut found = false;
     for entry in dirs.flatten() {
         let name = entry.file_name();
@@ -219,7 +220,7 @@ fn sweep_legacy_dirs() {
     }
     if found {
         // Stale index references deleted files; drop it so rebuild_index() runs fresh.
-        let _ = std::fs::remove_file(INDEX_FILE);
+        let _ = std::fs::remove_file(index_file());
     }
 }
 
@@ -238,11 +239,11 @@ fn write_index(idx: &Index) -> std::io::Result<()> {
     for ((item_id, ms), e) in &idx.entries {
         writeln!(s, "{} {} {} {} {}", item_id, ms, e.size, e.written_at, e.video_mtime).unwrap();
     }
-    std::fs::write(INDEX_FILE, s)
+    std::fs::write(index_file(), s)
 }
 
 fn load_index() -> Result<Index, Box<dyn std::error::Error>> {
-    let text = std::fs::read_to_string(INDEX_FILE)?;
+    let text = std::fs::read_to_string(index_file())?;
     let mut lines = text.lines();
 
     let version = lines.next().ok_or("empty index")?;
@@ -274,7 +275,7 @@ fn rebuild_index() -> Index {
     let mut entries = HashMap::new();
     let mut total_bytes: u64 = 0;
 
-    let Ok(dirs) = std::fs::read_dir(CACHE_DIR) else { return Index::default() };
+    let Ok(dirs) = std::fs::read_dir(cache_dir()) else { return Index::default() };
     for dir in dirs.flatten() {
         let item_id = dir.file_name().to_string_lossy().to_string();
         if item_id == "index.txt" { continue; }
